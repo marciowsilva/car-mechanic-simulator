@@ -240,6 +240,7 @@ export class Scene3D {
 
   // Limpar todos os labels
   clearAllLabels() {
+    // Limpar labels
     if (this.partLabels.length > 0) {
       this.partLabels.forEach((label) => {
         if (label.parent) {
@@ -248,6 +249,9 @@ export class Scene3D {
       });
       this.partLabels = [];
     }
+
+    // Limpar highlight
+    this.clearHighlight();
   }
 
   updatePartLabels(carData, job) {
@@ -398,9 +402,23 @@ export class Scene3D {
 
   // Efeito de brilho ao selecionar peça
   highlightPart(partName) {
+    // Verificar se há um carro
+    if (!this.currentCar) {
+      console.log("⚠️ Sem carro para destacar parte");
+      return;
+    }
+
     // Encontrar a posição da peça
     const pos = PART_POSITIONS[partName];
     if (!pos) return;
+
+    // Remover anel existente se houver
+    if (this.highlightRing) {
+      if (this.currentCar) {
+        this.currentCar.remove(this.highlightRing);
+      }
+      this.highlightRing = null;
+    }
 
     // Criar um anel de brilho
     const ringGeometry = new THREE.TorusGeometry(0.3, 0.02, 16, 32);
@@ -414,39 +432,73 @@ export class Scene3D {
     ring.position.set(pos[0], pos[1] + 0.5, pos[2]);
     ring.rotation.x = Math.PI / 2;
 
+    this.highlightRing = ring;
     this.currentCar.add(ring);
 
     // Animar o anel
     let time = 0;
     const animateRing = () => {
-      time += 0.05;
-      ring.scale.setScalar(1 + Math.sin(time) * 0.1);
-      ring.material.opacity = 0.3 + Math.sin(time) * 0.2;
-
-      if (gameState.selectedPart === partName) {
-        requestAnimationFrame(animateRing);
-      } else {
-        this.currentCar.remove(ring);
+      // Verificar se o carro ainda existe e a peça ainda está selecionada
+      if (
+        !this.currentCar ||
+        !this.highlightRing ||
+        gameState?.selectedPart !== partName
+      ) {
+        // Remover o anel se existir
+        if (this.highlightRing && this.currentCar) {
+          this.currentCar.remove(this.highlightRing);
+        }
+        this.highlightRing = null;
+        return;
       }
+
+      time += 0.05;
+      if (this.highlightRing) {
+        this.highlightRing.scale.setScalar(1 + Math.sin(time) * 0.1);
+        this.highlightRing.material.opacity = 0.3 + Math.sin(time) * 0.2;
+      }
+
+      requestAnimationFrame(animateRing);
     };
 
     animateRing();
   }
 
+  // método para limpar o highlight quando necessário
+  clearHighlight() {
+    if (this.highlightRing && this.currentCar) {
+      this.currentCar.remove(this.highlightRing);
+      this.highlightRing = null;
+    }
+  }
+
   // Modificar selectPart para incluir animação
   selectPart(partName) {
+    if (!gameState) return;
+
     gameState.selectedPart = partName;
 
+    // Atualizar labels
     this.partLabels.forEach((label) => {
-      label.element.classList.remove("selected");
-      if (
-        label.element.textContent.includes(PART_TRANSLATIONS[partName].display)
-      ) {
-        label.element.classList.add("selected");
+      if (label.element) {
+        label.element.classList.remove("selected");
+        if (
+          label.element.textContent.includes(
+            PART_TRANSLATIONS[partName].display,
+          )
+        ) {
+          label.element.classList.add("selected");
+        }
       }
     });
 
-    // Adicionar efeito visual
+    // Remover highlight anterior
+    if (this.highlightRing && this.currentCar) {
+      this.currentCar.remove(this.highlightRing);
+      this.highlightRing = null;
+    }
+
+    // Adicionar novo highlight
     this.highlightPart(partName);
   }
 
