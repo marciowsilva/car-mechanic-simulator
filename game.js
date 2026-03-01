@@ -7,6 +7,7 @@ import { Job } from "./job.js";
 import { CustomerCar } from "./car.js";
 import { Scene3D } from "./scene3d.js";
 import { UIManager } from "./ui.js";
+import { AudioManager } from "./audio.js";
 
 // Estado Global do Jogo
 class GameState {
@@ -61,6 +62,7 @@ class GameState {
 
 // Instâncias globais
 export const gameState = new GameState();
+export const audioManager = new AudioManager();
 export const upgradeSystem = new UpgradeSystem();
 export const achievementSystem = new AchievementSystem();
 export const db = new Database();
@@ -112,6 +114,15 @@ window.addEventListener("load", async () => {
 window.repairPart = (partName) => {
   if (!gameState.currentCar || !gameState.currentJob) return;
 
+  // Tocar som
+  audioManager.playSound(gameState.selectedTool);
+
+  // Criar efeito visual
+  const pos = PART_POSITIONS[partName];
+  if (pos && scene3D) {
+    scene3D.createRepairEffect(new THREE.Vector3(pos[0], pos[1] + 0.5, pos[2]));
+  }
+
   const part = gameState.currentCar.parts[partName];
   const targetCondition = gameState.currentJob.targetConditions[partName];
   const toolStats = upgradeSystem.getToolStats(gameState.selectedTool);
@@ -154,6 +165,21 @@ window.repairPart = (partName) => {
 
 window.buyNewPart = (partName) => {
   if (!gameState.currentCar || !gameState.currentJob) return;
+
+  // Tocar som de dinheiro
+  audioManager.playSound("money");
+
+  // Efeito visual mais forte para peça nova
+  const pos = PART_POSITIONS[partName];
+  if (pos && scene3D) {
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => {
+        scene3D.createRepairEffect(
+          new THREE.Vector3(pos[0], pos[1] + 0.5, pos[2]),
+        );
+      }, i * 100);
+    }
+  }
 
   const part = gameState.currentCar.parts[partName];
   const targetCondition = gameState.currentJob.targetConditions[partName];
@@ -216,6 +242,7 @@ window.closeUpgradeShop = () => {
 
 // Expor globalmente para acesso via onclick e database.js
 window.gameState = gameState;
+window.audioManager = audioManager;
 window.upgradeSystem = upgradeSystem;
 window.achievementSystem = achievementSystem;
 window.db = db;

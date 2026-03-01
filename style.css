@@ -874,3 +874,35 @@ body {
 .text-gold {
   color: #ffd700;
 }
+
+/* Audio controls */
+.audio-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.audio-btn {
+  background: #3a3a3a;
+  border: 1px solid #ff6b00;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.audio-btn:hover {
+  background: #ff6b00;
+  transform: scale(1.1);
+}
+
+.audio-btn.muted {
+  opacity: 0.5;
+  background: #666;
+}

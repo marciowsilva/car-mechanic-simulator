@@ -172,6 +172,44 @@ export class UIManager {
     document
       .getElementById("upgrade-shop-btn")
       .addEventListener("click", () => this.openUpgradeShop());
+
+    // Audio controls
+    document.getElementById("toggle-music").addEventListener("click", () => {
+      const isEnabled = audioManager.toggleMusic();
+      const btn = document.getElementById("toggle-music");
+      btn.textContent = isEnabled ? "🎵" : "🔇";
+      btn.classList.toggle("muted", !isEnabled);
+    });
+
+    document.getElementById("toggle-sfx").addEventListener("click", () => {
+      const isEnabled = audioManager.toggleSFX();
+      const btn = document.getElementById("toggle-sfx");
+      btn.textContent = isEnabled ? "🔊" : "🔈";
+      btn.classList.toggle("muted", !isEnabled);
+    });
+
+    // Adicionar sons aos botões existentes
+    document
+      .querySelectorAll(".action-btn, .tool-item, .upgrade-buy")
+      .forEach((btn) => {
+        btn.addEventListener("click", () => audioManager.playSound("click"));
+      });
+
+    // Sons específicos
+    document
+      .getElementById("new-job")
+      .addEventListener("click", () => audioManager.playSound("newJob"));
+    document
+      .getElementById("deliver-car")
+      .addEventListener("click", () => audioManager.playSound("deliver"));
+
+    // Substitua as notificações para incluir som
+    const originalShowNotification = this.showNotification;
+    this.showNotification = (message, type) => {
+      if (type === "success") audioManager.playSound("success");
+      if (type === "error") audioManager.playSound("error");
+      originalShowNotification.call(this, message, type);
+    };
   }
 
   // ===== MÉTODOS DA CLASSE =====

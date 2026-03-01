@@ -142,8 +142,25 @@ export class Scene3D {
     }
 
     const carGroup = new THREE.Group();
+
+    // Escolher cor aleatória baseada no tipo de carro
+    let carColor = 0x3366cc; // Azul padrão
+    if (job.carData && job.carData.type) {
+      // Cores baseadas no tipo
+      const typeColors = {
+        sports: 0xff3333, // Vermelho para esportivos
+        luxury: 0x000000, // Preto para luxo
+        suv: 0x666666, // Prata para SUVs
+        pickup: 0x996633, // Marrom para pickups
+        compact: 0x33cc33, // Verde para compactos
+      };
+      carColor =
+        typeColors[job.carData.type] ||
+        CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
+    }
+
     const bodyMaterial = new THREE.MeshStandardMaterial({
-      color: 0x3366cc,
+      color: carColor,
       roughness: 0.3,
       metalness: 0.7,
     });
@@ -300,10 +317,98 @@ export class Scene3D {
     });
   }
 
-  selectPart(partName) {
-    if (gameState) {
-      gameState.selectedPart = partName;
+  // Efeito de partículas para reparo
+  createRepairEffect(position) {
+    const particleCount = 20;
+    const particles = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      const geometry = new THREE.SphereGeometry(0.05, 4);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffaa00,
+        emissive: 0x442200,
+      });
+      const particle = new THREE.Mesh(geometry, material);
+
+      particle.position.copy(position);
+      particle.userData = {
+        velocity: new THREE.Vector3(
+          (Math.random() - 0.5) * 0.1,
+          Math.random() * 0.1,
+          (Math.random() - 0.5) * 0.1,
+        ),
+        life: 1.0,
+      };
+
+      this.scene.add(particle);
+      particles.push(particle);
     }
+
+    // Animar partículas
+    const animateParticles = () => {
+      let alive = false;
+      particles.forEach((particle) => {
+        particle.userData.life -= 0.02;
+        if (particle.userData.life > 0) {
+          alive = true;
+          particle.position.x += particle.userData.velocity.x;
+          particle.position.y += particle.userData.velocity.y;
+          particle.position.z += particle.userData.velocity.z;
+          particle.material.opacity = particle.userData.life;
+          particle.material.transparent = true;
+        } else {
+          this.scene.remove(particle);
+        }
+      });
+
+      if (alive) {
+        requestAnimationFrame(animateParticles);
+      }
+    };
+
+    animateParticles();
+  }
+
+  // Efeito de brilho ao selecionar peça
+  highlightPart(partName) {
+    // Encontrar a posição da peça
+    const pos = PART_POSITIONS[partName];
+    if (!pos) return;
+
+    // Criar um anel de brilho
+    const ringGeometry = new THREE.TorusGeometry(0.3, 0.02, 16, 32);
+    const ringMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffaa00,
+      emissive: 0x442200,
+      transparent: true,
+      opacity: 0.5,
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+    ring.position.set(pos[0], pos[1] + 0.5, pos[2]);
+    ring.rotation.x = Math.PI / 2;
+
+    this.currentCar.add(ring);
+
+    // Animar o anel
+    let time = 0;
+    const animateRing = () => {
+      time += 0.05;
+      ring.scale.setScalar(1 + Math.sin(time) * 0.1);
+      ring.material.opacity = 0.3 + Math.sin(time) * 0.2;
+
+      if (gameState.selectedPart === partName) {
+        requestAnimationFrame(animateRing);
+      } else {
+        this.currentCar.remove(ring);
+      }
+    };
+
+    animateRing();
+  }
+
+  // Modificar selectPart para incluir animação
+  selectPart(partName) {
+    gameState.selectedPart = partName;
 
     this.partLabels.forEach((label) => {
       label.element.classList.remove("selected");
@@ -313,6 +418,9 @@ export class Scene3D {
         label.element.classList.add("selected");
       }
     });
+
+    // Adicionar efeito visual
+    this.highlightPart(partName);
   }
 
   animate() {
