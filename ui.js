@@ -279,10 +279,23 @@ export class UIManager {
           Math.round(gameState.currentJob.targetConditions[partName]),
         );
 
-        const conditionClass = gameState.currentCar.getPartConditionClass(
-          condition,
-          targetCondition,
-        );
+        // ===== CORREÇÃO AQUI =====
+        // Se a peça está em 100%, mostrar apenas 100% (não mostrar a meta)
+        let displayText = "";
+        let conditionClass = "";
+
+        if (condition === 100) {
+          // Peça nova/perfeita - mostrar apenas 100%
+          displayText = `100%`;
+          conditionClass = "condition-good"; // Classe verde
+        } else {
+          // Peça não está em 100% - mostrar condição atual / meta
+          displayText = `${condition}% / ${targetCondition}%`;
+          conditionClass = gameState.currentCar.getPartConditionClass(
+            condition,
+            targetCondition,
+          );
+        }
 
         const toolStats = upgradeSystem?.getToolStats(
           gameState.selectedTool,
@@ -306,37 +319,38 @@ export class UIManager {
           condition < 100;
 
         // Calcular progresso baseado na meta, nunca passando de 100%
-        const progressPercent = Math.min(
-          100,
-          (condition / targetCondition) * 100,
-        );
+        // Se a peça está em 100%, a barra fica em 100%
+        const progressPercent =
+          condition === 100
+            ? 100
+            : Math.min(100, (condition / targetCondition) * 100);
         const targetPosition = (targetCondition / 100) * 100;
 
         const partElement = document.createElement("div");
         partElement.className = `part-item ${gameState.selectedPart === partName ? "selected" : ""}`;
 
         partElement.innerHTML = `
-                <div class="part-header">
-                    <span class="part-name">${icon} ${displayName}</span>
-                    <span class="part-condition-badge ${conditionClass}">${condition}% / ${targetCondition}%</span>
-                </div>
-                <div class="part-progress">
-                    <div class="progress-bar" style="width: ${progressPercent}%"></div>
-                    <div class="target-marker" style="left: ${targetPosition}%"></div>
-                </div>
-                <div class="part-details">
-                    <div>🔧 Reparo: +${repairEfficiency}% | R$ ${repairCost}</div>
-                    <div class="part-price">🛒 Nova: R$ ${partPrice}</div>
-                </div>
-                <div class="part-actions">
-                    <button class="part-action-btn repair-btn" ${!canRepair ? "disabled" : ""} onclick="repairPart('${partName}')">
-                        🔧 Reparar
-                    </button>
-                    <button class="part-action-btn buy-btn" ${!canBuy ? "disabled" : ""} onclick="buyNewPart('${partName}')">
-                        🛒 Comprar Nova
-                    </button>
-                </div>
-            `;
+            <div class="part-header">
+                <span class="part-name">${icon} ${displayName}</span>
+                <span class="part-condition-badge ${conditionClass}">${displayText}</span>
+            </div>
+            <div class="part-progress">
+                <div class="progress-bar" style="width: ${progressPercent}%"></div>
+                ${condition !== 100 ? `<div class="target-marker" style="left: ${targetPosition}%"></div>` : ""}
+            </div>
+            <div class="part-details">
+                <div>🔧 Reparo: +${repairEfficiency}% | R$ ${repairCost}</div>
+                <div class="part-price">🛒 Nova: R$ ${partPrice}</div>
+            </div>
+            <div class="part-actions">
+                <button class="part-action-btn repair-btn" ${!canRepair ? "disabled" : ""} onclick="repairPart('${partName}')">
+                    🔧 Reparar
+                </button>
+                <button class="part-action-btn buy-btn" ${!canBuy ? "disabled" : ""} onclick="buyNewPart('${partName}')">
+                    🛒 Comprar Nova
+                </button>
+            </div>
+        `;
 
         partElement.addEventListener("click", (e) => {
           if (!e.target.classList.contains("part-action-btn")) {

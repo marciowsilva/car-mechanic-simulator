@@ -239,25 +239,34 @@ export class Scene3D {
           labelDiv.classList.add("selected");
         }
 
-        labelDiv.textContent = `${displayName}: ${condition}% / ${targetCondition}%`;
-
+        // ===== CORREÇÃO AQUI =====
+        // Se a peça está em 100%, mostrar apenas 100%
+        let displayText = "";
         if (condition === 100) {
+          displayText = `${displayName}: 100% ✨`;
           labelDiv.style.backgroundColor = "#4CAF50";
           labelDiv.style.border = "3px solid gold";
-        } else if (condition >= targetCondition) {
-          labelDiv.style.backgroundColor = "#00aa00";
-        } else if (condition >= targetCondition * 0.7) {
-          labelDiv.style.backgroundColor = "#ffaa00";
         } else {
-          labelDiv.style.backgroundColor = "#ff0000";
+          displayText = `${displayName}: ${condition}% / ${targetCondition}%`;
+
+          // Cor baseada no progresso em relação à meta
+          if (condition >= targetCondition) {
+            labelDiv.style.backgroundColor = "#00aa00";
+          } else if (condition >= targetCondition * 0.7) {
+            labelDiv.style.backgroundColor = "#ffaa00";
+          } else {
+            labelDiv.style.backgroundColor = "#ff0000";
+          }
         }
+
+        labelDiv.textContent = displayText;
 
         labelDiv.addEventListener("click", (e) => {
           e.stopPropagation();
           this.selectPart(partName);
         });
 
-        const label = new CSS2DObject(labelDiv);
+        const label = new THREE.CSS2DObject(labelDiv);
         label.position.set(pos[0], pos[1] + 0.5, pos[2]);
         this.currentCar.add(label);
         this.partLabels.push(label);
