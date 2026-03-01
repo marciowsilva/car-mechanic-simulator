@@ -1,4 +1,5 @@
 // constants.js
+
 export const TOOL_BASE_STATS = {
   wrench: { baseRepair: 10, baseCost: 50, name: "Chave Inglesa", icon: "🔧" },
   screwdriver: {
@@ -270,3 +271,11 @@ export const CAR_COLORS = [
   0xffffff, // Branco
   0x996633, // Marrom
 ];
+
+export {
+  TOOL_BASE_STATS,
+  PART_TRANSLATIONS,
+  PART_POSITIONS,
+  CAR_MODELS,
+  CAR_COLORS,
+};
