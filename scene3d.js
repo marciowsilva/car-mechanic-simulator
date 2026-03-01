@@ -1,4 +1,5 @@
-// scene3d.js
+// scene3d.js - VERSÃO COMPLETA CORRIGIDA
+
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import {
@@ -26,6 +27,7 @@ export class Scene3D {
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(this.renderer.domElement);
 
     this.labelRenderer = new CSS2DRenderer();
@@ -210,7 +212,6 @@ export class Scene3D {
   }
 
   updatePartLabels(carData, job) {
-    // Remover labels antigos
     if (this.partLabels.length > 0) {
       this.partLabels.forEach((label) => {
         if (this.currentCar) this.currentCar.remove(label);
@@ -218,12 +219,10 @@ export class Scene3D {
       this.partLabels = [];
     }
 
-    // Se não há carro ou job, sair
     if (!this.currentCar || !carData || !job) return;
 
     Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
       if (carData.parts[partName]) {
-        // GARANTIR QUE PORCENTAGEM NUNCA PASSA DE 100%
         const condition = Math.min(
           100,
           Math.round(carData.parts[partName].condition),
@@ -236,22 +235,21 @@ export class Scene3D {
 
         const labelDiv = document.createElement("div");
         labelDiv.className = "part-label";
-        if (window.gameState?.selectedPart === partName) {
+        if (gameState?.selectedPart === partName) {
           labelDiv.classList.add("selected");
         }
 
         labelDiv.textContent = `${displayName}: ${condition}% / ${targetCondition}%`;
 
-        // Cor baseada no progresso em relação à meta
         if (condition === 100) {
-          labelDiv.style.backgroundColor = "#4CAF50"; // Verde
+          labelDiv.style.backgroundColor = "#4CAF50";
           labelDiv.style.border = "3px solid gold";
         } else if (condition >= targetCondition) {
-          labelDiv.style.backgroundColor = "#00aa00"; // Verde
+          labelDiv.style.backgroundColor = "#00aa00";
         } else if (condition >= targetCondition * 0.7) {
-          labelDiv.style.backgroundColor = "#ffaa00"; // Amarelo
+          labelDiv.style.backgroundColor = "#ffaa00";
         } else {
-          labelDiv.style.backgroundColor = "#ff0000"; // Vermelho
+          labelDiv.style.backgroundColor = "#ff0000";
         }
 
         labelDiv.addEventListener("click", (e) => {
@@ -259,7 +257,7 @@ export class Scene3D {
           this.selectPart(partName);
         });
 
-        const label = new THREE.CSS2DObject(labelDiv);
+        const label = new CSS2DObject(labelDiv);
         label.position.set(pos[0], pos[1] + 0.5, pos[2]);
         this.currentCar.add(label);
         this.partLabels.push(label);
