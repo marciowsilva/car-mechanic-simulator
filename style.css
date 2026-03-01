@@ -1,3 +1,5 @@
+/* style.css*/
+
 * {
   margin: 0;
   padding: 0;
@@ -26,6 +28,7 @@ body {
   z-index: 10;
 }
 
+/* ===== PAINEL SUPERIOR ===== */
 #top-panel {
   position: absolute;
   top: 20px;
@@ -41,6 +44,7 @@ body {
   box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
   pointer-events: auto;
   z-index: 20;
+  backdrop-filter: blur(5px);
 }
 
 .stat {
@@ -53,14 +57,17 @@ body {
   font-size: 12px;
   color: #888;
   text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: bold;
   color: #ff6b00;
+  text-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
 }
 
+/* ===== PAINEL DE FERRAMENTAS (ESQUERDA) ===== */
 #tool-panel {
   position: absolute;
   left: 20px;
@@ -73,6 +80,8 @@ body {
   pointer-events: auto;
   width: 240px;
   z-index: 20;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 #tool-panel h3 {
@@ -81,6 +90,8 @@ body {
   margin-bottom: 15px;
   border-bottom: 1px solid #ff6b00;
   padding-bottom: 5px;
+  font-size: 16px;
+  letter-spacing: 2px;
 }
 
 .tool-item {
@@ -100,11 +111,13 @@ body {
 .tool-item:hover {
   background: #ff6b00;
   transform: translateX(5px);
+  box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
 }
 
 .tool-item.selected {
   background: #ff6b00;
   border: 2px solid white;
+  box-shadow: 0 0 15px #ff6b00;
 }
 
 .tool-icon {
@@ -125,6 +138,7 @@ body {
   color: #ffd700;
 }
 
+/* ===== PAINEL DE PEÇAS (DIREITA) ===== */
 #car-parts-panel {
   position: absolute;
   right: 20px;
@@ -139,6 +153,8 @@ body {
   max-height: 600px;
   overflow-y: auto;
   z-index: 20;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 #car-parts-panel h3 {
@@ -147,8 +163,11 @@ body {
   margin-bottom: 15px;
   border-bottom: 1px solid #ff6b00;
   padding-bottom: 5px;
+  font-size: 16px;
+  letter-spacing: 2px;
 }
 
+/* Informações do Job/Serviço */
 .job-info {
   background: #2a2a2a;
   color: white;
@@ -156,6 +175,7 @@ body {
   margin-bottom: 20px;
   border-radius: 10px;
   border-left: 4px solid #ff6b00;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
 }
 
 .job-header {
@@ -246,6 +266,7 @@ body {
   }
 }
 
+/* Itens de peças */
 .part-item {
   background: #3a3a3a;
   color: white;
@@ -259,16 +280,14 @@ body {
 
 .part-item:hover {
   background: #4a4a4a;
+  transform: translateX(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
 }
 
 .part-item.selected {
   border: 2px solid #ff6b00;
   background: #4a4a4a;
-}
-
-/* Se quiser que a barra também mude de cor quando a peça atinge a meta */
-.part-item.completed .progress-bar {
-  background: #00aa00; /* VERDE quando completo */
+  box-shadow: 0 0 15px rgba(255, 107, 0, 0.3);
 }
 
 .part-header {
@@ -284,58 +303,87 @@ body {
   color: #ff6b00;
 }
 
+/* BADGES DE CONDIÇÃO - CORES CORRIGIDAS */
 .part-condition-badge {
   padding: 4px 8px;
   border-radius: 12px;
   font-size: 12px;
   font-weight: bold;
+  min-width: 70px;
+  text-align: center;
 }
 
 .condition-good {
-  background: #00aa00;
+  background: #00aa00 !important; /* VERDE */
   color: white;
 }
 
 .condition-medium {
-  background: #ffaa00;
+  background: #ffaa00 !important; /* AMARELO */
   color: black;
 }
 
 .condition-bad {
-  background: #ff0000;
+  background: #ff0000 !important; /* VERMELHO */
   color: white;
 }
 
-.part-details {
-  font-size: 13px;
-  margin: 8px 0;
-  color: #ccc;
-}
-
+/* BARRA DE PROGRESSO */
 .part-progress {
   margin-top: 8px;
-  height: 4px;
+  height: 6px;
   background: #555;
-  border-radius: 2px;
+  border-radius: 3px;
   overflow: hidden;
   position: relative;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
+/* Barra padrão (laranja) */
 .progress-bar {
   height: 100%;
   background: #ff6b00;
-  transition: width 0.3s;
+  transition: width 0.3s ease;
+}
+
+/* Barra verde - quando atingiu a meta ou está 100% */
+.progress-bar.progress-good {
+  background: #00aa00 !important;
+}
+
+/* Barra amarela - próximo da meta */
+.progress-bar.progress-medium {
+  background: #ffaa00 !important;
+}
+
+/* Barra vermelha - longe da meta */
+.progress-bar.progress-bad {
+  background: #ff0000 !important;
 }
 
 .target-marker {
   position: absolute;
   top: -2px;
   width: 2px;
-  height: 8px;
+  height: 10px;
   background: #2196f3;
   transform: translateX(-50%);
+  box-shadow: 0 0 5px #2196f3;
 }
 
+/* Detalhes da peça */
+.part-details {
+  font-size: 13px;
+  margin: 8px 0;
+  color: #ccc;
+}
+
+.part-price {
+  color: #ffd700;
+  font-weight: bold;
+}
+
+/* Botões de ação */
 .part-actions {
   display: flex;
   gap: 8px;
@@ -361,11 +409,13 @@ body {
 .repair-btn:hover:not(:disabled) {
   background: #ff8c00;
   transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(255, 107, 0, 0.3);
 }
 
 .repair-btn:disabled {
   background: #666;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
 .buy-btn {
@@ -376,13 +426,16 @@ body {
 .buy-btn:hover:not(:disabled) {
   background: #45a049;
   transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
 }
 
 .buy-btn:disabled {
   background: #666;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
+/* ===== PAINEL INFERIOR ===== */
 #bottom-panel {
   position: absolute;
   bottom: 20px;
@@ -396,6 +449,8 @@ body {
   border: 2px solid #ff6b00;
   pointer-events: auto;
   z-index: 20;
+  backdrop-filter: blur(5px);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .action-btn {
@@ -409,17 +464,21 @@ body {
   transition: all 0.3s;
   font-size: 14px;
   min-width: 140px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .action-btn:hover:not(:disabled) {
   background: #ff8c00;
   transform: scale(1.05);
+  box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
 }
 
 .action-btn:disabled {
   background: #666;
   cursor: not-allowed;
   transform: none;
+  opacity: 0.5;
 }
 
 .action-btn.secondary {
@@ -438,6 +497,7 @@ body {
   background: #45a049;
 }
 
+/* Informação de interação */
 #interaction-info {
   position: absolute;
   bottom: 100px;
@@ -452,8 +512,11 @@ body {
   pointer-events: none;
   z-index: 20;
   box-shadow: 0 0 15px rgba(255, 107, 0, 0.3);
+  backdrop-filter: blur(5px);
+  white-space: nowrap;
 }
 
+/* ===== TELA DE CARREGAMENTO ===== */
 #loading-screen {
   position: fixed;
   top: 0;
@@ -478,6 +541,19 @@ body {
   margin-bottom: 20px;
   font-size: 36px;
   text-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0% {
+    text-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+  }
+  50% {
+    text-shadow: 0 0 20px rgba(255, 107, 0, 0.8);
+  }
+  100% {
+    text-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+  }
 }
 
 .spinner {
@@ -503,8 +579,10 @@ body {
   margin-top: 20px;
   color: #ff6b00;
   font-size: 18px;
+  font-weight: bold;
 }
 
+/* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -523,6 +601,7 @@ body {
   background: #ff8c00;
 }
 
+/* ===== NOTIFICAÇÕES ===== */
 #notification {
   position: absolute;
   top: 100px;
@@ -532,17 +611,20 @@ body {
   padding: 15px 25px;
   border-radius: 10px;
   transform: translateX(400px);
-  transition: transform 0.3s;
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   pointer-events: none;
   z-index: 100;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   border-left: 4px solid white;
+  backdrop-filter: blur(5px);
+  min-width: 250px;
 }
 
 #notification.show {
   transform: translateX(0);
 }
 
+/* ===== LABELS 3D ===== */
 .part-label {
   background: rgba(0, 0, 0, 0.8);
   color: white;
@@ -555,16 +637,19 @@ body {
   transition: all 0.3s;
   white-space: nowrap;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
 }
 
 .part-label:hover {
   transform: scale(1.1);
   background: #ff6b00;
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.5);
 }
 
 .part-label.selected {
   background: #ff6b00;
   border-color: white;
+  box-shadow: 0 0 20px #ff6b00;
 }
 
 .part-label.perfect {
@@ -572,6 +657,7 @@ body {
   box-shadow: 0 0 15px gold;
 }
 
+/* ===== LOJA DE UPGRADES ===== */
 #upgrade-shop {
   position: absolute;
   top: 50%;
@@ -588,10 +674,24 @@ body {
   max-height: 80vh;
   overflow-y: auto;
   display: none;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
 }
 
 #upgrade-shop.show {
   display: block;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
 }
 
 .shop-header {
@@ -607,6 +707,7 @@ body {
   font-size: 24px;
   color: #ff6b00;
   font-weight: bold;
+  text-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
 }
 
 .shop-close {
@@ -629,6 +730,7 @@ body {
   color: #ff6b00;
   margin-bottom: 10px;
   padding-left: 10px;
+  border-left: 3px solid #ff6b00;
 }
 
 .upgrade-item {
@@ -640,11 +742,13 @@ body {
   justify-content: space-between;
   align-items: center;
   transition: all 0.3s;
+  border: 1px solid transparent;
 }
 
 .upgrade-item:hover {
   background: #4a4a4a;
   transform: translateX(5px);
+  border-color: #ff6b00;
 }
 
 .upgrade-info {
@@ -685,18 +789,22 @@ body {
   cursor: pointer;
   font-weight: bold;
   transition: all 0.3s;
+  min-width: 80px;
 }
 
 .upgrade-buy:hover:not(:disabled) {
   background: #45a049;
   transform: scale(1.05);
+  box-shadow: 0 2px 10px rgba(76, 175, 80, 0.3);
 }
 
 .upgrade-buy:disabled {
   background: #666;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
+/* ===== POPUP DE CONQUISTA ===== */
 #achievement-popup {
   position: absolute;
   top: 150px;
@@ -706,12 +814,13 @@ body {
   padding: 15px 25px;
   border-radius: 10px;
   transform: translateX(400px);
-  transition: transform 0.3s;
+  transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   pointer-events: none;
   z-index: 100;
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
   border-left: 4px solid gold;
   min-width: 250px;
+  backdrop-filter: blur(5px);
 }
 
 #achievement-popup.show {
@@ -731,4 +840,37 @@ body {
 .achievement-desc {
   font-size: 12px;
   opacity: 0.9;
+}
+
+/* ===== VERSION LABEL ===== */
+.version-label {
+  position: fixed;
+  bottom: 5px;
+  right: 10px;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 11px;
+  z-index: 1000;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 8px;
+  border-radius: 10px;
+  backdrop-filter: blur(2px);
+  font-family: monospace;
+}
+
+/* ===== UTILITÁRIOS ===== */
+.hidden {
+  display: none !important;
+}
+
+.invisible {
+  visibility: hidden !important;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-gold {
+  color: #ffd700;
 }
