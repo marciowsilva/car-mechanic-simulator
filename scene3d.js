@@ -1,16 +1,17 @@
-// scene3d.js - VERSÃO COMPLETA CORRIGIDA
+// scene3d.js
 
-import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import * as THREE from "https://unpkg.com/three@0.128.0/build/three.module.js";
+import { OrbitControls } from "https://unpkg.com/three@0.128.0/examples/jsm/controls/OrbitControls.js";
 import {
   CSS2DRenderer,
   CSS2DObject,
-} from "three/addons/renderers/CSS2DRenderer.js";
+} from "https://unpkg.com/three@0.128.0/examples/jsm/renderers/CSS2DRenderer.js";
 import { PART_TRANSLATIONS, PART_POSITIONS } from "./constants.js";
 import { gameState } from "./game.js";
 
 export class Scene3D {
   constructor(container) {
+    console.log("🎮 Inicializando Scene3D...");
     this.container = container;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x111122);
@@ -30,6 +31,7 @@ export class Scene3D {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(this.renderer.domElement);
 
+    // CSS2 Renderer
     this.labelRenderer = new CSS2DRenderer();
     this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
     this.labelRenderer.domElement.style.position = "absolute";
@@ -51,6 +53,8 @@ export class Scene3D {
 
     this.currentCar = null;
     this.partLabels = [];
+
+    console.log("✅ Scene3D inicializada");
   }
 
   setupLights() {
@@ -128,6 +132,7 @@ export class Scene3D {
   }
 
   createCar(carData, job) {
+    console.log("🚗 Criando carro...");
     if (this.currentCar) {
       this.scene.remove(this.currentCar);
     }
@@ -166,6 +171,7 @@ export class Scene3D {
 
     this.updatePartLabels(carData, job);
 
+    console.log("✅ Carro criado");
     return carGroup;
   }
 
@@ -212,6 +218,9 @@ export class Scene3D {
   }
 
   updatePartLabels(carData, job) {
+    console.log("🏷️ Atualizando labels...");
+
+    // Remover labels antigos
     if (this.partLabels.length > 0) {
       this.partLabels.forEach((label) => {
         if (this.currentCar) this.currentCar.remove(label);
@@ -219,7 +228,10 @@ export class Scene3D {
       this.partLabels = [];
     }
 
-    if (!this.currentCar || !carData || !job) return;
+    if (!this.currentCar || !carData || !job) {
+      console.log("❌ Sem dados para criar labels");
+      return;
+    }
 
     Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
       if (carData.parts[partName]) {
@@ -239,8 +251,7 @@ export class Scene3D {
           labelDiv.classList.add("selected");
         }
 
-        // ===== CORREÇÃO AQUI =====
-        // Se a peça está em 100%, mostrar apenas 100%
+        // Mostrar apenas 100% se a peça estiver perfeita
         let displayText = "";
         if (condition === 100) {
           displayText = `${displayName}: 100% ✨`;
@@ -249,7 +260,6 @@ export class Scene3D {
         } else {
           displayText = `${displayName}: ${condition}% / ${targetCondition}%`;
 
-          // Cor baseada no progresso em relação à meta
           if (condition >= targetCondition) {
             labelDiv.style.backgroundColor = "#00aa00";
           } else if (condition >= targetCondition * 0.7) {
@@ -266,16 +276,29 @@ export class Scene3D {
           this.selectPart(partName);
         });
 
-        const label = new THREE.CSS2DObject(labelDiv);
-        label.position.set(pos[0], pos[1] + 0.5, pos[2]);
-        this.currentCar.add(label);
-        this.partLabels.push(label);
+        // Verificar se CSS2DObject está disponível
+        if (typeof CSS2DObject === "undefined") {
+          console.error("❌ CSS2DObject não está disponível!");
+          return;
+        }
+
+        try {
+          const label = new CSS2DObject(labelDiv);
+          label.position.set(pos[0], pos[1] + 0.5, pos[2]);
+          this.currentCar.add(label);
+          this.partLabels.push(label);
+          console.log(`✅ Label criado para ${partName}`);
+        } catch (error) {
+          console.error(`❌ Erro ao criar label para ${partName}:`, error);
+        }
       }
     });
   }
 
   selectPart(partName) {
-    gameState.selectedPart = partName;
+    if (gameState) {
+      gameState.selectedPart = partName;
+    }
 
     this.partLabels.forEach((label) => {
       label.element.classList.remove("selected");
