@@ -31,7 +31,6 @@ export class Scene3D {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(this.renderer.domElement);
 
-    // CSS2 Renderer
     this.labelRenderer = new CSS2DRenderer();
     this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
     this.labelRenderer.domElement.style.position = "absolute";
@@ -133,8 +132,13 @@ export class Scene3D {
 
   createCar(carData, job) {
     console.log("🚗 Criando carro...");
+
+    // LIMPAR COMPLETAMENTE antes de criar novo
+    this.clearAllLabels();
+
     if (this.currentCar) {
       this.scene.remove(this.currentCar);
+      this.currentCar = null;
     }
 
     const carGroup = new THREE.Group();
@@ -217,16 +221,23 @@ export class Scene3D {
     carGroup.add(headlightRight);
   }
 
-  updatePartLabels(carData, job) {
-    console.log("🏷️ Atualizando labels...");
-
-    // Remover labels antigos
+  // Limpar todos os labels
+  clearAllLabels() {
     if (this.partLabels.length > 0) {
       this.partLabels.forEach((label) => {
-        if (this.currentCar) this.currentCar.remove(label);
+        if (label.parent) {
+          label.parent.remove(label);
+        }
       });
       this.partLabels = [];
     }
+  }
+
+  updatePartLabels(carData, job) {
+    console.log("🏷️ Atualizando labels...");
+
+    // Limpar labels existentes
+    this.clearAllLabels();
 
     if (!this.currentCar || !carData || !job) {
       console.log("❌ Sem dados para criar labels");
@@ -255,17 +266,18 @@ export class Scene3D {
         let displayText = "";
         if (condition === 100) {
           displayText = `${displayName}: 100% ✨`;
-          labelDiv.style.backgroundColor = "#4CAF50";
+          labelDiv.style.backgroundColor = "#4CAF50"; // Verde
           labelDiv.style.border = "3px solid gold";
         } else {
           displayText = `${displayName}: ${condition}% / ${targetCondition}%`;
 
+          // CORREÇÃO: Lógica de cores corrigida
           if (condition >= targetCondition) {
-            labelDiv.style.backgroundColor = "#00aa00";
+            labelDiv.style.backgroundColor = "#00aa00"; // Verde - meta atingida
           } else if (condition >= targetCondition * 0.7) {
-            labelDiv.style.backgroundColor = "#ffaa00";
+            labelDiv.style.backgroundColor = "#ffaa00"; // Amarelo - próximo
           } else {
-            labelDiv.style.backgroundColor = "#ff0000";
+            labelDiv.style.backgroundColor = "#ff0000"; // Vermelho - longe
           }
         }
 
@@ -276,18 +288,11 @@ export class Scene3D {
           this.selectPart(partName);
         });
 
-        // Verificar se CSS2DObject está disponível
-        if (typeof CSS2DObject === "undefined") {
-          console.error("❌ CSS2DObject não está disponível!");
-          return;
-        }
-
         try {
           const label = new CSS2DObject(labelDiv);
           label.position.set(pos[0], pos[1] + 0.5, pos[2]);
           this.currentCar.add(label);
           this.partLabels.push(label);
-          console.log(`✅ Label criado para ${partName}`);
         } catch (error) {
           console.error(`❌ Erro ao criar label para ${partName}:`, error);
         }

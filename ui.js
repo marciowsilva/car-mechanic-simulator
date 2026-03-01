@@ -72,14 +72,13 @@ export class UIManager {
 
     // Deliver car button - CORRIGIDO
     document.getElementById("deliver-car").addEventListener("click", () => {
-      console.log("🚗 Entregando carro..."); // Debug
+      console.log("🚗 Entregando carro...");
 
       if (!gameState.currentJob || !gameState.currentCar) {
         console.log("❌ Sem serviço ativo");
         return;
       }
 
-      // Verificar se realmente completou
       if (!gameState.currentJob.checkCompletion(gameState.currentCar.parts)) {
         this.showNotification(
           "⚠️ Carro não atende aos requisitos do cliente!",
@@ -88,7 +87,7 @@ export class UIManager {
         return;
       }
 
-      // Calcular bônus por peças perfeitas
+      // Calcular bônus
       let perfectCount = 0;
       const totalParts = Object.keys(gameState.currentCar.parts).length;
 
@@ -116,67 +115,56 @@ export class UIManager {
       );
 
       if (allPerfect) {
-        this.showNotification(
-          "✨ SERVIÇO PERFEITO! Todas as peças em 100%!",
-          "success",
-        );
+        this.showNotification("✨ SERVIÇO PERFEITO!", "success");
         achievementSystem?.checkAchievements();
       }
 
-      // ========== LIMPEZA COMPLETA DA CENA 3D ==========
+      // ===== LIMPEZA COMPLETA =====
+
+      // 1. Limpar cena 3D e labels
       if (scene3D) {
+        scene3D.clearAllLabels(); // NOVO MÉTODO
         if (scene3D.currentCar) {
-          console.log("🗑️ Removendo carro da cena 3D");
           scene3D.scene.remove(scene3D.currentCar);
           scene3D.currentCar = null;
         }
-        scene3D.partLabels = [];
       }
 
-      // ========== LIMPEZA COMPLETA DO ESTADO ==========
+      // 2. Marcar job como concluído
       if (gameState.currentJob) {
         gameState.currentJob.status = "completed";
         db?.updateJob(gameState.currentJob);
       }
 
-      // Resetar TODAS as variáveis de estado
+      // 3. Resetar estado
       gameState.currentJob = null;
       gameState.currentCar = null;
       gameState.selectedPart = null;
 
-      // ========== LIMPEZA COMPLETA DA INTERFACE ==========
-
-      // 1. Limpar informações do job
+      // 4. Limpar interface
       const jobInfo = document.getElementById("job-info");
       if (jobInfo) {
         jobInfo.innerHTML =
           '<div style="color: #888; text-align: center; padding: 20px;">🚗 Nenhum serviço ativo</div>';
       }
 
-      // 2. Limpar lista de peças (IMPORTANTE!)
       const partsList = document.getElementById("parts-list");
       if (partsList) {
         partsList.innerHTML =
           '<div style="color: #888; text-align: center; padding: 20px;">🔧 Nenhum carro na oficina</div>';
       }
 
-      // 3. Desabilitar botão de entrega
-      const deliverBtn = document.getElementById("deliver-car");
-      if (deliverBtn) deliverBtn.disabled = true;
+      document.getElementById("deliver-car").disabled = true;
 
-      // 4. Resetar texto de interação
       const interactionInfo = document.getElementById("interaction-info");
       if (interactionInfo) {
         interactionInfo.textContent =
           '👆 Clique em "Novo Cliente" para começar um serviço';
       }
 
-      // 5. Forçar atualização da UI
-      this.forceUIRefresh();
+      console.log("✅ Serviço finalizado e interface limpa");
 
-      console.log("✅ Serviço finalizado e interface completamente limpa!");
-
-      // Salvar progresso
+      achievementSystem?.checkAchievements();
       db?.savePlayerData();
     });
 
@@ -499,15 +487,40 @@ export class UIManager {
     }
   }
 
+  // FUNÇÃO showNotification CORRIGIDA (notificações somem completamente)
   showNotification(message, type = "info") {
     const notification = document.getElementById("notification");
+
+    // Limpar qualquer timeout anterior
+    if (this.notificationTimeout) {
+      clearTimeout(this.notificationTimeout);
+    }
+
+    // Resetar a notificação
+    notification.classList.remove("show");
+    notification.style.transform = "translateX(400px)";
+
+    // Forçar reflow
+    void notification.offsetWidth;
+
+    // Configurar nova notificação
     notification.textContent = message;
-    notification.className = "show";
     notification.style.backgroundColor =
       type === "error" ? "#ff3333" : type === "success" ? "#00aa00" : "#ff6b00";
 
+    // Mostrar
     setTimeout(() => {
+      notification.classList.add("show");
+    }, 10);
+
+    // Esconder após 3 segundos
+    this.notificationTimeout = setTimeout(() => {
       notification.classList.remove("show");
+
+      // Limpar completamente após a animação
+      setTimeout(() => {
+        notification.style.transform = "translateX(400px)";
+      }, 300);
     }, 3000);
   }
 
