@@ -1,0 +1,206 @@
+// game.js
+import { TOOL_BASE_STATS, PART_TRANSLATIONS } from './constants.js';
+import { Database } from './database.js';
+import { UpgradeSystem } from './upgrade-system.js';
+import { AchievementSystem } from './achievement-system.js';
+import { Job } from './job.js';
+import { CustomerCar } from './car.js';
+import { Scene3D } from './scene3d.js';
+import { UIManager } from './ui.js';
+
+// Estado Global do Jogo
+class GameState {
+    constructor() {
+        this.money = 5000;
+        this.level = 1;
+        this.experience = 0;
+        this.experienceToNextLevel = 1000;
+        this.reputation = 3;
+        this.jobsCompleted = 0;
+        this.currentJob = null;
+        this.currentCar = null;
+        this.selectedTool = 'wrench';
+        this.selectedPart = null;
+    }
+
+    updateMoney(amount) {
+        this.money += amount;
+        document.getElementById('money').textContent = `R$ ${this.money.toLocaleString()}`;
+        achievementSystem.checkAchievements();
+    }
+
+    addExperience(amount) {
+        const bonusAmount = upgradeSystem.calculateExperience(amount);
+        this.experience += bonusAmount;
+        
+        while (this.experience >= this.experienceToNextLevel) {
+            this.levelUp();
+        }
+        
+        document.getElementById('level').textContent = this.level;
+    }
+
+    levelUp() {
+        this.level++;
+        this.experience -= this.experienceToNextLevel;
+        this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.5);
+        uiManager.showNotification(`🎉 Nível ${this.level} alcançado!`, 'success');
+    }
+
+    updateReputation(change) {
+        this.reputation = Math.max(1, Math.min(5, this.reputation + change));
+        const stars = '★'.repeat(this.reputation) + '☆'.repeat(5 - this.reputation);
+        document.getElementById('reputation').textContent = stars;
+    }
+
+    canAfford(amount) {
+        return this.money >= amount;
+    }
+}
+
+// Instâncias globais
+export const gameState = new GameState();
+export const upgradeSystem = new UpgradeSystem();
+export const achievementSystem = new AchievementSystem();
+export const db = new Database();
+export let scene3D;
+export let uiManager;
+
+// Inicialização
+window.addEventListener('load', async () => {
+    // Loading progress
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 10;
+        document.getElementById('loading-progress').textContent = progress + '%';
+        if (progress >= 100) clearInterval(progressInterval);
+    }, 200);
+
+    // Aguardar banco de dados
+    await db.init();
+    
+    setTimeout(() => {
+        document.getElementById('loading-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('loading-screen').style.display = 'none';
+        }, 500);
+    }, 2000);
+    
+    // Inicializar cena 3D
+    const container = document.getElementById('game-container');
+    scene3D = new Scene3D(container);
+    scene3D.animate();
+    
+    // Inicializar UI
+    uiManager = new UIManager();
+    
+    // Carregar dados salvos
+    db.loadPlayerData();
+    db.loadUpgrades();
+    db.loadAchievements();
+    
+    // Auto-save
+    setInterval(() => {
+        db.savePlayerData();
+        db.saveUpgrades();
+        db.saveAchievements();
+    }, 30000);
+});
+
+// Funções globais para acesso via onclick
+window.repairPart = (partName) => {
+    if (!gameState.currentCar || !gameState.currentJob) return;
+    
+    const part = gameState.currentCar.parts[partName];
+    const targetCondition = gameState.currentJob.targetConditions[partName];
+    const toolStats = upgradeSystem.getToolStats(gameState.selectedTool);
+    const repairEfficiency = upgradeSystem.calculateRepairEfficiency(toolStats.repair);
+    const repairCost = upgradeSystem.calculateRepairCost(toolStats.cost);
+    
+    if (gameState.selectedTool === 'diagnostic') {
+        uiManager.showNotification(`🔍 Diagnóstico: ${PART_TRANSLATIONS[partName].display} está em ${Math.min(100, Math.round(part.condition))}%, necessário ${Math.min(100, Math.round(targetCondition))}%`, 'info');
+        return;
+    }
+    
+    if (part.condition >= targetCondition || part.condition >= 100) {
+        uiManager.showNotification('✅ Peça já atende aos requisitos!', 'info');
+        return;
+    }
+    
+    if (gameState.money < repairCost) {
+        uiManager.showNotification('💰 Dinheiro insuficiente!', 'error');
+        return;
+    }
+    
+    const newCondition = Math.min(100, part.condition + repairEfficiency);
+    part.condition = newCondition;
+    
+    gameState.updateMoney(-repairCost);
+    gameState.addExperience(50);
+    
+    scene3D.updatePartLabels(gameState.currentCar, gameState.currentJob);
+    uiManager.updatePartsList();
+    uiManager.updateJobInfo();
+    uiManager.checkJobCompletion();
+    
+    db.savePlayerData();
+};
+
+window.buyNewPart = (partName) => {
+    if (!gameState.currentCar || !gameState.currentJob) return;
+    
+    const part = gameState.currentCar.parts[partName];
+    const targetCondition = gameState.currentJob.targetConditions[partName];
+    const partPrice = upgradeSystem.calculatePartPrice(part.price);
+    
+    if (part.condition >= targetCondition || part.condition >= 100) {
+        uiManager.showNotification('✅ Peça já está ok!', 'info');
+        return;
+    }
+    
+    if (gameState.money < partPrice) {
+        uiManager.showNotification('💰 Dinheiro insuficiente!', 'error');
+        return;
+    }
+    
+    part.condition = 100;
+    
+    gameState.updateMoney(-partPrice);
+    gameState.addExperience(100);
+    
+    scene3D.updatePartLabels(gameState.currentCar, gameState.currentJob);
+    uiManager.updatePartsList();
+    uiManager.updateJobInfo();
+    uiManager.checkJobCompletion();
+    
+    db.savePlayerData();
+};
+
+window.upgradeTool = (toolId) => {
+    if (upgradeSystem.upgradeTool(toolId)) {
+        uiManager.updateToolDisplay();
+        uiManager.updateUpgradeShop();
+        uiManager.showNotification(`🔧 ${TOOL_BASE_STATS[toolId].name} upgraded!`, 'success');
+        db.saveUpgrades();
+    }
+};
+
+window.upgradeWorkshop = (upgradeId) => {
+    if (upgradeSystem.upgradeWorkshop(upgradeId)) {
+        uiManager.updateUpgradeShop();
+        uiManager.showNotification('🏢 Upgrade da oficina concluído!', 'success');
+        db.saveUpgrades();
+    }
+};
+
+window.upgradeSkill = (skillId) => {
+    if (upgradeSystem.upgradeSkill(skillId)) {
+        uiManager.updateUpgradeShop();
+        uiManager.showNotification('👤 Habilidade melhorada!', 'success');
+        db.saveUpgrades();
+    }
+};
+
+window.closeUpgradeShop = () => {
+    uiManager.closeUpgradeShop();
+};
