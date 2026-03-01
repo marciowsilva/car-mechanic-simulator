@@ -319,25 +319,33 @@ export class Scene3D {
 
   // Efeito de partículas para reparo
   createRepairEffect(position) {
-    const particleCount = 20;
+    if (!position) return;
+
+    const particleCount = 15;
     const particles = [];
+    const colors = [0xffaa00, 0xff6b00, 0xff4400];
 
     for (let i = 0; i < particleCount; i++) {
-      const geometry = new THREE.SphereGeometry(0.05, 4);
+      const geometry = new THREE.SphereGeometry(0.03 + Math.random() * 0.04, 4);
       const material = new THREE.MeshStandardMaterial({
-        color: 0xffaa00,
-        emissive: 0x442200,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        emissive: 0x331100,
       });
       const particle = new THREE.Mesh(geometry, material);
 
+      // Posição inicial com pequeno desvio
       particle.position.copy(position);
+      particle.position.x += (Math.random() - 0.5) * 0.3;
+      particle.position.y += (Math.random() - 0.5) * 0.3;
+      particle.position.z += (Math.random() - 0.5) * 0.3;
+
       particle.userData = {
         velocity: new THREE.Vector3(
-          (Math.random() - 0.5) * 0.1,
+          (Math.random() - 0.5) * 0.08,
           Math.random() * 0.1,
-          (Math.random() - 0.5) * 0.1,
+          (Math.random() - 0.5) * 0.08,
         ),
-        life: 1.0,
+        life: 0.8 + Math.random() * 0.4,
       };
 
       this.scene.add(particle);
@@ -347,17 +355,36 @@ export class Scene3D {
     // Animar partículas
     const animateParticles = () => {
       let alive = false;
+
       particles.forEach((particle) => {
-        particle.userData.life -= 0.02;
+        particle.userData.life -= 0.015;
+
         if (particle.userData.life > 0) {
           alive = true;
+
+          // Mover partícula
           particle.position.x += particle.userData.velocity.x;
           particle.position.y += particle.userData.velocity.y;
           particle.position.z += particle.userData.velocity.z;
-          particle.material.opacity = particle.userData.life;
-          particle.material.transparent = true;
+
+          // Desacelerar
+          particle.userData.velocity.x *= 0.98;
+          particle.userData.velocity.y *= 0.98;
+          particle.userData.velocity.z *= 0.98;
+
+          // Reduzir tamanho
+          particle.scale.setScalar(particle.userData.life);
+
+          // Reduzir opacidade
+          if (particle.material) {
+            particle.material.opacity = particle.userData.life;
+            particle.material.transparent = true;
+          }
         } else {
-          this.scene.remove(particle);
+          // Remover partícula morta
+          if (particle.parent) {
+            this.scene.remove(particle);
+          }
         }
       });
 
