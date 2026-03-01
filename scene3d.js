@@ -6,7 +6,7 @@ import {
   CSS2DRenderer,
   CSS2DObject,
 } from "https://unpkg.com/three@0.128.0/examples/jsm/renderers/CSS2DRenderer.js";
-import { PART_TRANSLATIONS, PART_POSITIONS } from "./constants.js";
+import { PART_TRANSLATIONS, PART_POSITIONS, CAR_COLORS } from "./constants.js";
 import { gameState } from "./game.js";
 
 export class Scene3D {
@@ -52,6 +52,7 @@ export class Scene3D {
 
     this.currentCar = null;
     this.partLabels = [];
+    this.highlightRing = null;
 
     console.log("✅ Scene3D inicializada");
   }
@@ -131,10 +132,11 @@ export class Scene3D {
   }
 
   createCar(carData, job) {
-    console.log("🚗 Criando carro...");
+    console.log("🚗 Criando carro:", job?.carModel);
 
-    // LIMPAR COMPLETAMENTE antes de criar novo
+    // Limpar completamente antes de criar novo
     this.clearAllLabels();
+    this.clearHighlight();
 
     if (this.currentCar) {
       this.scene.remove(this.currentCar);
@@ -145,18 +147,28 @@ export class Scene3D {
 
     // Escolher cor aleatória baseada no tipo de carro
     let carColor = 0x3366cc; // Azul padrão
-    if (job.carData && job.carData.type) {
-      // Cores baseadas no tipo
-      const typeColors = {
-        sports: 0xff3333, // Vermelho para esportivos
-        luxury: 0x000000, // Preto para luxo
-        suv: 0x666666, // Prata para SUVs
-        pickup: 0x996633, // Marrom para pickups
-        compact: 0x33cc33, // Verde para compactos
-      };
-      carColor =
-        typeColors[job.carData.type] ||
-        CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
+
+    // Verificar se CAR_COLORS está definido
+    if (typeof CAR_COLORS !== "undefined" && CAR_COLORS.length > 0) {
+      if (job?.carData?.type) {
+        // Cores baseadas no tipo
+        const typeColors = {
+          sports: 0xff3333, // Vermelho para esportivos
+          luxury: 0x000000, // Preto para luxo
+          suv: 0x666666, // Prata para SUVs
+          pickup: 0x996633, // Marrom para pickups
+          compact: 0x33cc33, // Verde para compactos
+          sedan: 0x3366cc, // Azul para sedans
+        };
+        carColor =
+          typeColors[job.carData.type] ||
+          CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
+      } else {
+        carColor = CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)];
+      }
+    } else {
+      console.warn("⚠️ CAR_COLORS não definido, usando cor padrão");
+      carColor = 0x3366cc;
     }
 
     const bodyMaterial = new THREE.MeshStandardMaterial({
@@ -165,6 +177,7 @@ export class Scene3D {
       metalness: 0.7,
     });
 
+    // Corpo principal
     const mainBody = new THREE.Mesh(
       new THREE.BoxGeometry(2.5, 0.8, 5),
       bodyMaterial,
@@ -174,6 +187,7 @@ export class Scene3D {
     mainBody.receiveShadow = true;
     carGroup.add(mainBody);
 
+    // Cabine
     const cabin = new THREE.Mesh(
       new THREE.BoxGeometry(1.8, 0.6, 1.5),
       new THREE.MeshStandardMaterial({ color: 0x444444 }),
@@ -182,6 +196,26 @@ export class Scene3D {
     cabin.castShadow = true;
     cabin.receiveShadow = true;
     carGroup.add(cabin);
+
+    // Capô
+    const hood = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.3, 1.8),
+      bodyMaterial,
+    );
+    hood.position.set(0, 1.1, 1.2);
+    hood.castShadow = true;
+    hood.receiveShadow = true;
+    carGroup.add(hood);
+
+    // Porta-malas
+    const trunk = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.4, 1.2),
+      bodyMaterial,
+    );
+    trunk.position.set(0, 1.0, -1.7);
+    trunk.castShadow = true;
+    trunk.receiveShadow = true;
+    carGroup.add(trunk);
 
     this.addWheels(carGroup);
     this.addLights(carGroup);
@@ -192,7 +226,7 @@ export class Scene3D {
 
     this.updatePartLabels(carData, job);
 
-    console.log("✅ Carro criado");
+    console.log("✅ Carro criado com cor:", carColor.toString(16));
     return carGroup;
   }
 
