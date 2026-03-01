@@ -54,6 +54,14 @@ export class Scene3D {
     this.partLabels = [];
     this.highlightRing = null;
 
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+
+    // Adicionar event listener para clique
+    this.renderer.domElement.addEventListener("click", (event) =>
+      this.onMouseClick(event),
+    );
+
     console.log("✅ Scene3D inicializada");
   }
 
@@ -274,7 +282,7 @@ export class Scene3D {
 
   // Limpar todos os labels
   clearAllLabels() {
-    // Limpar labels
+    // Limpar labels 2D
     if (this.partLabels.length > 0) {
       this.partLabels.forEach((label) => {
         if (label.parent) {
@@ -282,6 +290,16 @@ export class Scene3D {
         }
       });
       this.partLabels = [];
+    }
+
+    // Limpar objetos 3D
+    if (this.partObjects) {
+      this.partObjects.forEach((obj) => {
+        if (obj.parent) {
+          obj.parent.remove(obj);
+        }
+      });
+      this.partObjects = [];
     }
 
     // Limpar highlight
@@ -299,6 +317,9 @@ export class Scene3D {
       return;
     }
 
+    // Array para guardar os objetos 3D das peças (para poder destacar)
+    this.partObjects = [];
+
     Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
       if (carData.parts[partName]) {
         const condition = Math.min(
@@ -311,6 +332,7 @@ export class Scene3D {
         );
         const displayName = PART_TRANSLATIONS[partName].display;
 
+        // CRIAR LABEL 2D
         const labelDiv = document.createElement("div");
         labelDiv.className = "part-label";
         if (gameState?.selectedPart === partName) {
@@ -321,18 +343,17 @@ export class Scene3D {
         let displayText = "";
         if (condition === 100) {
           displayText = `${displayName}: 100% ✨`;
-          labelDiv.style.backgroundColor = "#4CAF50"; // Verde
+          labelDiv.style.backgroundColor = "#4CAF50";
           labelDiv.style.border = "3px solid gold";
         } else {
           displayText = `${displayName}: ${condition}% / ${targetCondition}%`;
 
-          // CORREÇÃO: Lógica de cores corrigida
           if (condition >= targetCondition) {
-            labelDiv.style.backgroundColor = "#00aa00"; // Verde - meta atingida
+            labelDiv.style.backgroundColor = "#00aa00";
           } else if (condition >= targetCondition * 0.7) {
-            labelDiv.style.backgroundColor = "#ffaa00"; // Amarelo - próximo
+            labelDiv.style.backgroundColor = "#ffaa00";
           } else {
-            labelDiv.style.backgroundColor = "#ff0000"; // Vermelho - longe
+            labelDiv.style.backgroundColor = "#ff0000";
           }
         }
 
@@ -348,6 +369,25 @@ export class Scene3D {
           label.position.set(pos[0], pos[1] + 0.5, pos[2]);
           this.currentCar.add(label);
           this.partLabels.push(label);
+
+          // ===== CRIAR OBJETO 3D DA PEÇA (para destacar) =====
+          // Adicionar um pequeno cubo invisível para detecção de clique e highlight
+          const partGeometry = new THREE.SphereGeometry(0.2, 8);
+          const partMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffaa00,
+            transparent: true,
+            opacity: 0.0, // Invisível por padrão
+            emissive: 0x442200,
+          });
+          const partObject = new THREE.Mesh(partGeometry, partMaterial);
+          partObject.position.set(pos[0], pos[1] + 0.5, pos[2]);
+          partObject.userData = { partName, isHighlight: false };
+
+          this.currentCar.add(partObject);
+
+          // Guardar referência
+          if (!this.partObjects) this.partObjects = [];
+          this.partObjects.push(partObject);
         } catch (error) {
           console.error(`❌ Erro ao criar label para ${partName}:`, error);
         }
@@ -500,9 +540,19 @@ export class Scene3D {
 
   // método para limpar o highlight quando necessário
   clearHighlight() {
+    // Limpar anel
     if (this.highlightRing && this.currentCar) {
       this.currentCar.remove(this.highlightRing);
       this.highlightRing = null;
+    }
+
+    // Resetar objetos 3D
+    if (this.partObjects) {
+      this.partObjects.forEach((obj) => {
+        obj.material.opacity = 0.0;
+        obj.scale.set(1, 1, 1);
+        obj.material.emissive.setHex(0x442200);
+      });
     }
   }
 
@@ -510,9 +560,10 @@ export class Scene3D {
   selectPart(partName) {
     if (!gameState) return;
 
+    console.log("🎯 Selecionando peça:", partName);
     gameState.selectedPart = partName;
 
-    // Atualizar labels
+    // Atualizar labels 2D
     this.partLabels.forEach((label) => {
       if (label.element) {
         label.element.classList.remove("selected");
@@ -526,14 +577,157 @@ export class Scene3D {
       }
     });
 
-    // Remover highlight anterior
-    if (this.highlightRing && this.currentCar) {
-      this.currentCar.remove(this.highlightRing);
-      this.highlightRing = null;
+    // ===== DESTACAR PEÇA SELECIONADA =====
+    // Resetar todos os objetos de peça
+    if (this.partObjects) {
+      this.partObjects.forEach((obj) => {
+        obj.material.opacity = 0.0;
+        obj.scale.set(1, 1, 1);
+        obj.userData.isHighlight = false;
+      });
+
+      // Encontrar e destacar a peça selecionada
+      const selectedObj = this.partObjects.find(
+        (obj) => obj.userData.partName === partName,
+      );
+      if (selectedObj) {
+        selectedObj.material.opacity = 0.3; // Fica semi-visível
+        selectedObj.scale.set(1.5, 1.5, 1.5); // Aumenta de tamanho
+        selectedObj.userData.isHighlight = true;
+
+        // Adicionar animação de brilho
+        this.highlightPart3D(selectedObj);
+      }
     }
 
-    // Adicionar novo highlight
+    // Remover highlight anterior
+    this.clearHighlight();
+
+    // Adicionar novo highlight (anel)
     this.highlightPart(partName);
+  }
+
+  // Highlight 3D da peça
+  highlightPart3D(partObject) {
+    if (!partObject) return;
+
+    let time = 0;
+    const animate = () => {
+      if (
+        !partObject ||
+        !partObject.parent ||
+        !gameState?.selectedPart === partObject.userData.partName
+      ) {
+        return;
+      }
+
+      time += 0.05;
+
+      // Efeito de pulsação
+      const pulse = 1.5 + Math.sin(time) * 0.2;
+      partObject.scale.set(pulse, pulse, pulse);
+
+      // Efeito de brilho
+      partObject.material.emissive.setHSL(0.1 + Math.sin(time) * 0.05, 1, 0.3);
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
+  }
+
+  // Detectar clique no modelo 3D
+  onMouseClick(event) {
+    // Calcular posição do mouse em coordenadas normalizadas (-1 a 1)
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    if (!this.currentCar) return;
+
+    // Atualizar o raycaster
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+
+    // Verificar interseções com o carro
+    const intersects = this.raycaster.intersectObject(this.currentCar, true);
+
+    if (intersects.length > 0) {
+      // Encontrar qual parte foi clicada baseado na posição
+      const clickPoint = intersects[0].point;
+
+      // Calcular distância para cada posição de peça
+      let closestPart = null;
+      let minDistance = 0.8; // Distância máxima para considerar
+
+      Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
+        // Posição global da peça
+        const partPos = new THREE.Vector3(pos[0], pos[1] + 0.5, pos[2]);
+
+        // Distância do clique até a peça
+        const distance = clickPoint.distanceTo(partPos);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPart = partName;
+        }
+      });
+
+      if (closestPart) {
+        console.log("👆 Peça selecionada pelo clique:", closestPart);
+        this.selectPart(closestPart);
+
+        // Feedback visual - efeito de partícula no local do clique
+        this.createClickEffect(clickPoint);
+      }
+    }
+  }
+
+  // Efeito visual de clique
+  createClickEffect(position) {
+    const particleCount = 5;
+
+    for (let i = 0; i < particleCount; i++) {
+      const geometry = new THREE.SphereGeometry(0.02, 4);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffff00,
+        emissive: 0x442200,
+      });
+      const particle = new THREE.Mesh(geometry, material);
+
+      particle.position.copy(position);
+      particle.position.x += (Math.random() - 0.5) * 0.2;
+      particle.position.y += (Math.random() - 0.5) * 0.2;
+      particle.position.z += (Math.random() - 0.5) * 0.2;
+
+      particle.userData = {
+        velocity: new THREE.Vector3(
+          (Math.random() - 0.5) * 0.05,
+          Math.random() * 0.05,
+          (Math.random() - 0.5) * 0.05,
+        ),
+        life: 0.5,
+      };
+
+      this.scene.add(particle);
+
+      // Animação simples
+      const animate = () => {
+        particle.userData.life -= 0.02;
+
+        if (particle.userData.life > 0) {
+          particle.position.x += particle.userData.velocity.x;
+          particle.position.y += particle.userData.velocity.y;
+          particle.position.z += particle.userData.velocity.z;
+          particle.scale.setScalar(particle.userData.life);
+
+          requestAnimationFrame(animate);
+        } else {
+          this.scene.remove(particle);
+        }
+      };
+
+      animate();
+    }
   }
 
   animate() {
