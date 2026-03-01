@@ -214,9 +214,6 @@ window.closeUpgradeShop = () => {
   uiManager.closeUpgradeShop();
 };
 
-// Exportar as instâncias
-export { gameState, upgradeSystem, achievementSystem, db, scene3D, uiManager };
-
 // Expor globalmente para acesso via onclick e database.js
 window.gameState = gameState;
 window.upgradeSystem = upgradeSystem;
@@ -225,10 +222,12 @@ window.db = db;
 window.scene3D = scene3D;
 window.uiManager = uiManager;
 
-// Forçar inicialização após definir globais
-console.log("Game initialized with globals:", {
-  gameState,
-  upgradeSystem,
-  achievementSystem,
-  db,
+// Aguardar UI ser inicializada antes de usar
+window.addEventListener("load", () => {
+  console.log("Game initialized with globals:", {
+    gameState,
+    upgradeSystem,
+    achievementSystem,
+    db,
+  });
 });
