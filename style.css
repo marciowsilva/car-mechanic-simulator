@@ -1,719 +1,734 @@
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Arial', sans-serif;
-    overflow: hidden;
-    background: #1a1a1a;
+  font-family: "Arial", sans-serif;
+  overflow: hidden;
+  background: #1a1a1a;
 }
 
 #game-container {
-    position: relative;
-    width: 100vw;
-    height: 100vh;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
 }
 
 #ui-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 10;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
 }
 
 #top-panel {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(30, 30, 30, 0.95);
-    color: white;
-    padding: 15px 30px;
-    border-radius: 50px;
-    display: flex;
-    gap: 40px;
-    border: 2px solid #ff6b00;
-    box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
-    pointer-events: auto;
-    z-index: 20;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 30, 30, 0.95);
+  color: white;
+  padding: 15px 30px;
+  border-radius: 50px;
+  display: flex;
+  gap: 40px;
+  border: 2px solid #ff6b00;
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+  pointer-events: auto;
+  z-index: 20;
 }
 
 .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .stat-label {
-    font-size: 12px;
-    color: #888;
-    text-transform: uppercase;
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
 }
 
 .stat-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #ff6b00;
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff6b00;
 }
 
 #tool-panel {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(30, 30, 30, 0.95);
-    padding: 20px;
-    border-radius: 15px;
-    border: 2px solid #ff6b00;
-    pointer-events: auto;
-    width: 240px;
-    z-index: 20;
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(30, 30, 30, 0.95);
+  padding: 20px;
+  border-radius: 15px;
+  border: 2px solid #ff6b00;
+  pointer-events: auto;
+  width: 240px;
+  z-index: 20;
 }
 
 #tool-panel h3 {
-    color: white;
-    text-align: center;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #ff6b00;
-    padding-bottom: 5px;
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #ff6b00;
+  padding-bottom: 5px;
 }
 
 .tool-item {
-    background: #3a3a3a;
-    color: white;
-    padding: 12px;
-    margin: 8px 0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    border: 1px solid transparent;
+  background: #3a3a3a;
+  color: white;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid transparent;
 }
 
 .tool-item:hover {
-    background: #ff6b00;
-    transform: translateX(5px);
+  background: #ff6b00;
+  transform: translateX(5px);
 }
 
 .tool-item.selected {
-    background: #ff6b00;
-    border: 2px solid white;
+  background: #ff6b00;
+  border: 2px solid white;
 }
 
 .tool-icon {
-    font-size: 24px;
+  font-size: 24px;
 }
 
 .tool-info {
-    flex: 1;
+  flex: 1;
 }
 
 .tool-name {
-    font-weight: bold;
-    font-size: 14px;
+  font-weight: bold;
+  font-size: 14px;
 }
 
 .tool-stats {
-    font-size: 11px;
-    color: #ffd700;
+  font-size: 11px;
+  color: #ffd700;
 }
 
 #car-parts-panel {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(30, 30, 30, 0.95);
-    padding: 20px;
-    border-radius: 15px;
-    border: 2px solid #ff6b00;
-    pointer-events: auto;
-    width: 350px;
-    max-height: 600px;
-    overflow-y: auto;
-    z-index: 20;
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(30, 30, 30, 0.95);
+  padding: 20px;
+  border-radius: 15px;
+  border: 2px solid #ff6b00;
+  pointer-events: auto;
+  width: 350px;
+  max-height: 600px;
+  overflow-y: auto;
+  z-index: 20;
 }
 
 #car-parts-panel h3 {
-    color: white;
-    text-align: center;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #ff6b00;
-    padding-bottom: 5px;
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #ff6b00;
+  padding-bottom: 5px;
 }
 
 .job-info {
-    background: #2a2a2a;
-    color: white;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 10px;
-    border-left: 4px solid #ff6b00;
+  background: #2a2a2a;
+  color: white;
+  padding: 15px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  border-left: 4px solid #ff6b00;
 }
 
 .job-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 .job-customer {
-    font-size: 18px;
-    font-weight: bold;
-    color: #ff6b00;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff6b00;
 }
 
 .job-difficulty {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .difficulty-easy {
-    background: #4CAF50;
-    color: white;
+  background: #4caf50;
+  color: white;
 }
 
 .difficulty-medium {
-    background: #ffaa00;
-    color: black;
+  background: #ffaa00;
+  color: black;
 }
 
 .difficulty-hard {
-    background: #ff0000;
-    color: white;
+  background: #ff0000;
+  color: white;
 }
 
 .job-info-item {
-    display: flex;
-    justify-content: space-between;
-    margin: 8px 0;
-    font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0;
+  font-size: 14px;
 }
 
 .job-info-label {
-    color: #888;
+  color: #888;
 }
 
 .job-info-value {
-    color: #ff6b00;
-    font-weight: bold;
+  color: #ff6b00;
+  font-weight: bold;
 }
 
 .job-payment {
-    font-size: 18px;
-    text-align: center;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid #444;
-    color: #4CAF50;
-    font-weight: bold;
+  font-size: 18px;
+  text-align: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #444;
+  color: #4caf50;
+  font-weight: bold;
 }
 
 .job-timer {
-    text-align: center;
-    margin-top: 10px;
-    padding: 8px;
-    background: #333;
-    border-radius: 20px;
-    font-size: 16px;
-    font-weight: bold;
+  text-align: center;
+  margin-top: 10px;
+  padding: 8px;
+  background: #333;
+  border-radius: 20px;
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .timer-urgent {
-    color: #ff0000;
-    animation: pulse 1s infinite;
+  color: #ff0000;
+  animation: pulse 1s infinite;
 }
 
 @keyframes pulse {
-    0% { opacity: 1; }
-    50% { opacity: 0.5; }
-    100% { opacity: 1; }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 .part-item {
-    background: #3a3a3a;
-    color: white;
-    padding: 12px;
-    margin: 8px 0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    border: 2px solid transparent;
+  background: #3a3a3a;
+  color: white;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid transparent;
 }
 
 .part-item:hover {
-    background: #4a4a4a;
+  background: #4a4a4a;
 }
 
 .part-item.selected {
-    border: 2px solid #ff6b00;
-    background: #4a4a4a;
+  border: 2px solid #ff6b00;
+  background: #4a4a4a;
+}
+
+/* Se quiser que a barra também mude de cor quando a peça atinge a meta */
+.part-item.completed .progress-bar {
+  background: #00aa00; /* VERDE quando completo */
 }
 
 .part-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 .part-name {
-    font-weight: bold;
-    font-size: 16px;
-    color: #ff6b00;
+  font-weight: bold;
+  font-size: 16px;
+  color: #ff6b00;
 }
 
 .part-condition-badge {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: bold;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .condition-good {
-    background: #00aa00;
-    color: white;
+  background: #00aa00;
+  color: white;
 }
 
 .condition-medium {
-    background: #ffaa00;
-    color: black;
+  background: #ffaa00;
+  color: black;
 }
 
 .condition-bad {
-    background: #ff0000;
-    color: white;
+  background: #ff0000;
+  color: white;
 }
 
 .part-details {
-    font-size: 13px;
-    margin: 8px 0;
-    color: #ccc;
+  font-size: 13px;
+  margin: 8px 0;
+  color: #ccc;
 }
 
 .part-progress {
-    margin-top: 8px;
-    height: 4px;
-    background: #555;
-    border-radius: 2px;
-    overflow: hidden;
-    position: relative;
+  margin-top: 8px;
+  height: 4px;
+  background: #555;
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
 }
 
 .progress-bar {
-    height: 100%;
-    background: #ff6b00;
-    transition: width 0.3s;
+  height: 100%;
+  background: #ff6b00;
+  transition: width 0.3s;
 }
 
 .target-marker {
-    position: absolute;
-    top: -2px;
-    width: 2px;
-    height: 8px;
-    background: #2196F3;
-    transform: translateX(-50%);
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 8px;
+  background: #2196f3;
+  transform: translateX(-50%);
 }
 
 .part-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .part-action-btn {
-    flex: 1;
-    padding: 8px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 12px;
-    transition: all 0.3s;
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 12px;
+  transition: all 0.3s;
 }
 
 .repair-btn {
-    background: #ff6b00;
-    color: white;
+  background: #ff6b00;
+  color: white;
 }
 
 .repair-btn:hover:not(:disabled) {
-    background: #ff8c00;
-    transform: scale(1.02);
+  background: #ff8c00;
+  transform: scale(1.02);
 }
 
 .repair-btn:disabled {
-    background: #666;
-    cursor: not-allowed;
+  background: #666;
+  cursor: not-allowed;
 }
 
 .buy-btn {
-    background: #4CAF50;
-    color: white;
+  background: #4caf50;
+  color: white;
 }
 
 .buy-btn:hover:not(:disabled) {
-    background: #45a049;
-    transform: scale(1.02);
+  background: #45a049;
+  transform: scale(1.02);
 }
 
 .buy-btn:disabled {
-    background: #666;
-    cursor: not-allowed;
+  background: #666;
+  cursor: not-allowed;
 }
 
 #bottom-panel {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(30, 30, 30, 0.95);
-    padding: 15px 30px;
-    border-radius: 50px;
-    display: flex;
-    gap: 20px;
-    border: 2px solid #ff6b00;
-    pointer-events: auto;
-    z-index: 20;
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 30, 30, 0.95);
+  padding: 15px 30px;
+  border-radius: 50px;
+  display: flex;
+  gap: 20px;
+  border: 2px solid #ff6b00;
+  pointer-events: auto;
+  z-index: 20;
 }
 
 .action-btn {
-    background: #ff6b00;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 25px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s;
-    font-size: 14px;
-    min-width: 140px;
+  background: #ff6b00;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  font-size: 14px;
+  min-width: 140px;
 }
 
 .action-btn:hover:not(:disabled) {
-    background: #ff8c00;
-    transform: scale(1.05);
+  background: #ff8c00;
+  transform: scale(1.05);
 }
 
 .action-btn:disabled {
-    background: #666;
-    cursor: not-allowed;
-    transform: none;
+  background: #666;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .action-btn.secondary {
-    background: #2196F3;
+  background: #2196f3;
 }
 
 .action-btn.secondary:hover:not(:disabled) {
-    background: #1976D2;
+  background: #1976d2;
 }
 
 .action-btn.success {
-    background: #4CAF50;
+  background: #4caf50;
 }
 
 .action-btn.success:hover:not(:disabled) {
-    background: #45a049;
+  background: #45a049;
 }
 
 #interaction-info {
-    position: absolute;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 25px;
-    border: 2px solid #ff6b00;
-    font-size: 14px;
-    pointer-events: none;
-    z-index: 20;
-    box-shadow: 0 0 15px rgba(255, 107, 0, 0.3);
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  border: 2px solid #ff6b00;
+  font-size: 14px;
+  pointer-events: none;
+  z-index: 20;
+  box-shadow: 0 0 15px rgba(255, 107, 0, 0.3);
 }
 
 #loading-screen {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #1a1a1a;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    transition: opacity 0.5s;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #1a1a1a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  transition: opacity 0.5s;
 }
 
 .loader {
-    text-align: center;
-    color: white;
+  text-align: center;
+  color: white;
 }
 
 .loader h1 {
-    color: #ff6b00;
-    margin-bottom: 20px;
-    font-size: 36px;
-    text-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+  color: #ff6b00;
+  margin-bottom: 20px;
+  font-size: 36px;
+  text-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
 }
 
 .spinner {
-    width: 60px;
-    height: 60px;
-    border: 6px solid #333;
-    border-top: 6px solid #ff6b00;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 20px auto;
+  width: 60px;
+  height: 60px;
+  border: 6px solid #333;
+  border-top: 6px solid #ff6b00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-progress {
-    margin-top: 20px;
-    color: #ff6b00;
-    font-size: 18px;
+  margin-top: 20px;
+  color: #ff6b00;
+  font-size: 18px;
 }
 
 ::-webkit-scrollbar {
-    width: 8px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #3a3a3a;
-    border-radius: 4px;
+  background: #3a3a3a;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #ff6b00;
-    border-radius: 4px;
+  background: #ff6b00;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #ff8c00;
+  background: #ff8c00;
 }
 
 #notification {
-    position: absolute;
-    top: 100px;
-    right: 20px;
-    background: rgba(255, 107, 0, 0.95);
-    color: white;
-    padding: 15px 25px;
-    border-radius: 10px;
-    transform: translateX(400px);
-    transition: transform 0.3s;
-    pointer-events: none;
-    z-index: 100;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    border-left: 4px solid white;
+  position: absolute;
+  top: 100px;
+  right: 20px;
+  background: rgba(255, 107, 0, 0.95);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 10px;
+  transform: translateX(400px);
+  transition: transform 0.3s;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border-left: 4px solid white;
 }
 
 #notification.show {
-    transform: translateX(0);
+  transform: translateX(0);
 }
 
 .part-label {
-    background: rgba(0,0,0,0.8);
-    color: white;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
-    border: 2px solid #ff6b00;
-    cursor: pointer;
-    transition: all 0.3s;
-    white-space: nowrap;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: bold;
+  border: 2px solid #ff6b00;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
 }
 
 .part-label:hover {
-    transform: scale(1.1);
-    background: #ff6b00;
+  transform: scale(1.1);
+  background: #ff6b00;
 }
 
 .part-label.selected {
-    background: #ff6b00;
-    border-color: white;
+  background: #ff6b00;
+  border-color: white;
 }
 
 .part-label.perfect {
-    border: 3px solid gold;
-    box-shadow: 0 0 15px gold;
+  border: 3px solid gold;
+  box-shadow: 0 0 15px gold;
 }
 
 #upgrade-shop {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(30, 30, 30, 0.98);
-    color: white;
-    padding: 30px;
-    border-radius: 20px;
-    border: 3px solid #ff6b00;
-    pointer-events: auto;
-    z-index: 30;
-    width: 500px;
-    max-height: 80vh;
-    overflow-y: auto;
-    display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30, 30, 30, 0.98);
+  color: white;
+  padding: 30px;
+  border-radius: 20px;
+  border: 3px solid #ff6b00;
+  pointer-events: auto;
+  z-index: 30;
+  width: 500px;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: none;
 }
 
 #upgrade-shop.show {
-    display: block;
+  display: block;
 }
 
 .shop-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ff6b00;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ff6b00;
 }
 
 .shop-title {
-    font-size: 24px;
-    color: #ff6b00;
-    font-weight: bold;
+  font-size: 24px;
+  color: #ff6b00;
+  font-weight: bold;
 }
 
 .shop-close {
-    font-size: 30px;
-    cursor: pointer;
-    color: #888;
-    transition: color 0.3s;
+  font-size: 30px;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.3s;
 }
 
 .shop-close:hover {
-    color: #ff6b00;
+  color: #ff6b00;
 }
 
 .upgrade-category {
-    margin-bottom: 25px;
+  margin-bottom: 25px;
 }
 
 .category-title {
-    font-size: 18px;
-    color: #ff6b00;
-    margin-bottom: 10px;
-    padding-left: 10px;
+  font-size: 18px;
+  color: #ff6b00;
+  margin-bottom: 10px;
+  padding-left: 10px;
 }
 
 .upgrade-item {
-    background: #3a3a3a;
-    padding: 15px;
-    margin: 10px 0;
-    border-radius: 10px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.3s;
+  background: #3a3a3a;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.3s;
 }
 
 .upgrade-item:hover {
-    background: #4a4a4a;
-    transform: translateX(5px);
+  background: #4a4a4a;
+  transform: translateX(5px);
 }
 
 .upgrade-info {
-    flex: 1;
+  flex: 1;
 }
 
 .upgrade-name {
-    font-weight: bold;
-    font-size: 16px;
-    color: #ff6b00;
+  font-weight: bold;
+  font-size: 16px;
+  color: #ff6b00;
 }
 
 .upgrade-desc {
-    font-size: 12px;
-    color: #888;
-    margin-top: 4px;
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
 }
 
 .upgrade-level {
-    font-size: 12px;
-    color: #4CAF50;
-    margin-top: 4px;
+  font-size: 12px;
+  color: #4caf50;
+  margin-top: 4px;
 }
 
 .upgrade-price {
-    font-size: 16px;
-    color: #ffd700;
-    font-weight: bold;
-    margin: 0 15px;
+  font-size: 16px;
+  color: #ffd700;
+  font-weight: bold;
+  margin: 0 15px;
 }
 
 .upgrade-buy {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s;
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
 }
 
 .upgrade-buy:hover:not(:disabled) {
-    background: #45a049;
-    transform: scale(1.05);
+  background: #45a049;
+  transform: scale(1.05);
 }
 
 .upgrade-buy:disabled {
-    background: #666;
-    cursor: not-allowed;
+  background: #666;
+  cursor: not-allowed;
 }
 
 #achievement-popup {
-    position: absolute;
-    top: 150px;
-    right: 20px;
-    background: linear-gradient(135deg, #ff6b00, #ff8c00);
-    color: white;
-    padding: 15px 25px;
-    border-radius: 10px;
-    transform: translateX(400px);
-    transition: transform 0.3s;
-    pointer-events: none;
-    z-index: 100;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    border-left: 4px solid gold;
-    min-width: 250px;
+  position: absolute;
+  top: 150px;
+  right: 20px;
+  background: linear-gradient(135deg, #ff6b00, #ff8c00);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 10px;
+  transform: translateX(400px);
+  transition: transform 0.3s;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  border-left: 4px solid gold;
+  min-width: 250px;
 }
 
 #achievement-popup.show {
-    transform: translateX(0);
+  transform: translateX(0);
 }
 
 .achievement-icon {
-    font-size: 24px;
-    margin-right: 10px;
+  font-size: 24px;
+  margin-right: 10px;
 }
 
 .achievement-title {
-    font-weight: bold;
-    font-size: 16px;
+  font-weight: bold;
+  font-size: 16px;
 }
 
 .achievement-desc {
-    font-size: 12px;
-    opacity: 0.9;
+  font-size: 12px;
+  opacity: 0.9;
 }

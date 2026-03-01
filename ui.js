@@ -245,53 +245,53 @@ export class UIManager {
 
   // ui.js - updatePartsList COMPLETA CORRIGIDA
 
+  // ui.js - updatePartsList com BARRA COLORIDA
+
   updatePartsList() {
     const partsList = document.getElementById("parts-list");
 
-    // SE NÃO HOUVER CARRO OU JOB, MOSTRAR MENSAGEM VAZIA
     if (!gameState.currentCar || !gameState.currentJob) {
       partsList.innerHTML =
         '<div style="color: #888; text-align: center; padding: 20px;">🔧 Nenhum carro na oficina</div>';
       return;
     }
 
-    partsList.innerHTML = ""; // Limpar lista atual
+    partsList.innerHTML = "";
 
     Object.entries(gameState.currentCar.parts).forEach(
       ([partName, partData]) => {
         const displayName = PART_TRANSLATIONS[partName].display;
         const icon = PART_TRANSLATIONS[partName].icon;
 
-        // GARANTIR QUE PORCENTAGEM NUNCA PASSA DE 100%
         const condition = Math.min(100, Math.round(partData.condition));
         const targetCondition = Math.min(
           100,
           Math.round(gameState.currentJob.targetConditions[partName]),
         );
 
-        // Determinar a classe de cor baseada no status da peça
+        // Determinar classe de cor para o badge
         let conditionClass = "";
         let displayText = "";
+        let barColor = ""; // Classe extra para a cor da barra
 
         if (condition === 100) {
-          // Peça perfeita (100%) - VERDE
           conditionClass = "condition-good";
           displayText = `100%`;
+          barColor = "progress-good"; // Barra verde
         } else if (condition >= targetCondition) {
-          // Peça atingiu a meta mas não está 100% - VERDE
           conditionClass = "condition-good";
           displayText = `${condition}% ✓`;
+          barColor = "progress-good"; // Barra verde
         } else if (condition >= targetCondition * 0.7) {
-          // Peça próximo da meta (70-99% da meta) - AMARELO
           conditionClass = "condition-medium";
           displayText = `${condition}% / ${targetCondition}%`;
+          barColor = "progress-medium"; // Barra amarela
         } else {
-          // Peça longe da meta (<70% da meta) - VERMELHO
           conditionClass = "condition-bad";
           displayText = `${condition}% / ${targetCondition}%`;
+          barColor = "progress-bad"; // Barra vermelha
         }
 
-        // Estatísticas de ferramentas e preços
         const toolStats = upgradeSystem?.getToolStats(
           gameState.selectedTool,
         ) || { repair: 0, cost: 0 };
@@ -302,7 +302,6 @@ export class UIManager {
         const partPrice =
           upgradeSystem?.calculatePartPrice(partData.price) || partData.price;
 
-        // Lógica para habilitar/desabilitar botões
         const canRepair =
           gameState.money >= repairCost &&
           condition < targetCondition &&
@@ -314,35 +313,30 @@ export class UIManager {
           condition < targetCondition &&
           condition < 100;
 
-        // Calcular progresso da barra
         let progressPercent = 0;
         let showTargetMarker = true;
 
         if (condition === 100) {
-          // Peça perfeita - barra cheia e sem marcador
           progressPercent = 100;
           showTargetMarker = false;
         } else {
-          // Progresso normal em relação à meta
           progressPercent = Math.min(100, (condition / targetCondition) * 100);
           showTargetMarker = true;
         }
 
         const targetPosition = (targetCondition / 100) * 100;
 
-        // CRIAR ELEMENTO DA PEÇA
         const partElement = document.createElement("div");
         partElement.className = `part-item ${gameState.selectedPart === partName ? "selected" : ""}`;
 
-        // Montar HTML da barra de progresso
+        // ===== CORREÇÃO: Barra de progresso com cor dinâmica =====
         const progressBarHTML = `
             <div class="part-progress">
-                <div class="progress-bar" style="width: ${progressPercent}%"></div>
+                <div class="progress-bar ${barColor}" style="width: ${progressPercent}%"></div>
                 ${showTargetMarker ? `<div class="target-marker" style="left: ${targetPosition}%"></div>` : ""}
             </div>
         `;
 
-        // Montar HTML completo
         partElement.innerHTML = `
             <div class="part-header">
                 <span class="part-name">${icon} ${displayName}</span>
@@ -363,7 +357,6 @@ export class UIManager {
             </div>
         `;
 
-        // Adicionar evento de clique para selecionar a peça
         partElement.addEventListener("click", (e) => {
           if (!e.target.classList.contains("part-action-btn")) {
             scene3D?.selectPart(partName);
@@ -373,9 +366,6 @@ export class UIManager {
         partsList.appendChild(partElement);
       },
     );
-
-    // Log para debug (opcional)
-    console.log("📋 Lista de peças atualizada com cores corrigidas");
   }
 
   updateToolDisplay() {
