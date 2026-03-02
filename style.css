@@ -29,9 +29,19 @@ body {
 }
 
 /* ===== CANVAS ===== */
+/* Garantir que o canvas não atrapalhe os eventos de clique */
 canvas {
   cursor: crosshair;
-  display: block;
+  pointer-events: auto;
+}
+
+/* Overlay para garantir que os labels estejam sempre clicáveis */
+.css2d-object {
+  pointer-events: none !important; /* O conteúdo interno tem pointer-events auto */
+}
+
+.css2d-object div {
+  pointer-events: auto !important;
 }
 
 /* ===== PAINEL SUPERIOR ===== */
@@ -675,31 +685,68 @@ canvas {
   font-weight: bold;
   border: 2px solid #ff6b00;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.2s ease-out;
   white-space: nowrap;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(2px);
-  z-index: 100;
+  will-change: transform, box-shadow; /* Otimizar performance */
+  pointer-events: auto;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
+/* Hover effect */
 .part-label:hover {
-  transform: scale(1.2);
   background: #ff6b00;
-  box-shadow: 0 0 20px rgba(255, 107, 0, 0.8);
-  z-index: 200;
+  border-color: white;
+  box-shadow: 0 0 25px rgba(255, 107, 0, 0.9);
+  z-index: 2000; /* Z-index mais alto */
 }
 
+/* Selected state - aplicado via JavaScript também */
 .part-label.selected {
   background: #ff6b00 !important;
   border-color: white !important;
-  box-shadow: 0 0 30px #ff6b00;
-  transform: scale(1.1);
-  z-index: 300;
+  box-shadow:
+    0 0 30px #ff6b00,
+    0 0 60px rgba(255, 107, 0, 0.5) !important;
+  z-index: 3000 !important;
+  font-weight: bold;
+  transform: scale(1.3); /* Escala maior */
+  animation: pulse-glow 1.5s infinite;
 }
 
+/* Efeito de brilho pulsante para peças perfeitas */
 .part-label.perfect {
   border: 3px solid gold;
-  box-shadow: 0 0 15px gold;
+  animation: gold-glow 2s infinite;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 30px #ff6b00;
+  }
+  50% {
+    box-shadow:
+      0 0 50px #ff6b00,
+      0 0 80px rgba(255, 107, 0, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 30px #ff6b00;
+  }
+}
+
+@keyframes gold-glow {
+  0% {
+    box-shadow: 0 0 20px gold;
+  }
+  50% {
+    box-shadow:
+      0 0 40px gold,
+      0 0 60px #ffaa00;
+  }
+  100% {
+    box-shadow: 0 0 20px gold;
+  }
 }
 
 /* ===== LOJA DE UPGRADES ===== */

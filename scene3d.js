@@ -290,6 +290,7 @@ export class Scene3D {
         }
       });
       this.partLabels = [];
+      this.labelObjects = []; // Limpar array específico
     }
 
     // Limpar objetos 3D
@@ -317,8 +318,9 @@ export class Scene3D {
       return;
     }
 
-    // Array para guardar os objetos 3D das peças (para poder destacar)
+    // Array para guardar os objetos 3D das peças
     this.partObjects = [];
+    this.labelObjects = []; // Array específico para os labels
 
     Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
       if (carData.parts[partName]) {
@@ -332,12 +334,14 @@ export class Scene3D {
         );
         const displayName = PART_TRANSLATIONS[partName].display;
 
-        // CRIAR LABEL 2D
+        // ===== LABEL 2D (CSS2DObject) =====
         const labelDiv = document.createElement("div");
         labelDiv.className = "part-label";
-        if (gameState?.selectedPart === partName) {
-          labelDiv.classList.add("selected");
-        }
+        labelDiv.dataset.partName = partName; // Adicionar dataset para identificar
+
+        // Guardar condição para uso posterior
+        labelDiv.dataset.condition = condition;
+        labelDiv.dataset.targetCondition = targetCondition;
 
         // Mostrar apenas 100% se a peça estiver perfeita
         let displayText = "";
@@ -365,34 +369,54 @@ export class Scene3D {
         });
 
         try {
+          // ===== POSIÇÃO DO LABEL =====
+          // Altura base do label
+          const baseY = pos[1] + 0.5;
+
+          // Criar label com posição normal
           const label = new CSS2DObject(labelDiv);
-          label.position.set(pos[0], pos[1] + 0.5, pos[2]);
+          label.position.set(pos[0], baseY, pos[2]);
+
+          // Guardar a posição original para referência
+          label.userData = {
+            partName,
+            baseY,
+            originalScale: 1,
+            isSelected: false,
+          };
+
           this.currentCar.add(label);
           this.partLabels.push(label);
+          this.labelObjects.push(label); // Adicionar ao array específico de labels
 
-          // ===== CRIAR OBJETO 3D DA PEÇA (para destacar) =====
-          // Adicionar um pequeno cubo invisível para detecção de clique e highlight
-          const partGeometry = new THREE.SphereGeometry(0.2, 8);
+          // ===== OBJETO 3D DA PEÇA (para highlight) =====
+          const partGeometry = new THREE.SphereGeometry(0.25, 8);
           const partMaterial = new THREE.MeshStandardMaterial({
             color: 0xffaa00,
             transparent: true,
-            opacity: 0.0, // Invisível por padrão
+            opacity: 0.0,
             emissive: 0x442200,
           });
           const partObject = new THREE.Mesh(partGeometry, partMaterial);
-          partObject.position.set(pos[0], pos[1] + 0.5, pos[2]);
-          partObject.userData = { partName, isHighlight: false };
+          partObject.position.set(pos[0], baseY, pos[2]);
+          partObject.userData = {
+            partName,
+            isHighlight: false,
+            originalY: baseY,
+          };
 
           this.currentCar.add(partObject);
-
-          // Guardar referência
-          if (!this.partObjects) this.partObjects = [];
           this.partObjects.push(partObject);
         } catch (error) {
           console.error(`❌ Erro ao criar label para ${partName}:`, error);
         }
       }
     });
+
+    // Se já havia uma peça selecionada, restaurar seu destaque
+    if (gameState?.selectedPart) {
+      this.highlightSelectedPart(gameState.selectedPart);
+    }
   }
 
   // Efeito de partículas para reparo
@@ -538,6 +562,62 @@ export class Scene3D {
     animateRing();
   }
 
+  // MÉTODO: Destacar a peça selecionada (separado do selectPart)
+  highlightSelectedPart(partName) {
+    if (!partName) return;
+
+    // ===== 1. AJUSTAR ALTURA DOS LABELS =====
+    // Colocar o label selecionado mais alto que os outros
+    this.labelObjects.forEach((label) => {
+      const labelPartName = label.userData.partName;
+      const baseY = label.userData.baseY;
+
+      if (labelPartName === partName) {
+        // Label selecionado: mais alto e maior
+        label.position.y = baseY + 0.4; // SOBE 0.4 unidades
+        label.userData.isSelected = true;
+
+        // Aplicar escala no elemento CSS
+        if (label.element) {
+          label.element.style.transform = "scale(1.3)";
+          label.element.style.zIndex = "1000";
+          label.element.style.boxShadow = "0 0 30px #ff6b00";
+        }
+      } else {
+        // Labels não selecionados: voltam à posição normal
+        label.position.y = baseY;
+        label.userData.isSelected = false;
+
+        if (label.element) {
+          label.element.style.transform = "scale(1)";
+          label.element.style.zIndex = "auto";
+          label.element.style.boxShadow = "none";
+        }
+      }
+    });
+
+    // ===== 2. DESTACAR OBJETO 3D =====
+    this.partObjects.forEach((obj) => {
+      const objPartName = obj.userData.partName;
+
+      if (objPartName === partName) {
+        // Objeto selecionado: visível e maior
+        obj.material.opacity = 0.3;
+        obj.scale.set(1.8, 1.8, 1.8); // MAIOR
+        obj.userData.isHighlight = true;
+      } else {
+        // Objetos não selecionados: invisíveis
+        obj.material.opacity = 0.0;
+        obj.scale.set(1, 1, 1);
+        obj.userData.isHighlight = false;
+      }
+    });
+
+    // ===== 3. ANEL DE DESTAQUE =====
+    this.clearHighlight();
+    this.highlightPart(partName);
+  }
+
   // método para limpar o highlight quando necessário
   clearHighlight() {
     // Limpar anel
@@ -554,6 +634,22 @@ export class Scene3D {
         obj.material.emissive.setHex(0x442200);
       });
     }
+
+    // Resetar posição dos labels
+    if (this.labelObjects) {
+      this.labelObjects.forEach((label) => {
+        if (label.userData) {
+          label.position.y = label.userData.baseY;
+          label.userData.isSelected = false;
+
+          if (label.element) {
+            label.element.style.transform = "scale(1)";
+            label.element.style.zIndex = "auto";
+            label.element.style.boxShadow = "none";
+          }
+        }
+      });
+    }
   }
 
   // Modificar selectPart para incluir animação
@@ -563,7 +659,7 @@ export class Scene3D {
     console.log("🎯 Selecionando peça:", partName);
     gameState.selectedPart = partName;
 
-    // Atualizar labels 2D
+    // Atualizar classes dos labels (para o efeito CSS adicional)
     this.partLabels.forEach((label) => {
       if (label.element) {
         label.element.classList.remove("selected");
@@ -577,34 +673,17 @@ export class Scene3D {
       }
     });
 
-    // ===== DESTACAR PEÇA SELECIONADA =====
-    // Resetar todos os objetos de peça
-    if (this.partObjects) {
-      this.partObjects.forEach((obj) => {
-        obj.material.opacity = 0.0;
-        obj.scale.set(1, 1, 1);
-        obj.userData.isHighlight = false;
-      });
+    // Aplicar destaque visual completo
+    this.highlightSelectedPart(partName);
 
-      // Encontrar e destacar a peça selecionada
-      const selectedObj = this.partObjects.find(
-        (obj) => obj.userData.partName === partName,
-      );
-      if (selectedObj) {
-        selectedObj.material.opacity = 0.3; // Fica semi-visível
-        selectedObj.scale.set(1.5, 1.5, 1.5); // Aumenta de tamanho
-        selectedObj.userData.isHighlight = true;
-
-        // Adicionar animação de brilho
-        this.highlightPart3D(selectedObj);
-      }
+    // Feedback na UI
+    const condition = gameState.currentCar?.parts[partName]?.condition;
+    const target = gameState.currentJob?.targetConditions[partName];
+    if (condition && target) {
+      const displayName = PART_TRANSLATIONS[partName].display;
+      document.getElementById("interaction-info").textContent =
+        `🔧 ${displayName}: ${Math.round(condition)}% / Meta: ${Math.round(target)}%`;
     }
-
-    // Remover highlight anterior
-    this.clearHighlight();
-
-    // Adicionar novo highlight (anel)
-    this.highlightPart(partName);
   }
 
   // Highlight 3D da peça
