@@ -301,19 +301,21 @@ export class UIManager {
   updatePartsList() {
     const partsList = document.getElementById("parts-list");
 
+    // SE NÃO HOUVER CARRO OU JOB, MOSTRAR MENSAGEM VAZIA
     if (!gameState.currentCar || !gameState.currentJob) {
       partsList.innerHTML =
         '<div style="color: #888; text-align: center; padding: 20px;">🔧 Nenhum carro na oficina</div>';
       return;
     }
 
-    partsList.innerHTML = "";
+    partsList.innerHTML = ""; // Limpar lista atual
 
     Object.entries(gameState.currentCar.parts).forEach(
       ([partName, partData]) => {
         const displayName = PART_TRANSLATIONS[partName].display;
         const icon = PART_TRANSLATIONS[partName].icon;
 
+        // GARANTIR QUE PORCENTAGEM NUNCA PASSA DE 100%
         const condition = Math.min(100, Math.round(partData.condition));
         const targetCondition = Math.min(
           100,
@@ -323,24 +325,19 @@ export class UIManager {
         // Determinar classe de cor para o badge
         let conditionClass = "";
         let displayText = "";
-        let barColor = ""; // Classe extra para a cor da barra
 
         if (condition === 100) {
           conditionClass = "condition-good";
           displayText = `100%`;
-          barColor = "progress-good"; // Barra verde
         } else if (condition >= targetCondition) {
           conditionClass = "condition-good";
           displayText = `${condition}% ✓`;
-          barColor = "progress-good"; // Barra verde
         } else if (condition >= targetCondition * 0.7) {
           conditionClass = "condition-medium";
           displayText = `${condition}% / ${targetCondition}%`;
-          barColor = "progress-medium"; // Barra amarela
         } else {
           conditionClass = "condition-bad";
           displayText = `${condition}% / ${targetCondition}%`;
-          barColor = "progress-bad"; // Barra vermelha
         }
 
         const toolStats = upgradeSystem?.getToolStats(
@@ -353,6 +350,11 @@ export class UIManager {
         const partPrice =
           upgradeSystem?.calculatePartPrice(partData.price) || partData.price;
 
+        // Verificar se tem no estoque
+        const hasInStock = window.inventory?.hasPart(partName) || false;
+        const stockQuantity = window.inventory?.getPartCount(partName) || 0;
+
+        // Só pode reparar se não atingiu a meta E não está em 100%
         const canRepair =
           gameState.money >= repairCost &&
           condition < targetCondition &&
@@ -364,6 +366,7 @@ export class UIManager {
           condition < targetCondition &&
           condition < 100;
 
+        // Calcular progresso da barra
         let progressPercent = 0;
         let showTargetMarker = true;
 
@@ -377,17 +380,31 @@ export class UIManager {
 
         const targetPosition = (targetCondition / 100) * 100;
 
+        // CRIAR ELEMENTO DA PEÇA
         const partElement = document.createElement("div");
         partElement.className = `part-item ${gameState.selectedPart === partName ? "selected" : ""}`;
 
-        // ===== CORREÇÃO: Barra de progresso com cor dinâmica =====
+        // Montar HTML da barra de progresso
         const progressBarHTML = `
             <div class="part-progress">
-                <div class="progress-bar ${barColor}" style="width: ${progressPercent}%"></div>
+                <div class="progress-bar" style="width: ${progressPercent}%"></div>
                 ${showTargetMarker ? `<div class="target-marker" style="left: ${targetPosition}%"></div>` : ""}
             </div>
         `;
 
+        // ===== BOTÃO DE ESTOQUE =====
+        const stockButtonHTML = `
+            <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #888; font-size: 11px;">
+                    📦 Estoque: <span style="color: #ffd700; font-weight: bold;">${stockQuantity}</span>
+                </span>
+                <button class="buy-to-stock-btn" data-part="${partName}" onclick="uiManager?.buyPartToStock('${partName}')">
+                    📦 Comprar p/ Estoque (R$ 500)
+                </button>
+            </div>
+        `;
+
+        // Montar HTML completo com o botão de estoque
         partElement.innerHTML = `
             <div class="part-header">
                 <span class="part-name">${icon} ${displayName}</span>
@@ -406,15 +423,15 @@ export class UIManager {
                     🛒 Comprar Nova
                 </button>
             </div>
-            <div style="margin-top: 5px;">
-    <button class="buy-to-stock-btn" data-part="${partName}" onclick="uiManager?.buyPartToStock('${partName}')">
-        📦 + Estoque (R$ 500)
-    </button>
-</div>
+            ${stockButtonHTML}
         `;
 
+        // Adicionar evento de clique para selecionar a peça
         partElement.addEventListener("click", (e) => {
-          if (!e.target.classList.contains("part-action-btn")) {
+          if (
+            !e.target.classList.contains("part-action-btn") &&
+            !e.target.classList.contains("buy-to-stock-btn")
+          ) {
             scene3D?.selectPart(partName);
           }
         });
