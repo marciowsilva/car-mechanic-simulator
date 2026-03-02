@@ -6,6 +6,7 @@ import {
   upgradeSystem,
   achievementSystem,
   db,
+  inventory,
 } from "./game.js";
 import { TOOL_BASE_STATS, PART_TRANSLATIONS } from "./constants.js";
 import { Job } from "./job.js";
@@ -167,6 +168,14 @@ export class UIManager {
       achievementSystem?.checkAchievements();
       db?.savePlayerData();
     });
+
+    // Botão de upgrade do estoque
+    const upgradeBtn = document.getElementById("upgrade-inventory");
+    if (upgradeBtn) {
+      upgradeBtn.addEventListener("click", () => {
+        this.upgradeInventory();
+      });
+    }
 
     // Upgrade shop button
     document
@@ -650,58 +659,116 @@ export class UIManager {
   }
 
   updateInventoryDisplay() {
+    console.log("📦 Atualizando display do estoque");
+
     const grid = document.getElementById("inventory-grid");
     const capacityEl = document.getElementById("inventory-capacity");
     const valueEl = document.getElementById("inventory-value");
 
-    if (!grid || !capacityEl || !valueEl) return;
+    if (!grid || !capacityEl || !valueEl) {
+      console.error("❌ Elementos do estoque não encontrados");
+      return;
+    }
 
-    const stats = inventory.getStats();
-    capacityEl.textContent = `${stats.usedCapacity}/${stats.maxCapacity}`;
-    valueEl.textContent = `R$ ${stats.totalValue}`;
-
-    grid.innerHTML = "";
-
-    Object.entries(inventory.parts).forEach(([partName, quantity]) => {
-      if (quantity > 0) {
-        const item = document.createElement("div");
-        item.className = "inventory-item";
-        item.innerHTML = `
-                <div class="inventory-item-icon">${PART_TRANSLATIONS[partName].icon}</div>
-                <div class="inventory-item-info">
-                    <div class="inventory-item-name">${PART_TRANSLATIONS[partName].display}</div>
-                    <div class="inventory-item-quantity">Quantidade: <span>${quantity}</span></div>
-                </div>
-            `;
-        grid.appendChild(item);
-      }
-    });
-
-    // Se estoque vazio
-    if (grid.children.length === 0) {
+    // Verificar se inventory existe
+    if (!window.inventory && !inventory) {
+      console.error("❌ inventory não está definido");
       grid.innerHTML =
-        '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #888;">📦 Estoque vazio</div>';
+        '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #ff0000;">❌ Erro: Estoque não disponível</div>';
+      return;
+    }
+
+    // Usar a instância correta
+    const inv = inventory || window.inventory;
+
+    try {
+      const stats = inv.getStats();
+      capacityEl.textContent = `${stats.usedCapacity}/${stats.maxCapacity}`;
+      valueEl.textContent = `R$ ${stats.totalValue.toLocaleString()}`;
+
+      grid.innerHTML = "";
+
+      Object.entries(inv.parts).forEach(([partName, quantity]) => {
+        if (quantity > 0) {
+          const item = document.createElement("div");
+          item.className = "inventory-item";
+          item.innerHTML = `
+                    <div class="inventory-item-icon">${PART_TRANSLATIONS[partName].icon}</div>
+                    <div class="inventory-item-info">
+                        <div class="inventory-item-name">${PART_TRANSLATIONS[partName].display}</div>
+                        <div class="inventory-item-quantity">Quantidade: <span>${quantity}</span></div>
+                    </div>
+                `;
+          grid.appendChild(item);
+        }
+      });
+
+      // Se estoque vazio
+      if (grid.children.length === 0) {
+        grid.innerHTML =
+          '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #888;">📦 Estoque vazio</div>';
+      }
+    } catch (error) {
+      console.error("❌ Erro ao atualizar estoque:", error);
+      grid.innerHTML =
+        '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #ff0000;">❌ Erro ao carregar estoque</div>';
     }
   }
 
   buyPartToStock(partName) {
+    console.log(`📦 Comprando ${partName} para estoque...`);
+
+    // Verificar se inventory existe
+    if (!window.inventory && !inventory) {
+      console.error("❌ inventory não está definido");
+      this.showNotification("❌ Erro: Estoque não disponível", "error");
+      return;
+    }
+
+    const inv = inventory || window.inventory;
     const partPrice = 500; // Preço fixo para simplificar
+
     if (gameState.money >= partPrice) {
-      if (inventory.addPart(partName)) {
+      if (inv.addPart(partName)) {
         gameState.updateMoney(-partPrice);
         this.updateInventoryDisplay();
-        uiManager?.showNotification(
+        this.showNotification(
           `📦 Comprou ${PART_TRANSLATIONS[partName].display} para o estoque!`,
           "success",
         );
+
+        // Atualizar a lista de peças para mostrar nova quantidade
+        this.updatePartsList();
       } else {
-        uiManager?.showNotification(
+        this.showNotification(
           "❌ Estoque cheio! Faça upgrade da capacidade.",
           "error",
         );
       }
     } else {
-      uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
+      this.showNotification("💰 Dinheiro insuficiente!", "error");
+    }
+  }
+
+  upgradeInventory() {
+    console.log("⬆️ Fazendo upgrade do estoque...");
+
+    if (!window.inventory && !inventory) {
+      console.error("❌ inventory não está definido");
+      this.showNotification("❌ Erro: Estoque não disponível", "error");
+      return;
+    }
+
+    const inv = inventory || window.inventory;
+    const upgradePrice = 1000;
+
+    if (gameState.money >= upgradePrice) {
+      inv.upgradeCapacity(2);
+      gameState.updateMoney(-upgradePrice);
+      this.updateInventoryDisplay();
+      this.showNotification("📦 Capacidade do estoque aumentada!", "success");
+    } else {
+      this.showNotification("💰 Dinheiro insuficiente para upgrade!", "error");
     }
   }
 }

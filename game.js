@@ -306,6 +306,7 @@ window.db = db;
 window.audioManager = audioManager;
 window.scene3D = scene3D;
 window.uiManager = uiManager;
+window.inventory = inventory;
 
 // Aguardar UI ser inicializada antes de usar
 window.addEventListener("load", () => {
