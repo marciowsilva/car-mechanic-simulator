@@ -8,6 +8,7 @@ import { CustomerCar } from "./car.js";
 import { Scene3D } from "./scene3d.js";
 import { UIManager } from "./ui.js";
 import { AudioManager } from "./audio.js";
+import { Inventory } from "./inventory.js";
 
 // Estado Global do Jogo
 class GameState {
@@ -68,6 +69,7 @@ export const db = new Database();
 export const audioManager = new AudioManager();
 export let scene3D;
 export let uiManager;
+export const inventory = new Inventory();
 
 // Inicialização
 window.addEventListener("load", async () => {
@@ -213,36 +215,39 @@ window.buyNewPart = (partName) => {
   const targetCondition = gameState.currentJob.targetConditions[partName];
   const partPrice = upgradeSystem.calculatePartPrice(part.price);
 
-  if (part.condition >= targetCondition || part.condition >= 100) {
-    uiManager?.showNotification("✅ Peça já está ok!", "info");
+  // Verificar se tem no estoque primeiro
+  if (inventory.hasPart(partName)) {
+    // Usar do estoque
+    inventory.usePart(partName);
+    part.condition = 100;
 
-    // Som de erro suave
-    if (window.audioManager) {
-      audioManager.playSound("error");
-    }
-    return;
-  }
-
-  if (gameState.money < partPrice) {
+    gameState.addExperience(50); // Menos experiência por usar estoque
+    uiManager?.showNotification(
+      `📦 Usou ${PART_TRANSLATIONS[partName].display} do estoque!`,
+      "success",
+    );
+  } else if (gameState.money >= partPrice) {
+    // Comprar novo
+    gameState.updateMoney(-partPrice);
+    part.condition = 100;
+    gameState.addExperience(100);
+    uiManager?.showNotification(
+      `🛒 Comprou ${PART_TRANSLATIONS[partName].display} nova!`,
+      "success",
+    );
+  } else {
     uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
-
-    // Som de erro
-    if (window.audioManager) {
-      audioManager.playSound("error");
-    }
     return;
   }
 
-  // ===== SOM DE DINHEIRO =====
+  // Efeitos visuais e sonoros
   if (window.audioManager) {
     audioManager.playSound("money");
   }
 
-  // ===== EFEITO VISUAL ESPECIAL (MÚLTIPLAS PARTÍCULAS) =====
   if (window.scene3D) {
     const pos = PART_POSITIONS[partName];
     if (pos) {
-      // Criar múltiplos efeitos para peça nova
       for (let i = 0; i < 3; i++) {
         setTimeout(() => {
           scene3D.createRepairEffect(
@@ -253,21 +258,10 @@ window.buyNewPart = (partName) => {
     }
   }
 
-  // Substituir peça (vai para 100%)
-  part.condition = 100;
-
-  gameState.updateMoney(-partPrice);
-  gameState.addExperience(100);
-
   scene3D?.updatePartLabels(gameState.currentCar, gameState.currentJob);
   uiManager?.updatePartsList();
   uiManager?.updateJobInfo();
   uiManager?.checkJobCompletion();
-
-  uiManager?.showNotification(
-    `🛒 Comprou ${PART_TRANSLATIONS[partName].display} nova! (100%)`,
-    "success",
-  );
 
   db.savePlayerData();
 };

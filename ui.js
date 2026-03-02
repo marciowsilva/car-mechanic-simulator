@@ -188,6 +188,19 @@ export class UIManager {
       btn.classList.toggle("muted", !isEnabled);
     });
 
+    // Botão do estoque (adicionar no bottom panel)
+    document.getElementById("inventory-btn").addEventListener("click", () => {
+      this.toggleInventoryPanel();
+    });
+
+    // Botão comprar para estoque (na lista de peças)
+    document.addEventListener("click", (e) => {
+      if (e.target.classList.contains("buy-to-stock-btn")) {
+        const partName = e.target.dataset.part;
+        this.buyPartToStock(partName);
+      }
+    });
+
     // Adicionar sons aos botões existentes
     document
       .querySelectorAll(".action-btn, .tool-item, .upgrade-buy")
@@ -393,6 +406,11 @@ export class UIManager {
                     🛒 Comprar Nova
                 </button>
             </div>
+            <div style="margin-top: 5px;">
+    <button class="buy-to-stock-btn" data-part="${partName}" onclick="uiManager?.buyPartToStock('${partName}')">
+        📦 + Estoque (R$ 500)
+    </button>
+</div>
         `;
 
         partElement.addEventListener("click", (e) => {
@@ -586,5 +604,87 @@ export class UIManager {
 
   closeUpgradeShop() {
     document.getElementById("upgrade-shop").classList.remove("show");
+  }
+
+  toggleInventoryPanel() {
+    const panel = document.getElementById("inventory-panel");
+    if (panel) {
+      if (panel.classList.contains("show")) {
+        this.closeInventory();
+      } else {
+        this.openInventory();
+      }
+    }
+  }
+
+  openInventory() {
+    const panel = document.getElementById("inventory-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateInventoryDisplay();
+    }
+  }
+
+  closeInventory() {
+    const panel = document.getElementById("inventory-panel");
+    if (panel) {
+      panel.classList.remove("show");
+    }
+  }
+
+  updateInventoryDisplay() {
+    const grid = document.getElementById("inventory-grid");
+    const capacityEl = document.getElementById("inventory-capacity");
+    const valueEl = document.getElementById("inventory-value");
+
+    if (!grid || !capacityEl || !valueEl) return;
+
+    const stats = inventory.getStats();
+    capacityEl.textContent = `${stats.usedCapacity}/${stats.maxCapacity}`;
+    valueEl.textContent = `R$ ${stats.totalValue}`;
+
+    grid.innerHTML = "";
+
+    Object.entries(inventory.parts).forEach(([partName, quantity]) => {
+      if (quantity > 0) {
+        const item = document.createElement("div");
+        item.className = "inventory-item";
+        item.innerHTML = `
+                <div class="inventory-item-icon">${PART_TRANSLATIONS[partName].icon}</div>
+                <div class="inventory-item-info">
+                    <div class="inventory-item-name">${PART_TRANSLATIONS[partName].display}</div>
+                    <div class="inventory-item-quantity">Quantidade: <span>${quantity}</span></div>
+                </div>
+            `;
+        grid.appendChild(item);
+      }
+    });
+
+    // Se estoque vazio
+    if (grid.children.length === 0) {
+      grid.innerHTML =
+        '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #888;">📦 Estoque vazio</div>';
+    }
+  }
+
+  buyPartToStock(partName) {
+    const partPrice = 500; // Preço fixo para simplificar
+    if (gameState.money >= partPrice) {
+      if (inventory.addPart(partName)) {
+        gameState.updateMoney(-partPrice);
+        this.updateInventoryDisplay();
+        uiManager?.showNotification(
+          `📦 Comprou ${PART_TRANSLATIONS[partName].display} para o estoque!`,
+          "success",
+        );
+      } else {
+        uiManager?.showNotification(
+          "❌ Estoque cheio! Faça upgrade da capacidade.",
+          "error",
+        );
+      }
+    } else {
+      uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
+    }
   }
 }

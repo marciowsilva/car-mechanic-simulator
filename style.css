@@ -912,3 +912,160 @@ canvas {
 .text-gold {
   color: #ffd700;
 }
+
+/* ===== PAINEL DE ESTOQUE ===== */
+.inventory-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30, 30, 30, 0.98);
+  color: white;
+  padding: 30px;
+  border-radius: 20px;
+  border: 3px solid #ff6b00;
+  pointer-events: auto;
+  z-index: 1000;
+  width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  backdrop-filter: blur(10px);
+  display: none;
+}
+
+.inventory-panel.show {
+  display: block;
+  animation: slideIn 0.3s ease;
+}
+
+.inventory-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ff6b00;
+}
+
+.inventory-title {
+  font-size: 24px;
+  color: #ff6b00;
+  font-weight: bold;
+}
+
+.inventory-close {
+  font-size: 30px;
+  cursor: pointer;
+  color: #888;
+  transition: color 0.3s;
+}
+
+.inventory-close:hover {
+  color: #ff6b00;
+}
+
+.inventory-stats {
+  display: flex;
+  justify-content: space-between;
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.stat-item .stat-label {
+  font-size: 12px;
+  color: #888;
+}
+
+.stat-item .stat-value {
+  font-size: 18px;
+  color: #ff6b00;
+  font-weight: bold;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.inventory-item {
+  background: #3a3a3a;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  border: 1px solid transparent;
+  transition: all 0.3s;
+}
+
+.inventory-item:hover {
+  border-color: #ff6b00;
+  transform: translateX(5px);
+}
+
+.inventory-item-icon {
+  font-size: 24px;
+}
+
+.inventory-item-info {
+  flex: 1;
+}
+
+.inventory-item-name {
+  font-weight: bold;
+  color: #ff6b00;
+}
+
+.inventory-item-quantity {
+  font-size: 14px;
+  color: #888;
+  margin-top: 4px;
+}
+
+.inventory-item-quantity span {
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 18px;
+}
+
+.inventory-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+#upgrade-inventory {
+  background: #4caf50;
+  min-width: 200px;
+}
+
+#upgrade-inventory:hover:not(:disabled) {
+  background: #45a049;
+}
+
+/* Botão comprar para estoque */
+.buy-to-stock-btn {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-left: 5px;
+}
+
+.buy-to-stock-btn:hover {
+  background: #1976d2;
+}

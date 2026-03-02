@@ -120,6 +120,9 @@
           <button class="action-btn success" id="deliver-car" disabled>
             ✅ Entregar Carro
           </button>
+          <button class="action-btn inventory-btn" id="inventory-btn">
+            📦 Estoque
+          </button>
         </div>
 
         <div id="interaction-info">
@@ -172,5 +175,36 @@
     </script>
 
     <script type="module" src="game.js"></script>
+
+    <!-- Painel de Estoque -->
+    <div id="inventory-panel" class="inventory-panel">
+      <div class="inventory-header">
+        <span class="inventory-title">📦 ESTOQUE DE PEÇAS</span>
+        <span class="inventory-close" onclick="uiManager?.closeInventory()"
+          >×</span
+        >
+      </div>
+
+      <div class="inventory-stats">
+        <div class="stat-item">
+          <span class="stat-label">Capacidade:</span>
+          <span class="stat-value" id="inventory-capacity">0/40</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Valor Total:</span>
+          <span class="stat-value" id="inventory-value">R$ 0</span>
+        </div>
+      </div>
+
+      <div class="inventory-grid" id="inventory-grid">
+        <!-- Itens do estoque serão inseridos aqui -->
+      </div>
+
+      <div class="inventory-actions">
+        <button class="action-btn secondary" id="upgrade-inventory">
+          ⬆️ Aumentar Capacidade (R$ 1000)
+        </button>
+      </div>
+    </div>
   </body>
 </html>
