@@ -318,7 +318,6 @@ export class Scene3D {
       return;
     }
 
-    // Array para guardar os objetos 3D das peças
     this.partObjects = [];
     this.labelObjects = [];
 
@@ -334,41 +333,21 @@ export class Scene3D {
         );
         const displayName = PART_TRANSLATIONS[partName].display;
 
-        // ===== DETERMINAR COR BASEADA NA CONDIÇÃO =====
+        // Determinar cor baseada na condição
         let bgColor = "";
         let borderColor = "#ff6b00";
         let textColor = "white";
-        let isPerfect = false;
 
         if (condition === 100) {
-          bgColor = "#4CAF50"; // Verde
+          bgColor = "#4CAF50";
           borderColor = "gold";
-          isPerfect = true;
         } else if (condition >= targetCondition) {
-          bgColor = "#00aa00"; // Verde
+          bgColor = "#00aa00";
         } else if (condition >= targetCondition * 0.7) {
-          bgColor = "#ffaa00"; // Amarelo
+          bgColor = "#ffaa00";
           textColor = "black";
         } else {
-          bgColor = "#ff0000"; // Vermelho
-        }
-
-        // ===== LABEL 2D (CSS2DObject) =====
-        const labelDiv = document.createElement("div");
-        labelDiv.className = "part-label";
-        labelDiv.dataset.partName = partName;
-        labelDiv.dataset.condition = condition;
-        labelDiv.dataset.targetCondition = targetCondition;
-        labelDiv.dataset.bgColor = bgColor; // Guardar cor original
-
-        // Aplicar cor de fundo original
-        labelDiv.style.backgroundColor = bgColor;
-        labelDiv.style.color = textColor;
-        labelDiv.style.border = `2px solid ${borderColor}`;
-
-        // Se for perfeita, adicionar classe especial
-        if (isPerfect) {
-          labelDiv.classList.add("perfect");
+          bgColor = "#ff0000";
         }
 
         // Texto do label
@@ -379,8 +358,22 @@ export class Scene3D {
           displayText = `${displayName}: ${condition}% / ${targetCondition}%`;
         }
 
+        // ===== LABEL 2D =====
+        const labelDiv = document.createElement("div");
+        labelDiv.className = "part-label";
         labelDiv.textContent = displayText;
+        labelDiv.style.backgroundColor = bgColor;
+        labelDiv.style.color = textColor;
+        labelDiv.style.border = `2px solid ${borderColor}`;
+        labelDiv.style.padding = "4px 8px";
+        labelDiv.style.borderRadius = "12px";
+        labelDiv.style.fontSize = "12px";
+        labelDiv.style.fontWeight = "bold";
+        labelDiv.style.whiteSpace = "nowrap";
+        labelDiv.style.cursor = "pointer";
+        labelDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
 
+        // Evento de clique
         labelDiv.addEventListener("click", (e) => {
           e.stopPropagation();
           this.selectPart(partName);
@@ -390,58 +383,45 @@ export class Scene3D {
           // Posição do label
           const baseY = pos[1] + 0.5;
 
-          // IMPORTANTE: Configurar o estilo do labelDiv antes de criar o CSS2DObject
-          labelDiv.style.position = "absolute";
-          labelDiv.style.top = "50%";
-          labelDiv.style.left = "50%";
-          labelDiv.style.transform = "translate(-50%, -50%)";
-          labelDiv.style.transformOrigin = "center center";
-          labelDiv.style.whiteSpace = "nowrap";
-
+          // Criar label SEM transformações CSS complexas
           const label = new CSS2DObject(labelDiv);
           label.position.set(pos[0], baseY, pos[2]);
 
+          // Guardar dados
           label.userData = {
             partName,
             baseY,
-            originalScale: 1,
             isSelected: false,
             originalBG: bgColor,
             originalBorder: borderColor,
-            originalColor: textColor,
           };
 
           this.currentCar.add(label);
           this.partLabels.push(label);
           this.labelObjects.push(label);
 
-          // Objeto 3D da peça (para highlight)
-          const partGeometry = new THREE.SphereGeometry(0.25, 8);
+          // Objeto 3D para highlight (opcional)
+          const partGeometry = new THREE.SphereGeometry(0.2, 6);
           const partMaterial = new THREE.MeshStandardMaterial({
             color: 0xffaa00,
             transparent: true,
             opacity: 0.0,
-            emissive: 0x442200,
           });
           const partObject = new THREE.Mesh(partGeometry, partMaterial);
           partObject.position.set(pos[0], baseY, pos[2]);
-          partObject.userData = {
-            partName,
-            isHighlight: false,
-            originalY: baseY,
-          };
+          partObject.userData = { partName };
 
           this.currentCar.add(partObject);
           this.partObjects.push(partObject);
         } catch (error) {
-          console.error(`❌ Erro ao criar label para ${partName}:`, error);
+          console.error(`❌ Erro ao criar label:`, error);
         }
       }
     });
 
-    // Se já havia uma peça selecionada, restaurar seu destaque
+    // Restaurar seleção se houver
     if (gameState?.selectedPart) {
-      this.highlightSelectedPart(gameState.selectedPart);
+      this.highlightSelectedPartSimple(gameState.selectedPart);
     }
   }
 
@@ -657,6 +637,55 @@ export class Scene3D {
     this.highlightPart(partName);
   }
 
+  // NOVO MÉTODO SIMPLIFICADO: Highlight sem transformações CSS
+  highlightSelectedPartSimple(partName) {
+    if (!partName) return;
+
+    // Resetar todos os labels primeiro
+    this.labelObjects.forEach((label) => {
+      if (label.element) {
+        // Remover estilos de seleção
+        label.element.style.borderWidth = "2px";
+        label.element.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+        label.element.style.transform = "none";
+        label.element.style.fontWeight = "normal";
+        label.element.classList.remove("selected");
+      }
+
+      // Voltar à posição original
+      if (label.userData) {
+        label.position.y = label.userData.baseY;
+      }
+    });
+
+    // Destacar o label selecionado
+    const selectedLabel = this.labelObjects.find(
+      (l) => l.userData?.partName === partName,
+    );
+    if (selectedLabel && selectedLabel.element) {
+      // Subir um pouco
+      selectedLabel.position.y = selectedLabel.userData.baseY + 0.3;
+
+      // Estilo diferenciado mas SEM TRANSFORM
+      selectedLabel.element.style.borderWidth = "4px";
+      selectedLabel.element.style.boxShadow =
+        "0 0 20px currentColor, 0 0 40px currentColor";
+      selectedLabel.element.style.fontWeight = "bold";
+      selectedLabel.element.classList.add("selected");
+    }
+
+    // Destacar objeto 3D
+    this.partObjects.forEach((obj) => {
+      if (obj.userData?.partName === partName) {
+        obj.material.opacity = 0.2;
+        obj.scale.set(1.5, 1.5, 1.5);
+      } else {
+        obj.material.opacity = 0.0;
+        obj.scale.set(1, 1, 1);
+      }
+    });
+  }
+
   // método para limpar o highlight quando necessário
   clearHighlight() {
     // Limpar anel
@@ -698,30 +727,18 @@ export class Scene3D {
     console.log("🎯 Selecionando peça:", partName);
     gameState.selectedPart = partName;
 
-    // Atualizar classes dos labels (para o efeito CSS adicional)
-    this.partLabels.forEach((label) => {
-      if (label.element) {
-        label.element.classList.remove("selected");
-        if (
-          label.element.textContent.includes(
-            PART_TRANSLATIONS[partName].display,
-          )
-        ) {
-          label.element.classList.add("selected");
-        }
-      }
-    });
-
-    // Aplicar destaque visual completo
-    this.highlightSelectedPart(partName);
+    // Usar método simplificado
+    this.highlightSelectedPartSimple(partName);
 
     // Feedback na UI
-    const condition = gameState.currentCar?.parts[partName]?.condition;
-    const target = gameState.currentJob?.targetConditions[partName];
-    if (condition && target) {
-      const displayName = PART_TRANSLATIONS[partName].display;
-      document.getElementById("interaction-info").textContent =
-        `🔧 ${displayName}: ${Math.round(condition)}% / Meta: ${Math.round(target)}%`;
+    if (gameState.currentCar && gameState.currentJob) {
+      const condition = gameState.currentCar.parts[partName]?.condition;
+      const target = gameState.currentJob.targetConditions[partName];
+      if (condition && target) {
+        const displayName = PART_TRANSLATIONS[partName].display;
+        document.getElementById("interaction-info").textContent =
+          `🔧 ${displayName}: ${Math.round(condition)}% / Meta: ${Math.round(target)}%`;
+      }
     }
   }
 

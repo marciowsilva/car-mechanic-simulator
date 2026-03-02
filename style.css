@@ -701,55 +701,36 @@ canvas {
 
 /* ===== LABELS 3D ===== */
 .part-label {
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
+  padding: 4px 8px;
+  border-radius: 12px;
   font-size: 12px;
   font-weight: bold;
-  border: 2px solid #ff6b00;
-  cursor: pointer;
-  transition: all 0.2s ease-out;
   white-space: nowrap;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(2px);
-  will-change: transform, box-shadow;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  font-family: Arial, sans-serif;
   pointer-events: auto;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-
-  /* IMPORTANTE: Garantir que a transformação seja centralizada */
-  transform-origin: center center;
-  position: relative;
-  display: inline-block;
+  border: 2px solid #ff6b00;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
 }
 
 /* Hover effect */
 .part-label:hover {
   filter: brightness(1.2);
-  transform: scale(1.1);
-  transform-origin: center center;
-  box-shadow: 0 0 25px currentColor;
-  z-index: 2000;
-  border-width: 3px;
+  box-shadow: 0 0 15px currentColor;
+  z-index: 100;
 }
 
 /* Selected state - aplicado via JavaScript também */
 .part-label.selected {
-  transform: scale(1.3) !important;
-  transform-origin: center center !important;
-  z-index: 3000 !important;
-  border-width: 3px !important;
+  border-width: 4px !important;
   box-shadow:
-    0 0 30px rgba(255, 255, 255, 0.5),
-    0 0 60px currentColor !important;
+    0 0 20px currentColor,
+    0 0 40px currentColor !important;
   filter: brightness(1.1);
-  animation: selected-pulse 1.5s infinite;
-
-  /* Garantir posição correta */
-  position: relative;
-  top: 0 !important;
-  left: 0 !important;
-  margin: 0 !important;
+  z-index: 200;
 }
 
 /* Efeito de brilho pulsante para peças perfeitas */
