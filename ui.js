@@ -177,6 +177,24 @@ export class UIManager {
       });
     }
 
+    // Botão fechar estoque
+    const closeInventoryBtn = document.getElementById("close-inventory-btn");
+    if (closeInventoryBtn) {
+      closeInventoryBtn.addEventListener("click", () => {
+        this.closeInventory();
+      });
+    }
+
+    // Fechar ao clicar fora do painel
+    const inventoryPanel = document.getElementById("inventory-panel");
+    if (inventoryPanel) {
+      inventoryPanel.addEventListener("click", (e) => {
+        if (e.target === inventoryPanel) {
+          this.closeInventory();
+        }
+      });
+    }
+
     // Upgrade shop button
     document
       .getElementById("upgrade-shop-btn")
