@@ -320,7 +320,7 @@ export class Scene3D {
 
     // Array para guardar os objetos 3D das peças
     this.partObjects = [];
-    this.labelObjects = []; // Array específico para os labels
+    this.labelObjects = [];
 
     Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
       if (carData.parts[partName]) {
@@ -334,31 +334,49 @@ export class Scene3D {
         );
         const displayName = PART_TRANSLATIONS[partName].display;
 
+        // ===== DETERMINAR COR BASEADA NA CONDIÇÃO =====
+        let bgColor = "";
+        let borderColor = "#ff6b00";
+        let textColor = "white";
+        let isPerfect = false;
+
+        if (condition === 100) {
+          bgColor = "#4CAF50"; // Verde
+          borderColor = "gold";
+          isPerfect = true;
+        } else if (condition >= targetCondition) {
+          bgColor = "#00aa00"; // Verde
+        } else if (condition >= targetCondition * 0.7) {
+          bgColor = "#ffaa00"; // Amarelo
+          textColor = "black";
+        } else {
+          bgColor = "#ff0000"; // Vermelho
+        }
+
         // ===== LABEL 2D (CSS2DObject) =====
         const labelDiv = document.createElement("div");
         labelDiv.className = "part-label";
-        labelDiv.dataset.partName = partName; // Adicionar dataset para identificar
-
-        // Guardar condição para uso posterior
+        labelDiv.dataset.partName = partName;
         labelDiv.dataset.condition = condition;
         labelDiv.dataset.targetCondition = targetCondition;
+        labelDiv.dataset.bgColor = bgColor; // Guardar cor original
 
-        // Mostrar apenas 100% se a peça estiver perfeita
+        // Aplicar cor de fundo original
+        labelDiv.style.backgroundColor = bgColor;
+        labelDiv.style.color = textColor;
+        labelDiv.style.border = `2px solid ${borderColor}`;
+
+        // Se for perfeita, adicionar classe especial
+        if (isPerfect) {
+          labelDiv.classList.add("perfect");
+        }
+
+        // Texto do label
         let displayText = "";
         if (condition === 100) {
           displayText = `${displayName}: 100% ✨`;
-          labelDiv.style.backgroundColor = "#4CAF50";
-          labelDiv.style.border = "3px solid gold";
         } else {
           displayText = `${displayName}: ${condition}% / ${targetCondition}%`;
-
-          if (condition >= targetCondition) {
-            labelDiv.style.backgroundColor = "#00aa00";
-          } else if (condition >= targetCondition * 0.7) {
-            labelDiv.style.backgroundColor = "#ffaa00";
-          } else {
-            labelDiv.style.backgroundColor = "#ff0000";
-          }
         }
 
         labelDiv.textContent = displayText;
@@ -369,27 +387,27 @@ export class Scene3D {
         });
 
         try {
-          // ===== POSIÇÃO DO LABEL =====
-          // Altura base do label
+          // Posição do label
           const baseY = pos[1] + 0.5;
 
-          // Criar label com posição normal
           const label = new CSS2DObject(labelDiv);
           label.position.set(pos[0], baseY, pos[2]);
 
-          // Guardar a posição original para referência
           label.userData = {
             partName,
             baseY,
             originalScale: 1,
             isSelected: false,
+            originalBG: bgColor,
+            originalBorder: borderColor,
+            originalColor: textColor,
           };
 
           this.currentCar.add(label);
           this.partLabels.push(label);
-          this.labelObjects.push(label); // Adicionar ao array específico de labels
+          this.labelObjects.push(label);
 
-          // ===== OBJETO 3D DA PEÇA (para highlight) =====
+          // Objeto 3D da peça (para highlight)
           const partGeometry = new THREE.SphereGeometry(0.25, 8);
           const partMaterial = new THREE.MeshStandardMaterial({
             color: 0xffaa00,
@@ -567,21 +585,30 @@ export class Scene3D {
     if (!partName) return;
 
     // ===== 1. AJUSTAR ALTURA DOS LABELS =====
-    // Colocar o label selecionado mais alto que os outros
     this.labelObjects.forEach((label) => {
       const labelPartName = label.userData.partName;
       const baseY = label.userData.baseY;
 
       if (labelPartName === partName) {
-        // Label selecionado: mais alto e maior
-        label.position.y = baseY + 0.4; // SOBE 0.4 unidades
+        // Label selecionado: mais alto e maior, MAS MANTÉM COR ORIGINAL
+        label.position.y = baseY + 0.4;
         label.userData.isSelected = true;
 
-        // Aplicar escala no elemento CSS
         if (label.element) {
+          // MANTER COR ORIGINAL - não mudar o background
+          const originalBG = label.userData.originalBG;
+          const originalBorder = label.userData.originalBorder;
+
+          // Apenas aumentar escala e adicionar efeitos de destaque
           label.element.style.transform = "scale(1.3)";
           label.element.style.zIndex = "1000";
-          label.element.style.boxShadow = "0 0 30px #ff6b00";
+          label.element.style.boxShadow =
+            "0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px currentColor";
+          label.element.style.borderWidth = "3px";
+          label.element.style.fontWeight = "bold";
+
+          // Adicionar classe selected sem modificar cores
+          label.element.classList.add("selected");
         }
       } else {
         // Labels não selecionados: voltam à posição normal
@@ -592,21 +619,22 @@ export class Scene3D {
           label.element.style.transform = "scale(1)";
           label.element.style.zIndex = "auto";
           label.element.style.boxShadow = "none";
+          label.element.style.borderWidth = "2px";
+          label.element.style.fontWeight = "normal";
+          label.element.classList.remove("selected");
         }
       }
     });
 
-    // ===== 2. DESTACAR OBJETO 3D =====
+    // ===== 2. DESTACAR OBJETO 3D (mantém igual) =====
     this.partObjects.forEach((obj) => {
       const objPartName = obj.userData.partName;
 
       if (objPartName === partName) {
-        // Objeto selecionado: visível e maior
         obj.material.opacity = 0.3;
-        obj.scale.set(1.8, 1.8, 1.8); // MAIOR
+        obj.scale.set(1.8, 1.8, 1.8);
         obj.userData.isHighlight = true;
       } else {
-        // Objetos não selecionados: invisíveis
         obj.material.opacity = 0.0;
         obj.scale.set(1, 1, 1);
         obj.userData.isHighlight = false;
