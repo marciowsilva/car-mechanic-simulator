@@ -282,7 +282,6 @@ export class Scene3D {
 
   // Limpar todos os labels
   clearAllLabels() {
-    // Limpar labels 2D
     if (this.partLabels.length > 0) {
       this.partLabels.forEach((label) => {
         if (label.parent) {
@@ -290,10 +289,9 @@ export class Scene3D {
         }
       });
       this.partLabels = [];
-      this.labelObjects = []; // Limpar array específico
+      this.labelObjects = [];
     }
 
-    // Limpar objetos 3D
     if (this.partObjects) {
       this.partObjects.forEach((obj) => {
         if (obj.parent) {
@@ -303,7 +301,6 @@ export class Scene3D {
       this.partObjects = [];
     }
 
-    // Limpar highlight
     this.clearHighlight();
   }
 
@@ -319,7 +316,9 @@ export class Scene3D {
     }
 
     this.partObjects = [];
-    this.labelObjects = [];
+
+    // Array para manter os labels em ordem
+    const labelsToAdd = [];
 
     Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
       if (carData.parts[partName]) {
@@ -333,7 +332,7 @@ export class Scene3D {
         );
         const displayName = PART_TRANSLATIONS[partName].display;
 
-        // Determinar cor baseada na condição
+        // Determinar cor
         let bgColor = "";
         let borderColor = "#ff6b00";
         let textColor = "white";
@@ -350,15 +349,13 @@ export class Scene3D {
           bgColor = "#ff0000";
         }
 
-        // Texto do label
-        let displayText = "";
-        if (condition === 100) {
-          displayText = `${displayName}: 100% ✨`;
-        } else {
-          displayText = `${displayName}: ${condition}% / ${targetCondition}%`;
-        }
+        // Texto
+        let displayText =
+          condition === 100
+            ? `${displayName}: 100% ✨`
+            : `${displayName}: ${condition}% / ${targetCondition}%`;
 
-        // ===== LABEL 2D =====
+        // Criar label
         const labelDiv = document.createElement("div");
         labelDiv.className = "part-label";
         labelDiv.textContent = displayText;
@@ -372,40 +369,45 @@ export class Scene3D {
         labelDiv.style.whiteSpace = "nowrap";
         labelDiv.style.cursor = "pointer";
         labelDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+        labelDiv.style.transition = "all 0.2s ease";
+        labelDiv.style.pointerEvents = "auto";
 
-        // Evento de clique
         labelDiv.addEventListener("click", (e) => {
           e.stopPropagation();
           this.selectPart(partName);
         });
 
         try {
-          // Posição do label
+          // Posição base
           const baseY = pos[1] + 0.5;
 
-          // Criar label SEM transformações CSS complexas
           const label = new CSS2DObject(labelDiv);
           label.position.set(pos[0], baseY, pos[2]);
 
-          // Guardar dados
+          // IMPORTANTE: Guardar TODOS os dados necessários
           label.userData = {
             partName,
             baseY,
             isSelected: false,
             originalBG: bgColor,
             originalBorder: borderColor,
+            position: { x: pos[0], y: baseY, z: pos[2] },
           };
 
-          this.currentCar.add(label);
-          this.partLabels.push(label);
-          this.labelObjects.push(label);
+          // Não adicionar ainda - vamos adicionar em ordem específica
+          labelsToAdd.push({
+            label,
+            partName,
+            baseY,
+          });
 
-          // Objeto 3D para highlight (opcional)
-          const partGeometry = new THREE.SphereGeometry(0.2, 6);
+          // Objeto 3D para highlight
+          const partGeometry = new THREE.SphereGeometry(0.25, 8);
           const partMaterial = new THREE.MeshStandardMaterial({
             color: 0xffaa00,
             transparent: true,
             opacity: 0.0,
+            emissive: 0x442200,
           });
           const partObject = new THREE.Mesh(partGeometry, partMaterial);
           partObject.position.set(pos[0], baseY, pos[2]);
@@ -414,14 +416,27 @@ export class Scene3D {
           this.currentCar.add(partObject);
           this.partObjects.push(partObject);
         } catch (error) {
-          console.error(`❌ Erro ao criar label:`, error);
+          console.error(`❌ Erro:`, error);
         }
       }
     });
 
-    // Restaurar seleção se houver
+    // ===== IMPORTANTE: Adicionar labels em ordem específica =====
+    // Primeiro, adicionar todos os labels
+    labelsToAdd.forEach((item) => {
+      this.currentCar.add(item.label);
+      this.partLabels.push(item.label);
+    });
+
+    // Depois, guardar referências para manipulação
+    this.labelObjects = [...this.partLabels];
+
+    // Se já havia uma peça selecionada, restaurar destaque
     if (gameState?.selectedPart) {
-      this.highlightSelectedPartSimple(gameState.selectedPart);
+      // Pequeno delay para garantir que tudo foi renderizado
+      setTimeout(() => {
+        this.highlightSelectedPart(gameState.selectedPart);
+      }, 50);
     }
   }
 
@@ -570,153 +585,133 @@ export class Scene3D {
 
   // MÉTODO: Destacar a peça selecionada (separado do selectPart)
   highlightSelectedPart(partName) {
-    if (!partName) return;
+    if (!partName || !this.currentCar) return;
 
-    // ===== 1. AJUSTAR ALTURA E POSIÇÃO DOS LABELS =====
-    this.labelObjects.forEach((label) => {
-      const labelPartName = label.userData.partName;
-      const baseY = label.userData.baseY;
+    console.log("✨ Destacando peça:", partName);
 
-      if (labelPartName === partName) {
-        // Label selecionado: mais alto e maior, MAS MANTÉM COR ORIGINAL
-        label.position.y = baseY + 0.4; // Sobe um pouco
-
-        if (label.element) {
-          // USAR TRANSFORM-ORIGIN PARA MANTER A POSIÇÃO
-          label.element.style.transform = "scale(1.3)";
-          label.element.style.transformOrigin = "center center"; // Centralizar a escala
-          label.element.style.zIndex = "1000";
-          label.element.style.boxShadow =
-            "0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px currentColor";
-          label.element.style.borderWidth = "3px";
-          label.element.style.fontWeight = "bold";
-
-          // Garantir que o elemento não desloque
-          label.element.style.position = "relative";
-          label.element.style.top = "0";
-          label.element.style.left = "0";
-
-          label.element.classList.add("selected");
-        }
-      } else {
-        // Labels não selecionados: voltam à posição normal
-        label.position.y = baseY;
-
-        if (label.element) {
-          label.element.style.transform = "scale(1)";
-          label.element.style.transformOrigin = "center center";
-          label.element.style.zIndex = "auto";
-          label.element.style.boxShadow = "none";
-          label.element.style.borderWidth = "2px";
-          label.element.style.fontWeight = "normal";
-          label.element.style.position = "relative";
-          label.element.style.top = "0";
-          label.element.style.left = "0";
-          label.element.classList.remove("selected");
-        }
-      }
-    });
-
-    // ===== 2. DESTACAR OBJETO 3D =====
-    this.partObjects.forEach((obj) => {
-      const objPartName = obj.userData.partName;
-
-      if (objPartName === partName) {
-        obj.material.opacity = 0.3;
-        obj.scale.set(1.8, 1.8, 1.8);
-        obj.userData.isHighlight = true;
-      } else {
-        obj.material.opacity = 0.0;
-        obj.scale.set(1, 1, 1);
-        obj.userData.isHighlight = false;
-      }
-    });
-
-    // ===== 3. ANEL DE DESTAQUE =====
-    this.clearHighlight();
-    this.highlightPart(partName);
-  }
-
-  // NOVO MÉTODO SIMPLIFICADO: Highlight sem transformações CSS
-  highlightSelectedPartSimple(partName) {
-    if (!partName) return;
-
-    // Resetar todos os labels primeiro
+    // ===== 1. Resetar todos os labels =====
     this.labelObjects.forEach((label) => {
       if (label.element) {
-        // Remover estilos de seleção
+        // Resetar estilos
         label.element.style.borderWidth = "2px";
         label.element.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
         label.element.style.transform = "none";
-        label.element.style.fontWeight = "normal";
+        label.element.style.zIndex = "auto";
         label.element.classList.remove("selected");
       }
 
       // Voltar à posição original
       if (label.userData) {
         label.position.y = label.userData.baseY;
+        label.position.z = label.userData.position?.z || 0;
       }
+
+      label.userData.isSelected = false;
     });
 
-    // Destacar o label selecionado
+    // ===== 2. Encontrar e destacar o label selecionado =====
     const selectedLabel = this.labelObjects.find(
       (l) => l.userData?.partName === partName,
     );
-    if (selectedLabel && selectedLabel.element) {
-      // Subir um pouco
-      selectedLabel.position.y = selectedLabel.userData.baseY + 0.3;
 
-      // Estilo diferenciado mas SEM TRANSFORM
+    if (selectedLabel && selectedLabel.element) {
+      // Salvar posição original
+      const baseY = selectedLabel.userData.baseY;
+
+      // ===== SOLUÇÃO: Mover para FRENTE no eixo Z também =====
+      // Além de subir, vamos trazer para frente no eixo Z
+      selectedLabel.position.y = baseY + 0.5; // Sobe mais um pouco
+      selectedLabel.position.z = 0.5; // Traz para frente (ajuste conforme necessidade)
+
+      // Aplicar estilos
       selectedLabel.element.style.borderWidth = "4px";
       selectedLabel.element.style.boxShadow =
-        "0 0 20px currentColor, 0 0 40px currentColor";
-      selectedLabel.element.style.fontWeight = "bold";
+        "0 0 30px currentColor, 0 0 60px currentColor";
+      selectedLabel.element.style.transform = "scale(1.2)"; // Scale suave
+      selectedLabel.element.style.zIndex = "1000";
       selectedLabel.element.classList.add("selected");
+
+      selectedLabel.userData.isSelected = true;
+
+      // ===== 3. Garantir que este label seja o último na ordem =====
+      // Remover e readicionar para ficar por último (renderiza por cima)
+      if (this.currentCar) {
+        this.currentCar.remove(selectedLabel);
+        this.currentCar.add(selectedLabel);
+      }
     }
 
-    // Destacar objeto 3D
+    // ===== 4. Destacar objeto 3D =====
     this.partObjects.forEach((obj) => {
       if (obj.userData?.partName === partName) {
-        obj.material.opacity = 0.2;
-        obj.scale.set(1.5, 1.5, 1.5);
+        obj.material.opacity = 0.3;
+        obj.scale.set(2.0, 2.0, 2.0);
+        // Também trazer para frente
+        obj.position.z = 0.3;
       } else {
         obj.material.opacity = 0.0;
         obj.scale.set(1, 1, 1);
+        obj.position.z = 0;
       }
     });
+
+    // ===== 5. Anel de destaque =====
+    this.clearHighlight();
+    this.createHighlightRing(partName);
+  }
+
+  createHighlightRing(partName) {
+    const pos = PART_POSITIONS[partName];
+    if (!pos || !this.currentCar) return;
+
+    // Remover anel anterior
+    if (this.highlightRing) {
+      this.currentCar.remove(this.highlightRing);
+    }
+
+    // Criar novo anel
+    const ringGeometry = new THREE.TorusGeometry(0.4, 0.03, 16, 32);
+    const ringMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffaa00,
+      emissive: 0x442200,
+      transparent: true,
+      opacity: 0.6,
+    });
+    const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+
+    // Posicionar o anel também na frente
+    ring.position.set(pos[0], pos[1] + 0.7, 0.4);
+    ring.rotation.x = Math.PI / 2;
+
+    this.currentCar.add(ring);
+    this.highlightRing = ring;
+
+    // Animação simples
+    this.animateRing(ring);
+  }
+
+  animateRing(ring) {
+    if (!ring) return;
+
+    let time = 0;
+    const animate = () => {
+      if (!ring.parent || !this.highlightRing) return;
+
+      time += 0.05;
+      ring.scale.setScalar(1 + Math.sin(time) * 0.1);
+      ring.material.opacity = 0.4 + Math.sin(time) * 0.2;
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
   }
 
   // método para limpar o highlight quando necessário
   clearHighlight() {
-    // Limpar anel
     if (this.highlightRing && this.currentCar) {
       this.currentCar.remove(this.highlightRing);
       this.highlightRing = null;
-    }
-
-    // Resetar objetos 3D
-    if (this.partObjects) {
-      this.partObjects.forEach((obj) => {
-        obj.material.opacity = 0.0;
-        obj.scale.set(1, 1, 1);
-        obj.material.emissive.setHex(0x442200);
-      });
-    }
-
-    // Resetar posição dos labels
-    if (this.labelObjects) {
-      this.labelObjects.forEach((label) => {
-        if (label.userData) {
-          label.position.y = label.userData.baseY;
-          label.userData.isSelected = false;
-
-          if (label.element) {
-            label.element.style.transform = "scale(1)";
-            label.element.style.zIndex = "auto";
-            label.element.style.boxShadow = "none";
-          }
-        }
-      });
     }
   }
 
@@ -727,17 +722,15 @@ export class Scene3D {
     console.log("🎯 Selecionando peça:", partName);
     gameState.selectedPart = partName;
 
-    // Usar método simplificado
-    this.highlightSelectedPartSimple(partName);
+    this.highlightSelectedPart(partName);
 
-    // Feedback na UI
+    // Atualizar UI
     if (gameState.currentCar && gameState.currentJob) {
       const condition = gameState.currentCar.parts[partName]?.condition;
       const target = gameState.currentJob.targetConditions[partName];
       if (condition && target) {
-        const displayName = PART_TRANSLATIONS[partName].display;
         document.getElementById("interaction-info").textContent =
-          `🔧 ${displayName}: ${Math.round(condition)}% / Meta: ${Math.round(target)}%`;
+          `🔧 ${PART_TRANSLATIONS[partName].display}: ${Math.round(condition)}% / Meta: ${Math.round(target)}%`;
       }
     }
   }
