@@ -390,6 +390,14 @@ export class Scene3D {
           // Posição do label
           const baseY = pos[1] + 0.5;
 
+          // IMPORTANTE: Configurar o estilo do labelDiv antes de criar o CSS2DObject
+          labelDiv.style.position = "absolute";
+          labelDiv.style.top = "50%";
+          labelDiv.style.left = "50%";
+          labelDiv.style.transform = "translate(-50%, -50%)";
+          labelDiv.style.transformOrigin = "center center";
+          labelDiv.style.whiteSpace = "nowrap";
+
           const label = new CSS2DObject(labelDiv);
           label.position.set(pos[0], baseY, pos[2]);
 
@@ -584,49 +592,52 @@ export class Scene3D {
   highlightSelectedPart(partName) {
     if (!partName) return;
 
-    // ===== 1. AJUSTAR ALTURA DOS LABELS =====
+    // ===== 1. AJUSTAR ALTURA E POSIÇÃO DOS LABELS =====
     this.labelObjects.forEach((label) => {
       const labelPartName = label.userData.partName;
       const baseY = label.userData.baseY;
 
       if (labelPartName === partName) {
         // Label selecionado: mais alto e maior, MAS MANTÉM COR ORIGINAL
-        label.position.y = baseY + 0.4;
-        label.userData.isSelected = true;
+        label.position.y = baseY + 0.4; // Sobe um pouco
 
         if (label.element) {
-          // MANTER COR ORIGINAL - não mudar o background
-          const originalBG = label.userData.originalBG;
-          const originalBorder = label.userData.originalBorder;
-
-          // Apenas aumentar escala e adicionar efeitos de destaque
+          // USAR TRANSFORM-ORIGIN PARA MANTER A POSIÇÃO
           label.element.style.transform = "scale(1.3)";
+          label.element.style.transformOrigin = "center center"; // Centralizar a escala
           label.element.style.zIndex = "1000";
           label.element.style.boxShadow =
             "0 0 30px rgba(255, 255, 255, 0.5), 0 0 60px currentColor";
           label.element.style.borderWidth = "3px";
           label.element.style.fontWeight = "bold";
 
-          // Adicionar classe selected sem modificar cores
+          // Garantir que o elemento não desloque
+          label.element.style.position = "relative";
+          label.element.style.top = "0";
+          label.element.style.left = "0";
+
           label.element.classList.add("selected");
         }
       } else {
         // Labels não selecionados: voltam à posição normal
         label.position.y = baseY;
-        label.userData.isSelected = false;
 
         if (label.element) {
           label.element.style.transform = "scale(1)";
+          label.element.style.transformOrigin = "center center";
           label.element.style.zIndex = "auto";
           label.element.style.boxShadow = "none";
           label.element.style.borderWidth = "2px";
           label.element.style.fontWeight = "normal";
+          label.element.style.position = "relative";
+          label.element.style.top = "0";
+          label.element.style.left = "0";
           label.element.classList.remove("selected");
         }
       }
     });
 
-    // ===== 2. DESTACAR OBJETO 3D (mantém igual) =====
+    // ===== 2. DESTACAR OBJETO 3D =====
     this.partObjects.forEach((obj) => {
       const objPartName = obj.userData.partName;
 
