@@ -662,6 +662,8 @@ canvas {
   transition: none;
   text-align: center;
   backface-visibility: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .part-label:hover {
@@ -688,7 +690,8 @@ canvas {
   transition: none;
   text-align: center;
   backface-visibility: hidden;
-  z-index: 1000;
+  position: relative;
+  z-index: 1000 !important;
 }
 
 .part-label.perfect {

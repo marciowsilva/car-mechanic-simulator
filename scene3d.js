@@ -751,15 +751,17 @@ export class Scene3D {
     console.log("🎯 Selecionando peça:", partName);
     gameState.selectedPart = partName;
 
-    // Resetar todos os labels
+    // Primeiro, resetar todos os labels
     this.normalLabels.forEach((item) => {
       if (item.normal && item.normal.element) {
         item.normal.element.style.opacity = "1";
         item.normal.element.style.pointerEvents = "auto";
+        item.normal.element.style.zIndex = "auto";
       }
       if (item.selected && item.selected.element) {
         item.selected.element.style.opacity = "0";
         item.selected.element.style.pointerEvents = "none";
+        item.selected.element.style.zIndex = "auto";
       }
     });
 
@@ -769,13 +771,33 @@ export class Scene3D {
     );
 
     if (selectedItem) {
+      // Esconder o normal
       if (selectedItem.normal && selectedItem.normal.element) {
         selectedItem.normal.element.style.opacity = "0";
         selectedItem.normal.element.style.pointerEvents = "none";
       }
+
+      // Mostrar o selecionado
       if (selectedItem.selected && selectedItem.selected.element) {
         selectedItem.selected.element.style.opacity = "1";
         selectedItem.selected.element.style.pointerEvents = "auto";
+        selectedItem.selected.element.style.zIndex = "1000";
+      }
+
+      // ===== SOLUÇÃO: Reordenar na cena =====
+      // Remover e readicionar o label selecionado para que ele fique por último
+      if (this.currentCar && selectedItem.selected) {
+        // Guardar posição
+        const pos = selectedItem.selected.position.clone();
+
+        // Remover da cena
+        this.currentCar.remove(selectedItem.selected);
+
+        // Readicionar (vai para o final da lista de renderização)
+        this.currentCar.add(selectedItem.selected);
+
+        // Restaurar posição
+        selectedItem.selected.position.copy(pos);
       }
 
       // Destacar objeto 3D
@@ -783,6 +805,14 @@ export class Scene3D {
         if (obj.userData?.partName === partName) {
           obj.material.opacity = 0.3;
           obj.scale.set(1.8, 1.8, 1.8);
+
+          // Também reordenar o objeto 3D
+          if (this.currentCar) {
+            const pos = obj.position.clone();
+            this.currentCar.remove(obj);
+            this.currentCar.add(obj);
+            obj.position.copy(pos);
+          }
         } else {
           obj.material.opacity = 0.0;
           obj.scale.set(1, 1, 1);
