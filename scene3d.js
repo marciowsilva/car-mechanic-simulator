@@ -12,6 +12,15 @@ import { gameState } from "./game.js";
 export class Scene3D {
   constructor(container) {
     console.log("🎮 Inicializando Scene3D...");
+
+    // Verificar se as importações funcionaram
+    if (typeof CSS2DObject === "undefined") {
+      console.error("❌ CSS2DObject não está disponível!");
+    }
+    if (typeof CSS2DRenderer === "undefined") {
+      console.error("❌ CSS2DRenderer não está disponível!");
+    }
+
     this.container = container;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x111122);
@@ -31,13 +40,19 @@ export class Scene3D {
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.appendChild(this.renderer.domElement);
 
-    this.labelRenderer = new CSS2DRenderer();
-    this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
-    this.labelRenderer.domElement.style.position = "absolute";
-    this.labelRenderer.domElement.style.top = "0px";
-    this.labelRenderer.domElement.style.left = "0px";
-    this.labelRenderer.domElement.style.pointerEvents = "none";
-    container.appendChild(this.labelRenderer.domElement);
+    // CSS2 Renderer
+    try {
+      this.labelRenderer = new CSS2DRenderer();
+      this.labelRenderer.setSize(window.innerWidth, window.innerHeight);
+      this.labelRenderer.domElement.style.position = "absolute";
+      this.labelRenderer.domElement.style.top = "0px";
+      this.labelRenderer.domElement.style.left = "0px";
+      this.labelRenderer.domElement.style.pointerEvents = "none";
+      container.appendChild(this.labelRenderer.domElement);
+      console.log("✅ CSS2DRenderer criado com sucesso");
+    } catch (error) {
+      console.error("❌ Erro ao criar CSS2DRenderer:", error);
+    }
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
@@ -52,15 +67,8 @@ export class Scene3D {
 
     this.currentCar = null;
     this.partLabels = [];
-    this.highlightRing = null;
-
-    this.raycaster = new THREE.Raycaster();
-    this.mouse = new THREE.Vector2();
-
-    // Adicionar event listener para clique
-    this.renderer.domElement.addEventListener("click", (event) =>
-      this.onMouseClick(event),
-    );
+    this.partObjects = [];
+    this.normalLabels = [];
 
     console.log("✅ Scene3D inicializada");
   }
@@ -282,7 +290,6 @@ export class Scene3D {
 
   // Limpar todos os labels
   clearAllLabels() {
-    // Limpar labels normais e selecionados
     if (this.normalLabels) {
       this.normalLabels.forEach((item) => {
         if (item.normal && item.normal.parent) {
@@ -317,8 +324,7 @@ export class Scene3D {
     }
 
     this.partObjects = [];
-    this.normalLabels = []; // Labels no estado normal
-    this.selectedLabel = null; // Apenas UM label selecionado por vez
+    this.normalLabels = [];
 
     Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
       if (carData.parts[partName]) {
@@ -355,7 +361,7 @@ export class Scene3D {
             ? `${displayName}: 100% ✨`
             : `${displayName}: ${condition}% / ${targetCondition}%`;
 
-        // ===== LABEL NORMAL (sempre visível) =====
+        // ===== LABEL NORMAL =====
         const normalDiv = document.createElement("div");
         normalDiv.className = "part-label part-label-normal";
         normalDiv.textContent = displayText;
@@ -369,7 +375,6 @@ export class Scene3D {
         normalDiv.style.whiteSpace = "nowrap";
         normalDiv.style.cursor = "pointer";
         normalDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
-        normalDiv.style.transition = "none"; // Sem transição para evitar flicker
         normalDiv.style.pointerEvents = "auto";
 
         normalDiv.addEventListener("click", (e) => {
@@ -377,32 +382,36 @@ export class Scene3D {
           this.selectPart(partName);
         });
 
-        // ===== LABEL SELECIONADO (invisível por padrão) =====
+        // ===== LABEL SELECIONADO =====
         const selectedDiv = document.createElement("div");
         selectedDiv.className = "part-label part-label-selected";
         selectedDiv.textContent = displayText;
         selectedDiv.style.backgroundColor = bgColor;
         selectedDiv.style.color = textColor;
-        selectedDiv.style.border = `4px solid white`; // Borda branca para destaque
-        selectedDiv.style.padding = "6px 10px"; // Um pouco maior
+        selectedDiv.style.border = `4px solid white`;
+        selectedDiv.style.padding = "6px 10px";
         selectedDiv.style.borderRadius = "14px";
-        selectedDiv.style.fontSize = "14px"; // Fonte maior
+        selectedDiv.style.fontSize = "14px";
         selectedDiv.style.fontWeight = "bold";
         selectedDiv.style.whiteSpace = "nowrap";
         selectedDiv.style.cursor = "pointer";
         selectedDiv.style.boxShadow =
           "0 0 30px currentColor, 0 0 60px currentColor";
-        selectedDiv.style.opacity = "0"; // Invisível
-        selectedDiv.style.pointerEvents = "none"; // Não clicável
-        selectedDiv.style.transition = "none";
+        selectedDiv.style.opacity = "0";
+        selectedDiv.style.pointerEvents = "none";
         selectedDiv.style.zIndex = "1000";
 
         try {
-          // Posição base (ambos na mesma posição)
+          // Verificar se CSS2DObject está disponível
+          if (typeof CSS2DObject === "undefined") {
+            throw new Error("CSS2DObject não está disponível");
+          }
+
+          // Posição base
           const baseY = pos[1] + 0.5;
 
           // Label normal
-          const normalLabel = new THREE.CSS2DObject(normalDiv);
+          const normalLabel = new CSS2DObject(normalDiv);
           normalLabel.position.set(pos[0], baseY, pos[2]);
           normalLabel.userData = {
             partName,
@@ -412,8 +421,8 @@ export class Scene3D {
           };
 
           // Label selecionado
-          const selectedLabel = new THREE.CSS2DObject(selectedDiv);
-          selectedLabel.position.set(pos[0], baseY, pos[2]); // MESMA POSIÇÃO
+          const selectedLabel = new CSS2DObject(selectedDiv);
+          selectedLabel.position.set(pos[0], baseY, pos[2]);
           selectedLabel.userData = {
             partName,
             type: "selected",
@@ -447,16 +456,19 @@ export class Scene3D {
           this.currentCar.add(partObject);
           this.partObjects.push(partObject);
         } catch (error) {
-          console.error(`❌ Erro:`, error);
+          console.error(`❌ Erro ao criar label para ${partName}:`, error);
         }
       }
     });
 
     // Se já havia uma peça selecionada, restaurar
     if (gameState?.selectedPart) {
-      this.selectPart(gameState.selectedPart);
+      setTimeout(() => {
+        this.selectPart(gameState.selectedPart);
+      }, 100);
     }
   }
+
   // Efeito de partículas para reparo
   createRepairEffect(position) {
     if (!position) return;
@@ -739,52 +751,31 @@ export class Scene3D {
     console.log("🎯 Selecionando peça:", partName);
     gameState.selectedPart = partName;
 
-    // ===== 1. Resetar todos os labels =====
+    // Resetar todos os labels
     this.normalLabels.forEach((item) => {
-      // Label normal: visível
       if (item.normal && item.normal.element) {
         item.normal.element.style.opacity = "1";
         item.normal.element.style.pointerEvents = "auto";
       }
-
-      // Label selecionado: invisível
       if (item.selected && item.selected.element) {
         item.selected.element.style.opacity = "0";
         item.selected.element.style.pointerEvents = "none";
       }
-
-      // Ambos na mesma posição original
-      if (item.normal) {
-        item.normal.position.set(item.baseY ? 0 : 0, item.baseY, 0); // Ajuste
-      }
-      if (item.selected) {
-        item.selected.position.set(item.baseY ? 0 : 0, item.baseY, 0);
-      }
     });
 
-    // ===== 2. Encontrar e destacar o selecionado =====
+    // Destacar o selecionado
     const selectedItem = this.normalLabels.find(
       (item) => item.partName === partName,
     );
 
     if (selectedItem) {
-      // Esconder label normal
       if (selectedItem.normal && selectedItem.normal.element) {
         selectedItem.normal.element.style.opacity = "0";
         selectedItem.normal.element.style.pointerEvents = "none";
       }
-
-      // Mostrar label selecionado (na MESMA POSIÇÃO)
       if (selectedItem.selected && selectedItem.selected.element) {
         selectedItem.selected.element.style.opacity = "1";
         selectedItem.selected.element.style.pointerEvents = "auto";
-
-        // Garantir que está na mesma posição
-        selectedItem.selected.position.set(
-          selectedItem.selected.userData.pos.x,
-          selectedItem.selected.userData.pos.y,
-          selectedItem.selected.userData.pos.z,
-        );
       }
 
       // Destacar objeto 3D
@@ -804,8 +795,10 @@ export class Scene3D {
       const condition = gameState.currentCar.parts[partName]?.condition;
       const target = gameState.currentJob.targetConditions[partName];
       if (condition && target) {
-        document.getElementById("interaction-info").textContent =
-          `🔧 ${PART_TRANSLATIONS[partName].display}: ${Math.round(condition)}% / Meta: ${Math.round(target)}%`;
+        const info = document.getElementById("interaction-info");
+        if (info) {
+          info.textContent = `🔧 ${PART_TRANSLATIONS[partName].display}: ${Math.round(condition)}% / Meta: ${Math.round(target)}%`;
+        }
       }
     }
   }
