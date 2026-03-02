@@ -282,14 +282,17 @@ export class Scene3D {
 
   // Limpar todos os labels
   clearAllLabels() {
-    if (this.partLabels.length > 0) {
-      this.partLabels.forEach((label) => {
-        if (label.parent) {
-          label.parent.remove(label);
+    // Limpar labels normais e selecionados
+    if (this.normalLabels) {
+      this.normalLabels.forEach((item) => {
+        if (item.normal && item.normal.parent) {
+          item.normal.parent.remove(item.normal);
+        }
+        if (item.selected && item.selected.parent) {
+          item.selected.parent.remove(item.selected);
         }
       });
-      this.partLabels = [];
-      this.labelObjects = [];
+      this.normalLabels = [];
     }
 
     if (this.partObjects) {
@@ -300,8 +303,6 @@ export class Scene3D {
       });
       this.partObjects = [];
     }
-
-    this.clearHighlight();
   }
 
   updatePartLabels(carData, job) {
@@ -316,9 +317,8 @@ export class Scene3D {
     }
 
     this.partObjects = [];
-
-    // Array para manter os labels em ordem
-    const labelsToAdd = [];
+    this.normalLabels = []; // Labels no estado normal
+    this.selectedLabel = null; // Apenas UM label selecionado por vez
 
     Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
       if (carData.parts[partName]) {
@@ -355,49 +355,81 @@ export class Scene3D {
             ? `${displayName}: 100% ✨`
             : `${displayName}: ${condition}% / ${targetCondition}%`;
 
-        // Criar label
-        const labelDiv = document.createElement("div");
-        labelDiv.className = "part-label";
-        labelDiv.textContent = displayText;
-        labelDiv.style.backgroundColor = bgColor;
-        labelDiv.style.color = textColor;
-        labelDiv.style.border = `2px solid ${borderColor}`;
-        labelDiv.style.padding = "4px 8px";
-        labelDiv.style.borderRadius = "12px";
-        labelDiv.style.fontSize = "12px";
-        labelDiv.style.fontWeight = "bold";
-        labelDiv.style.whiteSpace = "nowrap";
-        labelDiv.style.cursor = "pointer";
-        labelDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
-        labelDiv.style.transition = "all 0.2s ease";
-        labelDiv.style.pointerEvents = "auto";
+        // ===== LABEL NORMAL (sempre visível) =====
+        const normalDiv = document.createElement("div");
+        normalDiv.className = "part-label part-label-normal";
+        normalDiv.textContent = displayText;
+        normalDiv.style.backgroundColor = bgColor;
+        normalDiv.style.color = textColor;
+        normalDiv.style.border = `2px solid ${borderColor}`;
+        normalDiv.style.padding = "4px 8px";
+        normalDiv.style.borderRadius = "12px";
+        normalDiv.style.fontSize = "12px";
+        normalDiv.style.fontWeight = "bold";
+        normalDiv.style.whiteSpace = "nowrap";
+        normalDiv.style.cursor = "pointer";
+        normalDiv.style.boxShadow = "0 2px 5px rgba(0,0,0,0.3)";
+        normalDiv.style.transition = "none"; // Sem transição para evitar flicker
+        normalDiv.style.pointerEvents = "auto";
 
-        labelDiv.addEventListener("click", (e) => {
+        normalDiv.addEventListener("click", (e) => {
           e.stopPropagation();
           this.selectPart(partName);
         });
 
+        // ===== LABEL SELECIONADO (invisível por padrão) =====
+        const selectedDiv = document.createElement("div");
+        selectedDiv.className = "part-label part-label-selected";
+        selectedDiv.textContent = displayText;
+        selectedDiv.style.backgroundColor = bgColor;
+        selectedDiv.style.color = textColor;
+        selectedDiv.style.border = `4px solid white`; // Borda branca para destaque
+        selectedDiv.style.padding = "6px 10px"; // Um pouco maior
+        selectedDiv.style.borderRadius = "14px";
+        selectedDiv.style.fontSize = "14px"; // Fonte maior
+        selectedDiv.style.fontWeight = "bold";
+        selectedDiv.style.whiteSpace = "nowrap";
+        selectedDiv.style.cursor = "pointer";
+        selectedDiv.style.boxShadow =
+          "0 0 30px currentColor, 0 0 60px currentColor";
+        selectedDiv.style.opacity = "0"; // Invisível
+        selectedDiv.style.pointerEvents = "none"; // Não clicável
+        selectedDiv.style.transition = "none";
+        selectedDiv.style.zIndex = "1000";
+
         try {
-          // Posição base
+          // Posição base (ambos na mesma posição)
           const baseY = pos[1] + 0.5;
 
-          const label = new CSS2DObject(labelDiv);
-          label.position.set(pos[0], baseY, pos[2]);
-
-          // IMPORTANTE: Guardar TODOS os dados necessários
-          label.userData = {
+          // Label normal
+          const normalLabel = new THREE.CSS2DObject(normalDiv);
+          normalLabel.position.set(pos[0], baseY, pos[2]);
+          normalLabel.userData = {
             partName,
+            type: "normal",
             baseY,
-            isSelected: false,
-            originalBG: bgColor,
-            originalBorder: borderColor,
-            position: { x: pos[0], y: baseY, z: pos[2] },
+            pos: { x: pos[0], y: baseY, z: pos[2] },
           };
 
-          // Não adicionar ainda - vamos adicionar em ordem específica
-          labelsToAdd.push({
-            label,
+          // Label selecionado
+          const selectedLabel = new THREE.CSS2DObject(selectedDiv);
+          selectedLabel.position.set(pos[0], baseY, pos[2]); // MESMA POSIÇÃO
+          selectedLabel.userData = {
             partName,
+            type: "selected",
+            baseY,
+            pos: { x: pos[0], y: baseY, z: pos[2] },
+          };
+
+          // Adicionar ambos ao carro
+          this.currentCar.add(normalLabel);
+          this.currentCar.add(selectedLabel);
+
+          // Guardar referências
+          this.normalLabels.push({
+            partName,
+            normal: normalLabel,
+            selected: selectedLabel,
             baseY,
           });
 
@@ -407,7 +439,6 @@ export class Scene3D {
             color: 0xffaa00,
             transparent: true,
             opacity: 0.0,
-            emissive: 0x442200,
           });
           const partObject = new THREE.Mesh(partGeometry, partMaterial);
           partObject.position.set(pos[0], baseY, pos[2]);
@@ -421,25 +452,11 @@ export class Scene3D {
       }
     });
 
-    // ===== IMPORTANTE: Adicionar labels em ordem específica =====
-    // Primeiro, adicionar todos os labels
-    labelsToAdd.forEach((item) => {
-      this.currentCar.add(item.label);
-      this.partLabels.push(item.label);
-    });
-
-    // Depois, guardar referências para manipulação
-    this.labelObjects = [...this.partLabels];
-
-    // Se já havia uma peça selecionada, restaurar destaque
+    // Se já havia uma peça selecionada, restaurar
     if (gameState?.selectedPart) {
-      // Pequeno delay para garantir que tudo foi renderizado
-      setTimeout(() => {
-        this.highlightSelectedPart(gameState.selectedPart);
-      }, 50);
+      this.selectPart(gameState.selectedPart);
     }
   }
-
   // Efeito de partículas para reparo
   createRepairEffect(position) {
     if (!position) return;
@@ -717,12 +734,70 @@ export class Scene3D {
 
   // Modificar selectPart para incluir animação
   selectPart(partName) {
-    if (!gameState) return;
+    if (!gameState || !this.normalLabels) return;
 
     console.log("🎯 Selecionando peça:", partName);
     gameState.selectedPart = partName;
 
-    this.highlightSelectedPart(partName);
+    // ===== 1. Resetar todos os labels =====
+    this.normalLabels.forEach((item) => {
+      // Label normal: visível
+      if (item.normal && item.normal.element) {
+        item.normal.element.style.opacity = "1";
+        item.normal.element.style.pointerEvents = "auto";
+      }
+
+      // Label selecionado: invisível
+      if (item.selected && item.selected.element) {
+        item.selected.element.style.opacity = "0";
+        item.selected.element.style.pointerEvents = "none";
+      }
+
+      // Ambos na mesma posição original
+      if (item.normal) {
+        item.normal.position.set(item.baseY ? 0 : 0, item.baseY, 0); // Ajuste
+      }
+      if (item.selected) {
+        item.selected.position.set(item.baseY ? 0 : 0, item.baseY, 0);
+      }
+    });
+
+    // ===== 2. Encontrar e destacar o selecionado =====
+    const selectedItem = this.normalLabels.find(
+      (item) => item.partName === partName,
+    );
+
+    if (selectedItem) {
+      // Esconder label normal
+      if (selectedItem.normal && selectedItem.normal.element) {
+        selectedItem.normal.element.style.opacity = "0";
+        selectedItem.normal.element.style.pointerEvents = "none";
+      }
+
+      // Mostrar label selecionado (na MESMA POSIÇÃO)
+      if (selectedItem.selected && selectedItem.selected.element) {
+        selectedItem.selected.element.style.opacity = "1";
+        selectedItem.selected.element.style.pointerEvents = "auto";
+
+        // Garantir que está na mesma posição
+        selectedItem.selected.position.set(
+          selectedItem.selected.userData.pos.x,
+          selectedItem.selected.userData.pos.y,
+          selectedItem.selected.userData.pos.z,
+        );
+      }
+
+      // Destacar objeto 3D
+      this.partObjects.forEach((obj) => {
+        if (obj.userData?.partName === partName) {
+          obj.material.opacity = 0.3;
+          obj.scale.set(1.8, 1.8, 1.8);
+        } else {
+          obj.material.opacity = 0.0;
+          obj.scale.set(1, 1, 1);
+        }
+      });
+    }
 
     // Atualizar UI
     if (gameState.currentCar && gameState.currentJob) {
