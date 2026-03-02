@@ -461,12 +461,15 @@ export class Scene3D {
       }
     });
 
-    // Se já havia uma peça selecionada, restaurar
-    if (gameState?.selectedPart) {
-      setTimeout(() => {
+    // ===== ADICIONE ESTE BLOCO AQUI =====
+    // Após criar todos os labels, garantir que a seleção seja restaurada corretamente
+    setTimeout(() => {
+      if (gameState?.selectedPart) {
+        console.log("🔄 Restaurando seleção:", gameState.selectedPart);
         this.selectPart(gameState.selectedPart);
-      }, 100);
-    }
+      }
+    }, 200);
+    // ===== FIM DO BLOCO =====
   }
 
   // Efeito de partículas para reparo
