@@ -643,7 +643,29 @@ export class UIManager {
 
   openUpgradeShop() {
     document.getElementById("upgrade-shop").classList.add("show");
-    this.updateUpgradeShop();
+    this.updateToolDisplay();
+    this.updateWorkshopDisplay();
+    this.updateSkillsDisplay();
+    this.updateSpecializationsDisplay(); // NOVO
+
+    // Configurar abas
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const tab = e.target.dataset.tab;
+
+        // Atualizar abas
+        document
+          .querySelectorAll(".tab-btn")
+          .forEach((b) => b.classList.remove("active"));
+        e.target.classList.add("active");
+
+        // Atualizar conteúdo
+        document.querySelectorAll(".tab-content").forEach((content) => {
+          content.classList.remove("active");
+        });
+        document.getElementById(`${tab}-tab`).classList.add("active");
+      });
+    });
   }
 
   closeUpgradeShop() {
@@ -788,5 +810,108 @@ export class UIManager {
     } else {
       this.showNotification("💰 Dinheiro insuficiente para upgrade!", "error");
     }
+  }
+
+  updateSpecializationsDisplay() {
+    const container = document.getElementById("specializations-list");
+    const statsEl = document.getElementById("specializations-stats");
+
+    if (!container || !statsEl || !window.specializationSystem) return;
+
+    const stats = specializationSystem.getStats();
+    statsEl.innerHTML = `
+        <div style="display: flex; justify-content: space-around;">
+            <div>
+                <div style="color: #888; font-size: 12px;">Níveis Totais</div>
+                <div style="color: #ff6b00; font-size: 18px; font-weight: bold;">${stats.totalLevels}/${stats.maxPossible}</div>
+            </div>
+            <div>
+                <div style="color: #888; font-size: 12px;">Progresso</div>
+                <div style="color: #4CAF50; font-size: 18px; font-weight: bold;">${stats.completionPercent}%</div>
+            </div>
+            <div>
+                <div style="color: #888; font-size: 12px;">Total Gasto</div>
+                <div style="color: #ffd700; font-size: 18px; font-weight: bold;">R$ ${stats.totalSpent}</div>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = "";
+
+    Object.values(specializationSystem.specializations).forEach((spec) => {
+      const nextPrice = specializationSystem.getNextLevelPrice(spec.id);
+      const canBuy = nextPrice ? gameState.money >= nextPrice : false;
+      const progressPercent = (spec.level / spec.maxLevel) * 100;
+
+      const item = document.createElement("div");
+      item.className = "specialization-item";
+
+      let buyButton = "";
+      if (spec.level >= spec.maxLevel) {
+        buyButton = `<button class="specialization-buy maxed" disabled>⭐ Nível Máximo</button>`;
+      } else {
+        buyButton = `<button class="specialization-buy" onclick="uiManager?.buySpecialization('${spec.id}')" ${!canBuy ? "disabled" : ""}>
+                            Comprar Nível ${spec.level + 1} (R$ ${nextPrice})
+                        </button>`;
+      }
+
+      item.innerHTML = `
+            <div class="specialization-header">
+                <span class="specialization-icon">${spec.icon}</span>
+                <div class="specialization-info">
+                    <div class="specialization-name">${spec.name}</div>
+                    <div class="specialization-desc">${spec.description}</div>
+                </div>
+            </div>
+            <div class="specialization-level">
+                <div class="level-bar">
+                    <div class="level-progress" style="width: ${progressPercent}%"></div>
+                </div>
+                <span class="level-text">Nv. ${spec.level}/${spec.maxLevel}</span>
+            </div>
+            <div class="specialization-bonus">
+                Bônus atual: +${spec.bonus * spec.level * 100}%
+            </div>
+            ${buyButton}
+        `;
+
+      container.appendChild(item);
+    });
+  }
+
+  buySpecialization(specId) {
+    if (!window.specializationSystem) return;
+
+    const result = specializationSystem.buySpecialization(specId);
+
+    if (result.success) {
+      this.updateSpecializationsDisplay();
+      this.showNotification(result.message, "success");
+
+      // Atualizar tooltips se necessário
+      this.updateToolDisplay();
+    } else {
+      this.showNotification(result.message, "error");
+    }
+  }
+
+  // Modificar updateToolDisplay para mostrar bônus de especialização
+  updateToolDisplay() {
+    document.querySelectorAll(".tool-item").forEach((tool) => {
+      const toolId = tool.dataset.tool;
+      if (toolId === "diagnostic") return;
+
+      const stats = upgradeSystem?.getToolStats(toolId);
+      if (!stats) return;
+
+      const toolInfo = tool.querySelector(".tool-info");
+      if (toolInfo) {
+        // Aqui você pode adicionar indicadores de bônus por especialização
+        toolInfo.innerHTML = `
+                <div class="tool-name">${stats.name} Nv.${stats.level}</div>
+                <div class="tool-stats">+${stats.repair}% | R$ ${stats.cost}</div>
+            `;
+      }
+    });
   }
 }

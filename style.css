@@ -707,8 +707,8 @@ canvas {
   pointer-events: auto !important;
 }
 
-/* ===== LOJA DE UPGRADES ===== */
-#upgrade-shop {
+/* ===== LOJA DE UPGRADES COM ABAS ===== */
+.upgrade-shop {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -720,16 +720,181 @@ canvas {
   border: 3px solid #ff6b00;
   pointer-events: auto;
   z-index: 1000;
-  width: 500px;
+  width: 600px;
   max-height: 80vh;
   overflow-y: auto;
-  display: none;
   backdrop-filter: blur(10px);
+  display: none;
 }
 
-#upgrade-shop.show {
+.upgrade-shop.show {
   display: block;
   animation: slideIn 0.3s ease;
+}
+
+/* Abas */
+.shop-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #444;
+  padding-bottom: 10px;
+}
+
+.tab-btn {
+  background: #3a3a3a;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  flex: 1;
+}
+
+.tab-btn:hover {
+  background: #ff6b00;
+}
+
+.tab-btn.active {
+  background: #ff6b00;
+  box-shadow: 0 0 15px #ff6b00;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* Especializações */
+.specializations-stats {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.specializations-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.specialization-item {
+  background: #3a3a3a;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid transparent;
+  transition: all 0.3s;
+}
+
+.specialization-item:hover {
+  border-color: #ff6b00;
+  transform: translateY(-2px);
+}
+
+.specialization-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.specialization-icon {
+  font-size: 24px;
+}
+
+.specialization-info {
+  flex: 1;
+}
+
+.specialization-name {
+  font-weight: bold;
+  color: #ff6b00;
+  font-size: 14px;
+}
+
+.specialization-desc {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+}
+
+.specialization-level {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.level-bar {
+  flex: 1;
+  height: 4px;
+  background: #555;
+  border-radius: 2px;
+  margin-right: 10px;
+  overflow: hidden;
+}
+
+.level-progress {
+  height: 100%;
+  background: #ff6b00;
+  transition: width 0.3s;
+}
+
+.level-text {
+  font-size: 12px;
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.specialization-bonus {
+  font-size: 12px;
+  color: #4caf50;
+  text-align: right;
+}
+
+.specialization-price {
+  font-size: 14px;
+  color: #ffd700;
+  font-weight: bold;
+  text-align: right;
+}
+
+.specialization-buy {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 15px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  width: 100%;
+  margin-top: 5px;
+}
+
+.specialization-buy:hover:not(:disabled) {
+  background: #45a049;
+  transform: scale(1.02);
+}
+
+.specialization-buy:disabled {
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.specialization-buy.maxed {
+  background: #333;
+  color: #888;
 }
 
 @keyframes slideIn {

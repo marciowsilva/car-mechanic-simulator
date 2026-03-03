@@ -9,6 +9,7 @@ import { Scene3D } from "./scene3d.js";
 import { UIManager } from "./ui.js";
 import { AudioManager } from "./audio.js";
 import { Inventory } from "./inventory.js";
+import { SpecializationSystem } from "./specializations.js";
 
 // Estado Global do Jogo
 class GameState {
@@ -70,6 +71,7 @@ export const audioManager = new AudioManager();
 export let scene3D;
 export let uiManager;
 export const inventory = new Inventory();
+export const specializationSystem = new SpecializationSystem();
 
 // Inicialização
 window.addEventListener("load", async () => {
@@ -125,8 +127,12 @@ window.repairPart = (partName) => {
   const part = gameState.currentCar.parts[partName];
   const targetCondition = gameState.currentJob.targetConditions[partName];
   const toolStats = upgradeSystem.getToolStats(gameState.selectedTool);
-  const repairEfficiency = upgradeSystem.calculateRepairEfficiency(
+  const baseEfficiency = upgradeSystem.calculateRepairEfficiency(
     toolStats.repair,
+  );
+  const repairEfficiency = specializationSystem.calculateRepairEfficiency(
+    baseEfficiency,
+    partName,
   );
   const repairCost = upgradeSystem.calculateRepairCost(toolStats.cost);
 
@@ -307,6 +313,7 @@ window.audioManager = audioManager;
 window.scene3D = scene3D;
 window.uiManager = uiManager;
 window.inventory = inventory;
+window.specializationSystem = specializationSystem;
 
 // Aguardar UI ser inicializada antes de usar
 window.addEventListener("load", () => {

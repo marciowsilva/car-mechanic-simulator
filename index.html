@@ -131,25 +131,57 @@
       </div>
     </div>
 
-    <div id="upgrade-shop">
+    <!-- Loja de Upgrades com Abas -->
+    <div id="upgrade-shop" class="upgrade-shop">
       <div class="shop-header">
         <span class="shop-title">🛠️ LOJA DE UPGRADES</span>
-        <span class="shop-close" onclick="closeUpgradeShop()">×</span>
+        <span class="shop-close" onclick="uiManager?.closeUpgradeShop()"
+          >×</span
+        >
       </div>
 
-      <div class="upgrade-category">
-        <div class="category-title">🔧 FERRAMENTAS</div>
-        <div id="tool-upgrades"></div>
+      <!-- Abas -->
+      <div class="shop-tabs">
+        <button class="tab-btn active" data-tab="tools">🔧 Ferramentas</button>
+        <button class="tab-btn" data-tab="workshop">🏢 Oficina</button>
+        <button class="tab-btn" data-tab="skills">👤 Habilidades</button>
+        <button class="tab-btn" data-tab="specializations">
+          ⭐ Especializações
+        </button>
       </div>
 
-      <div class="upgrade-category">
-        <div class="category-title">🏢 OFICINA</div>
-        <div id="workshop-upgrades"></div>
+      <!-- Conteúdo das abas -->
+      <div class="tab-content active" id="tools-tab">
+        <div class="upgrade-category">
+          <div class="category-title">🔧 FERRAMENTAS</div>
+          <div id="tool-upgrades"></div>
+        </div>
       </div>
 
-      <div class="upgrade-category">
-        <div class="category-title">👤 HABILIDADES</div>
-        <div id="skill-upgrades"></div>
+      <div class="tab-content" id="workshop-tab">
+        <div class="upgrade-category">
+          <div class="category-title">🏢 OFICINA</div>
+          <div id="workshop-upgrades"></div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="skills-tab">
+        <div class="upgrade-category">
+          <div class="category-title">👤 HABILIDADES</div>
+          <div id="skill-upgrades"></div>
+        </div>
+      </div>
+
+      <div class="tab-content" id="specializations-tab">
+        <div class="upgrade-category">
+          <div class="category-title">⭐ ESPECIALIZAÇÕES</div>
+          <div class="specializations-stats" id="specializations-stats">
+            <!-- Estatísticas serão inseridas aqui -->
+          </div>
+          <div id="specializations-list" class="specializations-grid">
+            <!-- Especializações serão inseridas aqui -->
+          </div>
+        </div>
       </div>
     </div>
 
