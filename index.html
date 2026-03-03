@@ -92,6 +92,9 @@
         </div>
 
         <div id="bottom-panel">
+          <button class="action-btn career-btn" id="career-btn">
+            📈 Carreira
+          </button>
           <button class="action-btn customers-btn" id="customers-btn">
             👥 Clientes
           </button>
@@ -410,6 +413,136 @@
           🔄 Atualizar (R$ 500)
         </button>
         <button class="action-btn" id="best-deals">🏷️ Melhores Ofertas</button>
+      </div>
+    </div>
+
+    <!-- Painel do Modo Carreira -->
+    <div id="career-panel" class="career-panel">
+      <div class="career-header">
+        <span class="career-title">📈 MODO CARREIRA</span>
+        <span class="career-close" id="close-career-panel">×</span>
+      </div>
+
+      <!-- Nível Atual -->
+      <div class="current-level-card">
+        <div class="level-icon" id="career-level-icon">🔰</div>
+        <div class="level-info">
+          <div class="level-name" id="career-level-name">Mecânico Aprendiz</div>
+          <div class="level-desc" id="career-level-desc">Nível 1/6</div>
+          <div class="level-progress-bar">
+            <div
+              class="level-progress-fill"
+              id="career-level-progress"
+              style="width: 0%"
+            ></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estatísticas da Carreira -->
+      <div class="career-stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-label">Reputação</div>
+          <div class="stat-value" id="career-reputation">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🚗</div>
+          <div class="stat-label">Serviços</div>
+          <div class="stat-value" id="career-jobs">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-label">Ganho Total</div>
+          <div class="stat-value" id="career-money">R$ 0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✨</div>
+          <div class="stat-label">Perfeitos</div>
+          <div class="stat-value" id="career-perfect">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👑</div>
+          <div class="stat-label">VIPs</div>
+          <div class="stat-value" id="career-vip">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔧</div>
+          <div class="stat-label">Peças Usadas</div>
+          <div class="stat-value" id="career-parts">0</div>
+        </div>
+      </div>
+
+      <!-- Próximo Nível -->
+      <div class="next-level-section">
+        <h4>⬆️ PRÓXIMO NÍVEL</h4>
+        <div class="next-level-card" id="next-level-card">
+          <div class="next-level-header">
+            <span class="next-level-icon" id="next-level-icon">🔧</span>
+            <span class="next-level-name" id="next-level-name"
+              >Mecânico Iniciante</span
+            >
+          </div>
+
+          <div class="requirement-item">
+            <div class="requirement-label">
+              <span>⭐ Reputação</span>
+              <span id="req-reputation">0/10</span>
+            </div>
+            <div class="requirement-bar">
+              <div
+                class="requirement-fill"
+                id="req-reputation-bar"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+
+          <div class="requirement-item">
+            <div class="requirement-label">
+              <span>🚗 Serviços</span>
+              <span id="req-jobs">0/5</span>
+            </div>
+            <div class="requirement-bar">
+              <div
+                class="requirement-fill"
+                id="req-jobs-bar"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+
+          <div class="requirement-item">
+            <div class="requirement-label">
+              <span>💰 Dinheiro Ganho</span>
+              <span id="req-money">R$ 0/R$ 5.000</span>
+            </div>
+            <div class="requirement-bar">
+              <div
+                class="requirement-fill"
+                id="req-money-bar"
+                style="width: 0%"
+              ></div>
+            </div>
+          </div>
+
+          <div class="next-level-rewards">
+            <h5>🎁 RECOMPENSAS</h5>
+            <div class="rewards-list" id="next-rewards">
+              <span class="reward-item">💰 R$ 2.000</span>
+              <span class="reward-item">⚡ 1.000 XP</span>
+              <span class="reward-item">🔓 Diagnóstico Avançado</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Desbloqueadas -->
+      <div class="unlocked-features">
+        <h4>🔓 FEATURES DESBLOQUEADAS</h4>
+        <div class="features-grid" id="features-grid">
+          <!-- Features serão inseridas aqui -->
+        </div>
       </div>
     </div>
 

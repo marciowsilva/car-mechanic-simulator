@@ -19,6 +19,7 @@ import { CustomerCar } from "./car.js";
 import { Scene3D } from "./scene3d.js";
 import { UIManager } from "./ui.js";
 import { UsedPartsMarket } from "./used-parts-market.js";
+import { CareerMode } from "./career-mode.js";
 
 // ===== ESTADO GLOBAL DO JOGO =====
 class GameState {
@@ -89,6 +90,7 @@ const dailyChallenges = new DailyChallenges();
 let scene3D;
 let uiManager;
 const usedPartsMarket = new UsedPartsMarket();
+const careerMode = new CareerMode();
 
 // ===== EXPORTAÇÕES =====
 export {
@@ -105,6 +107,7 @@ export {
   scene3D,
   uiManager,
   usedPartsMarket,
+  careerMode,
 };
 
 // ===== EXPORTAÇÕES GLOBAIS =====
@@ -119,6 +122,7 @@ window.garageSystem = garageSystem;
 window.customerSystem = customerSystem;
 window.dailyChallenges = dailyChallenges;
 window.usedPartsMarket = usedPartsMarket;
+window.careerMode = careerMode;
 
 Object.defineProperty(window, "scene3D", {
   set: (value) => {
@@ -181,6 +185,7 @@ window.repairPart = (partName) => {
 
   audioManager?.playSound(gameState.selectedTool);
   dailyChallenges?.onToolUsed(gameState.selectedTool);
+  careerMode?.onPartUsed(partName);
 
   if (window.scene3D) {
     const pos = PART_POSITIONS[partName];
@@ -252,6 +257,7 @@ window.buyNewPart = (partName) => {
   }
 
   audioManager?.playSound("money");
+  careerMode?.onMoneySpent(partPrice);
 
   if (window.scene3D) {
     const pos = PART_POSITIONS[partName];
@@ -281,6 +287,8 @@ window.upgradeTool = (toolId) => {
     window.uiManager?.updateUpgradeShop();
     window.uiManager?.showNotification(`🔧 Ferramenta upgraded!`, "success");
     dailyChallenges?.onUpgradeBuy(price);
+    careerMode?.onToolUpgraded(toolId);
+    careerMode?.onMoneySpent(price);
     db.saveUpgrades();
   }
 };
@@ -292,6 +300,8 @@ window.upgradeWorkshop = (upgradeId) => {
     window.uiManager?.updateUpgradeShop();
     window.uiManager?.showNotification("🏢 Upgrade da oficina!", "success");
     dailyChallenges?.onUpgradeBuy(price);
+    careerMode?.onToolUpgraded(toolId);
+    careerMode?.onMoneySpent(price);
     db.saveUpgrades();
   }
 };
@@ -303,6 +313,8 @@ window.upgradeSkill = (skillId) => {
     window.uiManager?.updateUpgradeShop();
     window.uiManager?.showNotification("👤 Habilidade melhorada!", "success");
     dailyChallenges?.onUpgradeBuy(price);
+    careerMode?.onToolUpgraded(toolId);
+    careerMode?.onMoneySpent(price);
     db.saveUpgrades();
   }
 };

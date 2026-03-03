@@ -342,6 +342,17 @@ export class UIManager {
         this.filterMarket(e.target.dataset.filter);
       });
     });
+
+    // Botão da carreira
+    document.getElementById("career-btn").addEventListener("click", () => {
+      this.toggleCareerPanel();
+    });
+
+    document
+      .getElementById("close-career-panel")
+      .addEventListener("click", () => {
+        this.closeCareerPanel();
+      });
   }
 
   // ===== MÉTODOS DE INTERFACE =====
@@ -1393,12 +1404,180 @@ export class UIManager {
     }
   }
 
+  toggleCareerPanel() {
+    const panel = document.getElementById("career-panel");
+    if (panel) {
+      panel.classList.contains("show")
+        ? this.closeCareerPanel()
+        : this.openCareerPanel();
+    }
+  }
+
+  openCareerPanel() {
+    const panel = document.getElementById("career-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateCareerDisplay();
+    }
+  }
+
+  closeCareerPanel() {
+    const panel = document.getElementById("career-panel");
+    if (panel) panel.classList.remove("show");
+  }
+
+  updateCareerDisplay() {
+    if (!careerMode) return;
+
+    const stats = careerMode.getStats();
+    const currentLevel = CAREER_LEVELS[stats.currentLevel];
+
+    // Nível atual
+    document.getElementById("career-level-icon").textContent = stats.levelIcon;
+    document.getElementById("career-level-name").textContent = stats.levelName;
+    document.getElementById("career-level-desc").textContent =
+      `Nível ${stats.currentLevel}/6`;
+
+    // Progresso para o próximo nível (baseado na reputação)
+    const nextLevel = stats.nextLevel;
+    if (!nextLevel.maxLevel) {
+      const progress =
+        (stats.progress.reputation /
+          nextLevel.requirements.reputation.required) *
+        100;
+      document.getElementById("career-level-progress").style.width =
+        Math.min(100, progress) + "%";
+    } else {
+      document.getElementById("career-level-progress").style.width = "100%";
+    }
+
+    // Estatísticas
+    document.getElementById("career-reputation").textContent =
+      stats.progress.reputation;
+    document.getElementById("career-jobs").textContent =
+      stats.progress.jobsCompleted;
+    document.getElementById("career-money").textContent =
+      `R$ ${stats.progress.moneyEarned}`;
+    document.getElementById("career-perfect").textContent =
+      stats.progress.perfectJobs;
+    document.getElementById("career-vip").textContent =
+      stats.progress.vipCustomers;
+    document.getElementById("career-parts").textContent =
+      stats.progress.partsUsed;
+
+    // Próximo nível
+    if (!nextLevel.maxLevel) {
+      const nextCard = document.getElementById("next-level-card");
+      nextCard.style.display = "block";
+
+      document.getElementById("next-level-icon").textContent = nextLevel.icon;
+      document.getElementById("next-level-name").textContent = nextLevel.name;
+
+      // Requisitos
+      const repReq = nextLevel.requirements.reputation;
+      document.getElementById("req-reputation").textContent =
+        `${repReq.current}/${repReq.required}`;
+      document.getElementById("req-reputation-bar").style.width =
+        repReq.percentage + "%";
+
+      const jobsReq = nextLevel.requirements.jobs;
+      document.getElementById("req-jobs").textContent =
+        `${jobsReq.current}/${jobsReq.required}`;
+      document.getElementById("req-jobs-bar").style.width =
+        jobsReq.percentage + "%";
+
+      const moneyReq = nextLevel.requirements.money;
+      document.getElementById("req-money").textContent =
+        `R$ ${moneyReq.current}/R$ ${moneyReq.required}`;
+      document.getElementById("req-money-bar").style.width =
+        moneyReq.percentage + "%";
+
+      // Recompensas
+      const rewards = nextLevel.rewards;
+      const rewardsList = document.getElementById("next-rewards");
+      rewardsList.innerHTML = "";
+
+      rewardsList.innerHTML += `<span class="reward-item">💰 R$ ${rewards.money}</span>`;
+      rewardsList.innerHTML += `<span class="reward-item">⚡ ${rewards.experience} XP</span>`;
+      rewards.unlocks.forEach((unlock) => {
+        let unlockName = unlock;
+        switch (unlock) {
+          case "diagnóstico-avançado":
+            unlockName = "🔍 Diagnóstico Avançado";
+            break;
+          case "peças-usadas":
+            unlockName = "🏪 Mercado de Usados";
+            break;
+          case "elevador":
+            unlockName = "⬆️ Elevador Hidráulico";
+            break;
+          case "especializações":
+            unlockName = "⭐ Especializações";
+            break;
+          case "pintura":
+            unlockName = "🎨 Pintura";
+            break;
+          case "alinhamento":
+            unlockName = "⚙️ Alinhamento";
+            break;
+          case "preparação-motor":
+            unlockName = "⚡ Preparação de Motor";
+            break;
+          case "turbo":
+            unlockName = "💨 Turbo";
+            break;
+          case "personalização":
+            unlockName = "✨ Personalização";
+            break;
+          case "conversões":
+            unlockName = "🔄 Conversões";
+            break;
+        }
+        rewardsList.innerHTML += `<span class="reward-item">🔓 ${unlockName}</span>`;
+      });
+    } else {
+      document.getElementById("next-level-card").style.display = "none";
+    }
+
+    // Features desbloqueadas
+    const featuresGrid = document.getElementById("features-grid");
+    featuresGrid.innerHTML = "";
+
+    const allFeatures = [
+      { id: "básico", name: "Reparos Básicos", icon: "🔧" },
+      { id: "diagnóstico-avançado", name: "Diagnóstico Avançado", icon: "🔍" },
+      { id: "peças-usadas", name: "Mercado de Usados", icon: "🏪" },
+      { id: "elevador", name: "Elevador Hidráulico", icon: "⬆️" },
+      { id: "especializações", name: "Especializações", icon: "⭐" },
+      { id: "pintura", name: "Pintura", icon: "🎨" },
+      { id: "alinhamento", name: "Alinhamento", icon: "⚙️" },
+      { id: "preparação-motor", name: "Preparação de Motor", icon: "⚡" },
+      { id: "turbo", name: "Turbo", icon: "💨" },
+      { id: "personalização", name: "Personalização", icon: "✨" },
+      { id: "conversões", name: "Conversões", icon: "🔄" },
+    ];
+
+    allFeatures.forEach((feature) => {
+      const isUnlocked = careerMode.isFeatureUnlocked(feature.id);
+      const item = document.createElement("div");
+      item.className = `feature-item ${isUnlocked ? "unlocked" : ""}`;
+      item.innerHTML = `
+            <span class="feature-icon">${feature.icon}</span>
+            <span class="feature-name">${feature.name}</span>
+            ${isUnlocked ? "✅" : "🔒"}
+        `;
+      featuresGrid.appendChild(item);
+    });
+  }
+
   // ===== MÉTODOS UTILITÁRIOS =====
 
   checkJobCompletion() {
     if (!gameState.currentJob || !gameState.currentCar) return;
     document.getElementById("deliver-car").disabled =
       !gameState.currentJob.checkCompletion(gameState.currentCar.parts);
+    careerMode?.onJobCompleted(gameState.currentJob);
+    careerMode?.onCustomerServed(gameState.currentJob.customerData);
   }
 
   updateTimer() {
