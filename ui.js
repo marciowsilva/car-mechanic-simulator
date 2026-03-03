@@ -399,14 +399,14 @@ export class UIManager {
       const element = document.createElement("div");
       element.className = "upgrade-item";
       element.innerHTML = `
-                <div class="upgrade-info">
-                    <div class="upgrade-name">${tool.icon} ${tool.name}</div>
-                    <div class="upgrade-desc">Nível ${level} → ${level + 1}</div>
-                    <div class="upgrade-level">+20% eficiência, +10% custo</div>
-                </div>
-                <span class="upgrade-price">R$ ${price}</span>
-                <button class="upgrade-buy" onclick="upgradeTool('${toolId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
-            `;
+            <div class="upgrade-info">
+                <div class="upgrade-name">${tool.icon} ${tool.name}</div>
+                <div class="upgrade-desc">Nível ${level} → ${level + 1}</div>
+                <div class="upgrade-level">+20% eficiência, +10% custo</div>
+            </div>
+            <span class="upgrade-price">R$ ${price}</span>
+            <button class="upgrade-buy" onclick="upgradeTool('${toolId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
+        `;
       container.appendChild(element);
     });
   }
@@ -427,14 +427,14 @@ export class UIManager {
         const element = document.createElement("div");
         element.className = "upgrade-item";
         element.innerHTML = `
-                <div class="upgrade-info">
-                    <div class="upgrade-name">${upgrade.name}</div>
-                    <div class="upgrade-desc">${upgrade.desc}</div>
-                    <div class="upgrade-level">Nível ${upgrade.level}/${upgrade.maxLevel}</div>
-                </div>
-                <span class="upgrade-price">R$ ${price}</span>
-                <button class="upgrade-buy" onclick="upgradeWorkshop('${upgradeId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
-            `;
+            <div class="upgrade-info">
+                <div class="upgrade-name">${upgrade.name}</div>
+                <div class="upgrade-desc">${upgrade.desc}</div>
+                <div class="upgrade-level">Nível ${upgrade.level}/${upgrade.maxLevel}</div>
+            </div>
+            <span class="upgrade-price">R$ ${price}</span>
+            <button class="upgrade-buy" onclick="upgradeWorkshop('${upgradeId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
+        `;
         container.appendChild(element);
       },
     );
@@ -455,14 +455,14 @@ export class UIManager {
       const element = document.createElement("div");
       element.className = "upgrade-item";
       element.innerHTML = `
-                <div class="upgrade-info">
-                    <div class="upgrade-name">${skill.name}</div>
-                    <div class="upgrade-desc">${skill.desc}</div>
-                    <div class="upgrade-level">Nível ${skill.level}/${skill.maxLevel}</div>
-                </div>
-                <span class="upgrade-price">R$ ${price}</span>
-                <button class="upgrade-buy" onclick="upgradeSkill('${skillId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
-            `;
+            <div class="upgrade-info">
+                <div class="upgrade-name">${skill.name}</div>
+                <div class="upgrade-desc">${skill.desc}</div>
+                <div class="upgrade-level">Nível ${skill.level}/${skill.maxLevel}</div>
+            </div>
+            <span class="upgrade-price">R$ ${price}</span>
+            <button class="upgrade-buy" onclick="upgradeSkill('${skillId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
+        `;
       container.appendChild(element);
     });
   }
@@ -651,10 +651,22 @@ export class UIManager {
 
       this.updateUpgradeShop();
 
-      // Remover listeners antigos e adicionar novos
+      // ===== CORREÇÃO: Remover listeners antigos e adicionar novos de forma segura =====
+      const tabs = document.querySelectorAll(".tab-btn");
+
+      // Remover listeners antigos (se existirem)
+      tabs.forEach((btn) => {
+        const newBtn = btn.cloneNode(true); // Clonar para remover todos os listeners
+        btn.parentNode.replaceChild(newBtn, btn);
+      });
+
+      // Adicionar novos listeners
       document.querySelectorAll(".tab-btn").forEach((btn) => {
-        btn.removeEventListener("click", this.handleTabClick);
-        btn.addEventListener("click", this.handleTabClick);
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.handleTabClick(e);
+        });
       });
 
       // Ativar primeira aba se nenhuma estiver ativa
@@ -679,13 +691,15 @@ export class UIManager {
   }
 
   handleTabClick(e) {
-    const tab = e.target.dataset.tab;
+    console.log("📌 Aba clicada:", e.currentTarget.dataset.tab); // Debug
+
+    const tab = e.currentTarget.dataset.tab;
 
     // Atualizar abas
     document
       .querySelectorAll(".tab-btn")
       .forEach((b) => b.classList.remove("active"));
-    e.target.classList.add("active");
+    e.currentTarget.classList.add("active");
 
     // Atualizar conteúdo
     document
@@ -697,6 +711,22 @@ export class UIManager {
 
       // Garantir que o scroll comece do topo
       activeTab.scrollTop = 0;
+
+      // Forçar atualização do conteúdo da aba
+      switch (tab) {
+        case "tools":
+          this.updateToolDisplay();
+          break;
+        case "workshop":
+          this.updateWorkshopDisplay();
+          break;
+        case "skills":
+          this.updateSkillsDisplay();
+          break;
+        case "specializations":
+          this.updateSpecializationsDisplay();
+          break;
+      }
     }
 
     // Garantir que a loja mantenha o tamanho fixo

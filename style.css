@@ -1003,34 +1003,30 @@ canvas {
   margin-bottom: 25px;
 }
 
+/* Remover títulos duplicados que possam vir do JavaScript */
 .category-title {
-  font-size: 18px;
-  color: #ff6b00;
-  margin-bottom: 15px;
-  padding-left: 10px;
-  border-left: 3px solid #ff6b00;
-  position: sticky;
-  top: 0;
-  background: rgba(30, 30, 30, 0.95);
-  padding: 12px 10px;
-  z-index: 20;
-  font-weight: bold;
-  backdrop-filter: blur(5px);
+  display: none; /* Esconder títulos gerados pelo JS */
+}
+
+/* ===== CONTAINERS DE UPGRADES ===== */
+.upgrades-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 5px 0;
 }
 
 /* Itens de upgrade */
 .upgrade-item {
   background: #3a3a3a;
   padding: 15px;
-  margin: 10px 0;
+  margin: 0;
   border-radius: 10px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   transition: all 0.3s;
   border: 1px solid transparent;
-  position: relative;
-  z-index: 5;
 }
 
 .upgrade-item:hover {

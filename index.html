@@ -108,14 +108,14 @@
       </div>
     </div>
 
-    <!-- Loja de Upgrades -->
+    <!-- Loja de Upgrades - SEM TÍTULOS DUPLICADOS -->
     <div id="upgrade-shop" class="upgrade-shop">
       <div class="shop-header">
         <span class="shop-title">🛠️ LOJA DE UPGRADES</span>
         <span class="shop-close" id="close-upgrade-shop">×</span>
       </div>
 
-      <!-- Abas com ícones estruturados -->
+      <!-- Abas (agora com os nomes visíveis) -->
       <div class="shop-tabs">
         <button class="tab-btn active" data-tab="tools">
           <span class="tab-icon">🔧</span>
@@ -135,33 +135,22 @@
         </button>
       </div>
 
+      <!-- Conteúdo das abas - SEM OS TÍTULOS REPETIDOS -->
       <div class="tab-content active" id="tools-tab">
-        <div class="upgrade-category">
-          <div class="category-title">🔧 FERRAMENTAS</div>
-          <div id="tool-upgrades"></div>
-        </div>
+        <div id="tool-upgrades" class="upgrades-container"></div>
       </div>
 
       <div class="tab-content" id="workshop-tab">
-        <div class="upgrade-category">
-          <div class="category-title">🏢 OFICINA</div>
-          <div id="workshop-upgrades"></div>
-        </div>
+        <div id="workshop-upgrades" class="upgrades-container"></div>
       </div>
 
       <div class="tab-content" id="skills-tab">
-        <div class="upgrade-category">
-          <div class="category-title">👤 HABILIDADES</div>
-          <div id="skill-upgrades"></div>
-        </div>
+        <div id="skill-upgrades" class="upgrades-container"></div>
       </div>
 
       <div class="tab-content" id="specializations-tab">
-        <div class="upgrade-category">
-          <div class="category-title">⭐ ESPECIALIZAÇÕES</div>
-          <div class="specializations-stats" id="specializations-stats"></div>
-          <div id="specializations-list" class="specializations-grid"></div>
-        </div>
+        <div class="specializations-stats" id="specializations-stats"></div>
+        <div id="specializations-list" class="specializations-grid"></div>
       </div>
     </div>
 
