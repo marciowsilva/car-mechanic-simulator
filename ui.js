@@ -17,6 +17,9 @@ export class UIManager {
     this.initEventListeners();
     this.updateToolDisplay();
     setInterval(() => this.updateTimer(), 1000);
+
+    // Bind do handler para manter o contexto
+    this.handleTabClick = this.handleTabClick.bind(this);
   }
 
   initEventListeners() {
@@ -169,11 +172,11 @@ export class UIManager {
       db?.savePlayerData();
     });
 
-    // Botão de upgrade do estoque
-    const upgradeBtn = document.getElementById("upgrade-inventory");
+    // Upgrade shop button
+    const upgradeBtn = document.getElementById("upgrade-shop-btn");
     if (upgradeBtn) {
       upgradeBtn.addEventListener("click", () => {
-        this.upgradeInventory();
+        this.openUpgradeShop();
       });
     }
 
@@ -468,21 +471,90 @@ export class UIManager {
     );
   }
 
+  // Atualizar display de ferramentas
   updateToolDisplay() {
-    document.querySelectorAll(".tool-item").forEach((tool) => {
-      const toolId = tool.dataset.tool;
-      if (toolId === "diagnostic") return;
+    const container = document.getElementById("tool-upgrades");
+    if (!container || !window.upgradeSystem) return;
 
-      const stats = upgradeSystem?.getToolStats(toolId);
-      if (!stats) return;
+    container.innerHTML = "";
 
-      const toolInfo = tool.querySelector(".tool-info");
-      if (toolInfo) {
-        toolInfo.innerHTML = `
-                    <div class="tool-name">${stats.name} Nv.${stats.level}</div>
-                    <div class="tool-stats">+${stats.repair}% | R$ ${stats.cost}</div>
-                `;
-      }
+    Object.entries(upgradeSystem.toolLevels).forEach(([toolId, level]) => {
+      if (level >= 5) return;
+
+      const tool = TOOL_BASE_STATS[toolId];
+      const price = 500 * level;
+      const canBuy = gameState.money >= price;
+
+      const element = document.createElement("div");
+      element.className = "upgrade-item";
+      element.innerHTML = `
+            <div class="upgrade-info">
+                <div class="upgrade-name">${tool.icon} ${tool.name}</div>
+                <div class="upgrade-desc">Nível ${level} → ${level + 1}</div>
+                <div class="upgrade-level">+20% eficiência, +10% custo</div>
+            </div>
+            <span class="upgrade-price">R$ ${price}</span>
+            <button class="upgrade-buy" onclick="upgradeTool('${toolId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
+        `;
+      container.appendChild(element);
+    });
+  }
+
+  // Atualizar display de upgrades da oficina
+  updateWorkshopDisplay() {
+    const container = document.getElementById("workshop-upgrades");
+    if (!container || !window.upgradeSystem) return;
+
+    container.innerHTML = "";
+
+    Object.entries(upgradeSystem.workshopUpgrades).forEach(
+      ([upgradeId, upgrade]) => {
+        if (upgrade.level >= upgrade.maxLevel) return;
+
+        const price = upgrade.price * (upgrade.level + 1);
+        const canBuy = gameState.money >= price;
+
+        const element = document.createElement("div");
+        element.className = "upgrade-item";
+        element.innerHTML = `
+            <div class="upgrade-info">
+                <div class="upgrade-name">${upgrade.name}</div>
+                <div class="upgrade-desc">${upgrade.desc}</div>
+                <div class="upgrade-level">Nível ${upgrade.level}/${upgrade.maxLevel}</div>
+            </div>
+            <span class="upgrade-price">R$ ${price}</span>
+            <button class="upgrade-buy" onclick="upgradeWorkshop('${upgradeId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
+        `;
+        container.appendChild(element);
+      },
+    );
+  }
+
+  // Atualizar display de habilidades
+  updateSkillsDisplay() {
+    const container = document.getElementById("skill-upgrades");
+    if (!container || !window.upgradeSystem) return;
+
+    container.innerHTML = "";
+
+    Object.entries(upgradeSystem.skillUpgrades).forEach(([skillId, skill]) => {
+      if (skill.level >= skill.maxLevel) return;
+
+      const price = skill.price * (skill.level + 1);
+      const canBuy = gameState.money >= price;
+
+      const element = document.createElement("div");
+      element.className = "upgrade-item";
+      element.innerHTML = `
+            <div class="upgrade-info">
+                <div class="upgrade-name">${skill.name}</div>
+                <div class="upgrade-desc">${skill.desc}</div>
+                <div class="upgrade-level">Nível ${skill.level}/${skill.maxLevel}</div>
+            </div>
+            <span class="upgrade-price">R$ ${price}</span>
+            <button class="upgrade-buy" onclick="upgradeSkill('${skillId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
+        `;
+      container.appendChild(element);
     });
   }
 
@@ -642,34 +714,34 @@ export class UIManager {
   }
 
   openUpgradeShop() {
-    document.getElementById("upgrade-shop").classList.add("show");
-    this.updateToolDisplay();
-    this.updateWorkshopDisplay();
-    this.updateSkillsDisplay();
-    this.updateSpecializationsDisplay(); // NOVO
+    const shop = document.getElementById("upgrade-shop");
+    if (shop) {
+      shop.classList.add("show");
 
-    // Configurar abas
-    document.querySelectorAll(".tab-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        const tab = e.target.dataset.tab;
+      // Atualizar todas as abas
+      this.updateToolDisplay();
+      this.updateWorkshopDisplay();
+      this.updateSkillsDisplay();
+      this.updateSpecializationsDisplay();
 
-        // Atualizar abas
-        document
-          .querySelectorAll(".tab-btn")
-          .forEach((b) => b.classList.remove("active"));
-        e.target.classList.add("active");
-
-        // Atualizar conteúdo
-        document.querySelectorAll(".tab-content").forEach((content) => {
-          content.classList.remove("active");
-        });
-        document.getElementById(`${tab}-tab`).classList.add("active");
+      // Configurar abas (remover listeners antigos para não duplicar)
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.removeEventListener("click", this.handleTabClick);
       });
-    });
+
+      // Adicionar novos listeners
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", this.handleTabClick);
+      });
+    }
   }
 
+  // Fechar loja de upgrades
   closeUpgradeShop() {
-    document.getElementById("upgrade-shop").classList.remove("show");
+    const shop = document.getElementById("upgrade-shop");
+    if (shop) {
+      shop.classList.remove("show");
+    }
   }
 
   toggleInventoryPanel() {
@@ -812,6 +884,7 @@ export class UIManager {
     }
   }
 
+  // Atualizar display de especializações
   updateSpecializationsDisplay() {
     const container = document.getElementById("specializations-list");
     const statsEl = document.getElementById("specializations-stats");
@@ -870,7 +943,7 @@ export class UIManager {
                 <span class="level-text">Nv. ${spec.level}/${spec.maxLevel}</span>
             </div>
             <div class="specialization-bonus">
-                Bônus atual: +${spec.bonus * spec.level * 100}%
+                Bônus atual: +${Math.round(spec.bonus * spec.level * 100)}%
             </div>
             ${buyButton}
         `;
@@ -879,6 +952,7 @@ export class UIManager {
     });
   }
 
+  // Comprar especialização
   buySpecialization(specId) {
     if (!window.specializationSystem) return;
 
@@ -887,31 +961,29 @@ export class UIManager {
     if (result.success) {
       this.updateSpecializationsDisplay();
       this.showNotification(result.message, "success");
-
-      // Atualizar tooltips se necessário
-      this.updateToolDisplay();
     } else {
       this.showNotification(result.message, "error");
     }
   }
 
-  // Modificar updateToolDisplay para mostrar bônus de especialização
-  updateToolDisplay() {
-    document.querySelectorAll(".tool-item").forEach((tool) => {
-      const toolId = tool.dataset.tool;
-      if (toolId === "diagnostic") return;
+  // Handler para cliques nas abas
+  handleTabClick(e) {
+    const tab = e.target.dataset.tab;
 
-      const stats = upgradeSystem?.getToolStats(toolId);
-      if (!stats) return;
+    // Atualizar abas
+    document
+      .querySelectorAll(".tab-btn")
+      .forEach((b) => b.classList.remove("active"));
+    e.target.classList.add("active");
 
-      const toolInfo = tool.querySelector(".tool-info");
-      if (toolInfo) {
-        // Aqui você pode adicionar indicadores de bônus por especialização
-        toolInfo.innerHTML = `
-                <div class="tool-name">${stats.name} Nv.${stats.level}</div>
-                <div class="tool-stats">+${stats.repair}% | R$ ${stats.cost}</div>
-            `;
-      }
+    // Atualizar conteúdo
+    document.querySelectorAll(".tab-content").forEach((content) => {
+      content.classList.remove("active");
     });
+
+    const activeTab = document.getElementById(`${tab}-tab`);
+    if (activeTab) {
+      activeTab.classList.add("active");
+    }
   }
 }
