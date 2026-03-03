@@ -17,6 +17,7 @@ import { Scene3D } from "./scene3d.js";
 import { UIManager } from "./ui.js";
 import { GarageSystem } from "./garage.js";
 import { CustomerSystem } from "./customers.js";
+import { DailyChallenges } from "./daily-challenges.js";
 
 // ===== ESTADO GLOBAL DO JOGO =====
 class GameState {
@@ -85,6 +86,7 @@ let scene3D;
 let uiManager;
 export const garageSystem = new GarageSystem();
 export const customerSystem = new CustomerSystem();
+export const dailyChallenges = new DailyChallenges();
 
 // ===== EXPORTAÇÕES (UMA ÚNICA VEZ) =====
 export {
@@ -177,6 +179,9 @@ window.repairPart = (partName) => {
       );
   }
 
+  dailyChallenges?.onRepair(partName);
+  dailyChallenges?.onToolUsed(gameState.selectedTool);
+
   const newCondition = Math.min(100, part.condition + repairEfficiency);
   part.condition = newCondition;
 
@@ -248,6 +253,12 @@ window.buyNewPart = (partName) => {
     }
   }
 
+  if (inventory.hasPart(partName)) {
+    dailyChallenges?.onInventoryUse();
+  } else {
+    dailyChallenges?.onInventoryBuy();
+  }
+
   window.scene3D?.updatePartLabels(gameState.currentCar, gameState.currentJob);
   window.uiManager?.updatePartsList();
   window.uiManager?.updateJobInfo();
@@ -316,6 +327,7 @@ window.addEventListener("load", async () => {
   window._uiManager = newUIManager;
   window.garageSystem = garageSystem;
   window.customerSystem = customerSystem;
+  window.dailyChallenges = dailyChallenges;
 
   newScene3D.animate();
   db.loadPlayerData();

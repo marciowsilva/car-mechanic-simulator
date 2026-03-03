@@ -99,6 +99,9 @@
           <button class="action-btn garage-btn" id="garage-btn">
             🏢 Garagem
           </button>
+          <button class="action-btn challenges-btn" id="challenges-btn">
+            📅 Desafios
+          </button>
           <button class="action-btn secondary" id="upgrade-shop-btn">
             🛠️ Upgrades
           </button>
@@ -310,6 +313,46 @@
       <!-- Lista de clientes -->
       <h4>📋 LISTA DE CLIENTES</h4>
       <div class="customers-list" id="customers-list"></div>
+    </div>
+
+    <!-- Painel de Desafios Diários -->
+    <div id="challenges-panel" class="challenges-panel">
+      <div class="challenges-header">
+        <span class="challenges-title">📅 DESAFIOS DIÁRIOS</span>
+        <span class="challenges-close" id="close-challenges-panel">×</span>
+      </div>
+
+      <!-- Estatísticas -->
+      <div class="challenges-stats">
+        <div class="stat-card">
+          <div class="stat-icon">⏰</div>
+          <div class="stat-label">Próximo Reset</div>
+          <div class="stat-value" id="challenges-timer">24h 0m</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-label">Dias Consecutivos</div>
+          <div class="stat-value" id="consecutive-days">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✨</div>
+          <div class="stat-label">Bônus</div>
+          <div class="stat-value" id="bonus-multiplier">1.0x</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-label">Progresso</div>
+          <div class="stat-value" id="challenges-progress">0%</div>
+        </div>
+      </div>
+
+      <!-- Lista de Desafios Ativos -->
+      <h4>⚡ DESAFIOS ATIVOS</h4>
+      <div class="challenges-list" id="active-challenges"></div>
+
+      <!-- Lista de Desafios Completados -->
+      <h4 style="margin-top: 20px">✅ DESAFIOS CONCLUÍDOS</h4>
+      <div class="challenges-list" id="completed-challenges"></div>
     </div>
 
     <div class="version-label">v1.2.0-desenvolvimento</div>
