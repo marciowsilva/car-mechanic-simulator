@@ -93,6 +93,9 @@
 
         <div id="bottom-panel">
           <button class="action-btn" id="new-job">🚗 Novo Cliente</button>
+          <button class="action-btn garage-btn" id="garage-btn">
+            🏢 Garagem
+          </button>
           <button class="action-btn secondary" id="upgrade-shop-btn">
             🛠️ Upgrades
           </button>
@@ -190,6 +193,83 @@
           <div class="achievement-title" id="achievement-title">Conquista!</div>
           <div class="achievement-desc" id="achievement-desc">Descrição</div>
         </div>
+      </div>
+    </div>
+
+    <!-- Painel da Garagem -->
+    <div id="garage-panel" class="garage-panel">
+      <div class="garage-header">
+        <span class="garage-title">🏢 GARAGEM EXPANSÍVEL</span>
+        <span class="garage-close" id="close-garage-panel">×</span>
+      </div>
+
+      <!-- Nível atual da garagem -->
+      <div class="garage-current-level">
+        <div class="level-display">
+          <span class="level-icon" id="garage-level-icon">🏚️</span>
+          <div class="level-info">
+            <div class="level-name" id="garage-level-name">Garagem Simples</div>
+            <div class="level-desc" id="garage-level-desc">Nível 1/5</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estatísticas da garagem -->
+      <div class="garage-stats">
+        <div class="stat-card">
+          <div class="stat-icon">🚗</div>
+          <div class="stat-label">Vagas</div>
+          <div class="stat-value" id="garage-slots">1/1</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔧</div>
+          <div class="stat-label">Ferramentas</div>
+          <div class="stat-value" id="garage-tools">1</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-label">Estoque</div>
+          <div class="stat-value" id="garage-storage">50</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔍</div>
+          <div class="stat-label">Diagnóstico</div>
+          <div class="stat-value" id="garage-diagnostic">+0%</div>
+        </div>
+      </div>
+
+      <!-- Bônus da garagem -->
+      <div class="garage-bonus">
+        <h4>✨ BÔNUS ATIVOS</h4>
+        <div class="bonus-list" id="garage-bonus-list">
+          <div class="bonus-item">🔧 Reparos mais rápidos</div>
+        </div>
+      </div>
+
+      <!-- Próximo upgrade -->
+      <div class="garage-next-upgrade" id="garage-next-upgrade">
+        <h4>⬆️ PRÓXIMO UPGRADE</h4>
+        <div class="upgrade-info">
+          <div class="upgrade-name" id="next-name">Garagem Ampliada</div>
+          <div class="upgrade-desc" id="next-desc">2 vagas, estoque 100</div>
+          <div class="upgrade-requirements">
+            <span class="req-item" id="next-price">💰 R$ 5.000</span>
+            <span class="req-item" id="next-level">⭐ Nível 3</span>
+          </div>
+          <button class="garage-upgrade-btn" id="upgrade-garage">
+            ⬆️ UPGRADIR GARAGEM
+          </button>
+        </div>
+      </div>
+
+      <!-- Carros estacionados (futuro) -->
+      <div
+        class="garage-parked-cars"
+        id="garage-parked-cars"
+        style="display: none"
+      >
+        <h4>🚗 CARROS NA OFICINA</h4>
+        <div class="cars-list" id="cars-list"></div>
       </div>
     </div>
 

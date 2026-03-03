@@ -461,7 +461,6 @@ export class Scene3D {
       }
     });
 
-    // ===== ADICIONE ESTE BLOCO AQUI =====
     // Após criar todos os labels, garantir que a seleção seja restaurada corretamente
     setTimeout(() => {
       if (gameState?.selectedPart) {
@@ -469,7 +468,6 @@ export class Scene3D {
         this.selectPart(gameState.selectedPart);
       }
     }, 200);
-    // ===== FIM DO BLOCO =====
   }
 
   // Efeito de partículas para reparo
@@ -964,5 +962,15 @@ export class Scene3D {
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
     this.labelRenderer.render(this.scene, this.camera);
+  }
+
+  // Método para atualizar aparência da garagem
+
+  updateGarageAppearance(appearance) {
+    // Atualizar cor e tamanho da garagem baseado no nível
+    console.log("🏢 Atualizando aparência da garagem:", appearance);
+
+    // Aqui você pode modificar os objetos 3D da garagem
+    // Por exemplo: aumentar tamanho, adicionar placas, etc.
   }
 }

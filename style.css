@@ -1489,3 +1489,265 @@ canvas {
 .tab-content * {
   position: relative;
 }
+
+/* ===== PAINEL DA GARAGEM ===== */
+.garage-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30, 30, 30, 0.98);
+  color: white;
+  padding: 30px;
+  border-radius: 20px;
+  border: 3px solid #ff6b00;
+  pointer-events: auto;
+  z-index: 1000;
+  width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  backdrop-filter: blur(10px);
+  display: none;
+}
+
+.garage-panel.show {
+  display: block;
+  animation: slideIn 0.3s ease;
+}
+
+.garage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ff6b00;
+}
+
+.garage-title {
+  font-size: 24px;
+  color: #ff6b00;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
+}
+
+.garage-close {
+  font-size: 30px;
+  cursor: pointer;
+  color: #888;
+  transition: all 0.3s;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  user-select: none;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.garage-close:hover {
+  color: #ff6b00;
+  background: rgba(255, 107, 0, 0.2);
+  transform: scale(1.1);
+}
+
+/* Nível atual */
+.garage-current-level {
+  background: #2a2a2a;
+  padding: 20px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #444;
+}
+
+.level-display {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.level-icon {
+  font-size: 48px;
+  background: rgba(255, 107, 0, 0.2);
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+}
+
+.level-info {
+  flex: 1;
+}
+
+.level-name {
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff6b00;
+  margin-bottom: 5px;
+}
+
+.level-desc {
+  font-size: 14px;
+  color: #888;
+}
+
+/* Estatísticas */
+.garage-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+  text-align: center;
+  border: 1px solid #444;
+}
+
+.stat-card .stat-icon {
+  font-size: 24px;
+  margin-bottom: 5px;
+}
+
+.stat-card .stat-label {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 5px;
+}
+
+.stat-card .stat-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: #ff6b00;
+}
+
+/* Bônus */
+.garage-bonus {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.garage-bonus h4 {
+  color: #ff6b00;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.bonus-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.bonus-item {
+  background: #3a3a3a;
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 13px;
+  border: 1px solid #4caf50;
+  color: #4caf50;
+}
+
+/* Próximo upgrade */
+.garage-next-upgrade {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.garage-next-upgrade h4 {
+  color: #ff6b00;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.upgrade-info {
+  background: #3a3a3a;
+  padding: 15px;
+  border-radius: 8px;
+}
+
+.upgrade-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff6b00;
+  margin-bottom: 5px;
+}
+
+.upgrade-desc {
+  font-size: 13px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.upgrade-requirements {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.req-item {
+  font-size: 14px;
+  color: #ffd700;
+}
+
+.garage-upgrade-btn {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 100%;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.garage-upgrade-btn:hover:not(:disabled) {
+  background: #45a049;
+  transform: scale(1.02);
+}
+
+.garage-upgrade-btn:disabled {
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Carros estacionados */
+.garage-parked-cars {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.garage-parked-cars h4 {
+  color: #ff6b00;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.cars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.parked-car-item {
+  background: #3a3a3a;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

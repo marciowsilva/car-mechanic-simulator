@@ -222,6 +222,23 @@ export class UIManager {
         this.upgradeInventory();
       });
     }
+
+    // Botão da garagem (adicionar no bottom panel)
+    document.getElementById("garage-btn").addEventListener("click", () => {
+      this.toggleGaragePanel();
+    });
+
+    // Fechar garagem
+    document
+      .getElementById("close-garage-panel")
+      .addEventListener("click", () => {
+        this.closeGaragePanel();
+      });
+
+    // Upgrade da garagem
+    document.getElementById("upgrade-garage").addEventListener("click", () => {
+      this.upgradeGarage();
+    });
   }
 
   // ===== MÉTODOS DE INTERFACE =====
@@ -801,5 +818,110 @@ export class UIManager {
         300,
       );
     }, 3000);
+  }
+
+  // ===== MÉTODOS DA GARAGEM =====
+
+  toggleGaragePanel() {
+    const panel = document.getElementById("garage-panel");
+    if (panel) {
+      panel.classList.contains("show")
+        ? this.closeGaragePanel()
+        : this.openGaragePanel();
+    }
+  }
+
+  openGaragePanel() {
+    const panel = document.getElementById("garage-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateGarageDisplay();
+    }
+  }
+
+  closeGaragePanel() {
+    const panel = document.getElementById("garage-panel");
+    if (panel) panel.classList.remove("show");
+  }
+
+  updateGarageDisplay() {
+    if (!garageSystem) return;
+
+    const stats = garageSystem.getStats();
+    const currentLevel = GARAGE_UPGRADES[`level${stats.currentLevel}`];
+
+    // Atualizar ícone e nome
+    document.getElementById("garage-level-icon").textContent =
+      currentLevel.image;
+    document.getElementById("garage-level-name").textContent =
+      currentLevel.name;
+    document.getElementById("garage-level-desc").textContent =
+      `Nível ${stats.currentLevel}/${stats.maxLevel}`;
+
+    // Atualizar estatísticas
+    document.getElementById("garage-slots").textContent =
+      `${stats.usedSlots}/${stats.carSlots}`;
+    document.getElementById("garage-tools").textContent = stats.toolRacks;
+    document.getElementById("garage-storage").textContent = stats.partsStorage;
+    document.getElementById("garage-diagnostic").textContent =
+      `+${stats.diagnosticBonus}%`;
+
+    // Atualizar lista de bônus
+    const bonusList = document.getElementById("garage-bonus-list");
+    bonusList.innerHTML = "";
+
+    if (stats.diagnosticBonus > 0) {
+      bonusList.innerHTML += `<div class="bonus-item">🔍 Diagnóstico +${stats.diagnosticBonus}%</div>`;
+    }
+    if (stats.partsDiscount > 0) {
+      bonusList.innerHTML += `<div class="bonus-item">💰 Desconto em peças ${stats.partsDiscount}%</div>`;
+    }
+    if (stats.currentLevel >= 3) {
+      bonusList.innerHTML += `<div class="bonus-item">⬆️ Estoque +5 capacidade</div>`;
+    }
+    if (stats.currentLevel >= 4) {
+      bonusList.innerHTML += `<div class="bonus-item">🎨 Serviços de pintura</div>`;
+    }
+    if (stats.currentLevel >= 5) {
+      bonusList.innerHTML += `<div class="bonus-item">⚡ Preparação de motor</div>`;
+    }
+
+    // Atualizar próximo upgrade
+    const nextUpgrade = document.getElementById("garage-next-upgrade");
+    if (stats.nextUpgrade) {
+      document.getElementById("next-name").textContent = stats.nextUpgrade.name;
+      document.getElementById("next-desc").textContent =
+        `${stats.nextUpgrade.carSlots} vagas, estoque ${stats.nextUpgrade.partsStorage}`;
+      document.getElementById("next-price").innerHTML =
+        `💰 R$ ${stats.nextUpgrade.price}`;
+      document.getElementById("next-level").innerHTML =
+        `⭐ Nível ${stats.nextUpgrade.requiredLevel}`;
+
+      // Verificar se pode comprar
+      const canBuy =
+        gameState.money >= stats.nextUpgrade.price &&
+        gameState.level >= stats.nextUpgrade.requiredLevel;
+      document.getElementById("upgrade-garage").disabled = !canBuy;
+    } else {
+      nextUpgrade.style.display = "none";
+    }
+  }
+
+  upgradeGarage() {
+    if (!garageSystem) return;
+
+    const result = garageSystem.buyUpgrade();
+
+    if (result.success) {
+      this.updateGarageDisplay();
+      this.showNotification(result.message, "success");
+
+      // Atualizar visual da garagem se necessário
+      if (window.scene3D) {
+        scene3D.updateGarageAppearance(garageSystem.getGarageAppearance());
+      }
+    } else {
+      this.showNotification(result.message, "error");
+    }
   }
 }
