@@ -16,6 +16,7 @@ import { CustomerCar } from "./car.js";
 import { Scene3D } from "./scene3d.js";
 import { UIManager } from "./ui.js";
 import { GarageSystem } from "./garage.js";
+import { CustomerSystem } from "./customers.js";
 
 // ===== ESTADO GLOBAL DO JOGO =====
 class GameState {
@@ -83,6 +84,7 @@ const specializationSystem = new SpecializationSystem();
 let scene3D;
 let uiManager;
 export const garageSystem = new GarageSystem();
+export const customerSystem = new CustomerSystem();
 
 // ===== EXPORTAÇÕES (UMA ÚNICA VEZ) =====
 export {
@@ -313,6 +315,7 @@ window.addEventListener("load", async () => {
   window._scene3D = newScene3D;
   window._uiManager = newUIManager;
   window.garageSystem = garageSystem;
+  window.customerSystem = customerSystem;
 
   newScene3D.animate();
   db.loadPlayerData();

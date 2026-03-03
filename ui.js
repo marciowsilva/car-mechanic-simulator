@@ -240,6 +240,17 @@ export class UIManager {
     document.getElementById("upgrade-garage").addEventListener("click", () => {
       this.upgradeGarage();
     });
+
+    // Botão de clientes
+    document.getElementById("customers-btn").addEventListener("click", () => {
+      this.toggleCustomersPanel();
+    });
+
+    document
+      .getElementById("close-customers-panel")
+      .addEventListener("click", () => {
+        this.closeCustomersPanel();
+      });
   }
 
   // ===== MÉTODOS DE INTERFACE =====
@@ -980,5 +991,67 @@ export class UIManager {
     } else {
       this.showNotification(result.message, "error");
     }
+  }
+  // MÉTODOS DA CLASSE
+  toggleCustomersPanel() {
+    const panel = document.getElementById("customers-panel");
+    if (panel) {
+      panel.classList.contains("show")
+        ? this.closeCustomersPanel()
+        : this.openCustomersPanel();
+    }
+  }
+
+  openCustomersPanel() {
+    const panel = document.getElementById("customers-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateCustomersDisplay();
+    }
+  }
+
+  closeCustomersPanel() {
+    const panel = document.getElementById("customers-panel");
+    if (panel) panel.classList.remove("show");
+  }
+
+  updateCustomersDisplay() {
+    if (!customerSystem) return;
+
+    const stats = customerSystem.getStats();
+
+    document.getElementById("total-customers").textContent =
+      stats.totalCustomers;
+    document.getElementById("regular-customers").textContent =
+      stats.regularCustomers;
+    document.getElementById("vip-customers").textContent = stats.vipCustomers;
+    document.getElementById("avg-satisfaction").textContent =
+      stats.averageSatisfaction + "%";
+
+    const list = document.getElementById("customers-list");
+    list.innerHTML = "";
+
+    Object.values(customerSystem.customers)
+      .slice(0, 10)
+      .forEach((customer) => {
+        const card = customerSystem.getCustomerCard(customer.name);
+        if (!card) return;
+
+        const item = document.createElement("div");
+        item.className = "customer-item";
+        item.innerHTML = `
+            <div class="customer-status" style="color: ${card.color}">${card.icon}</div>
+            <div class="customer-info">
+                <div class="customer-name" style="color: ${card.color}">${card.name}</div>
+                <div class="customer-details">
+                    <span>${card.visits} visitas</span>
+                    <span>${card.satisfaction}%</span>
+                    <span>R$ ${card.totalSpent}</span>
+                </div>
+            </div>
+            <div class="customer-favorite">❤️ ${card.favoritePart}</div>
+        `;
+        list.appendChild(item);
+      });
   }
 }

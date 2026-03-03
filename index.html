@@ -92,6 +92,9 @@
         </div>
 
         <div id="bottom-panel">
+          <button class="action-btn customers-btn" id="customers-btn">
+            👥 Clientes
+          </button>
           <button class="action-btn" id="new-job">🚗 Novo Cliente</button>
           <button class="action-btn garage-btn" id="garage-btn">
             🏢 Garagem
@@ -271,6 +274,42 @@
         <h4>🚗 CARROS NA OFICINA</h4>
         <div class="cars-list" id="cars-list"></div>
       </div>
+    </div>
+
+    <!-- Painel de Clientes -->
+    <div id="customers-panel" class="customers-panel">
+      <div class="customers-header">
+        <span class="customers-title">👥 CLIENTES</span>
+        <span class="customers-close" id="close-customers-panel">×</span>
+      </div>
+
+      <!-- Estatísticas -->
+      <div class="customers-stats">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-label">Total</div>
+          <div class="stat-value" id="total-customers">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⭐</div>
+          <div class="stat-label">Regulares</div>
+          <div class="stat-value" id="regular-customers">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">👑</div>
+          <div class="stat-label">VIPs</div>
+          <div class="stat-value" id="vip-customers">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">😊</div>
+          <div class="stat-label">Satisfação</div>
+          <div class="stat-value" id="avg-satisfaction">0%</div>
+        </div>
+      </div>
+
+      <!-- Lista de clientes -->
+      <h4>📋 LISTA DE CLIENTES</h4>
+      <div class="customers-list" id="customers-list"></div>
     </div>
 
     <div class="version-label">v1.2.0-desenvolvimento</div>
