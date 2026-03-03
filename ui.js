@@ -475,12 +475,21 @@ export class UIManager {
 
     const stats = specializationSystem.getStats();
     statsEl.innerHTML = `
-            <div style="display: flex; justify-content: space-around;">
-                <div><div style="color: #888;">Níveis</div><div style="color: #ff6b00; font-size: 18px;">${stats.totalLevels}/${stats.maxPossible}</div></div>
-                <div><div style="color: #888;">Progresso</div><div style="color: #4CAF50; font-size: 18px;">${stats.completionPercent}%</div></div>
-                <div><div style="color: #888;">Total Gasto</div><div style="color: #ffd700; font-size: 18px;">R$ ${stats.totalSpent}</div></div>
+        <div>
+            <div>
+                <div>NÍVEIS</div>
+                <div style="color: #ff6b00;">${stats.totalLevels}/${stats.maxPossible}</div>
             </div>
-        `;
+            <div>
+                <div>PROGRESSO</div>
+                <div style="color: #4CAF50;">${stats.completionPercent}%</div>
+            </div>
+            <div>
+                <div>TOTAL GASTO</div>
+                <div style="color: #ffd700;">R$ ${stats.totalSpent}</div>
+            </div>
+        </div>
+    `;
 
     container.innerHTML = "";
 
@@ -494,28 +503,35 @@ export class UIManager {
 
       let buyButton = "";
       if (spec.level >= spec.maxLevel) {
-        buyButton = `<button class="specialization-buy maxed" disabled>⭐ Nível Máximo</button>`;
+        buyButton = `<button class="specialization-buy maxed" disabled>⭐ NÍVEL MÁXIMO</button>`;
       } else {
         buyButton = `<button class="specialization-buy" onclick="uiManager?.buySpecialization('${spec.id}')" ${!canBuy ? "disabled" : ""}>
-                                Comprar Nível ${spec.level + 1} (R$ ${nextPrice})
-                            </button>`;
+                            NIVEL ${spec.level + 1} • R$ ${nextPrice}
+                        </button>`;
       }
 
+      // Calcular bônus atual
+      const currentBonus = Math.round(spec.bonus * spec.level * 100);
+
       item.innerHTML = `
-                <div class="specialization-header">
-                    <span class="specialization-icon">${spec.icon}</span>
-                    <div class="specialization-info">
-                        <div class="specialization-name">${spec.name}</div>
-                        <div class="specialization-desc">${spec.desc}</div>
-                    </div>
+            <div class="specialization-header">
+                <div class="specialization-icon">${spec.icon}</div>
+                <div class="specialization-info">
+                    <div class="specialization-name">${spec.name}</div>
+                    <div class="specialization-desc">${spec.desc}</div>
                 </div>
-                <div class="specialization-level">
-                    <div class="level-bar"><div class="level-progress" style="width: ${progressPercent}%"></div></div>
-                    <span class="level-text">Nv. ${spec.level}/${spec.maxLevel}</span>
+            </div>
+            <div class="specialization-level">
+                <div class="level-bar">
+                    <div class="level-progress" style="width: ${progressPercent}%"></div>
                 </div>
-                <div class="specialization-bonus">Bônus: +${Math.round(spec.bonus * spec.level * 100)}%</div>
-                ${buyButton}
-            `;
+                <span class="level-text">${spec.level}/${spec.maxLevel}</span>
+            </div>
+            <div class="specialization-bonus">
+                +${currentBonus}% BÔNUS
+            </div>
+            ${buyButton}
+        `;
 
       container.appendChild(item);
     });

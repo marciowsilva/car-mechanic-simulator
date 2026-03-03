@@ -1134,6 +1134,7 @@ canvas {
   font-weight: bold;
 }
 
+/* Grid de cards */
 .specializations-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1143,33 +1144,40 @@ canvas {
   z-index: 70;
 }
 
+/* Card de especialização - ALTURA FIXA PARA ALINHAMENTO */
 .specialization-item {
   background: #3a3a3a;
   padding: 15px;
   border-radius: 10px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   border: 1px solid transparent;
   transition: all 0.3s;
   position: relative;
   z-index: 80;
-  isolation: isolate; /* Cria novo contexto de empilhamento */
+  isolation: isolate;
+  height: 220px; /* Altura fixa para todos os cards */
+  min-height: 220px;
+  max-height: 220px;
 }
 
 .specialization-item:hover {
   border-color: #ff6b00;
   transform: translateY(-2px);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  z-index: 200; /* Z-index alto quando hover */
+  z-index: 200;
 }
 
+/* Header do card - altura fixa */
 .specialization-header {
   display: flex;
   align-items: center;
   gap: 12px;
   position: relative;
-  z-index: 150; /* Z-index alto para o header */
+  z-index: 150;
+  height: 60px; /* Altura fixa para o header */
+  min-height: 60px;
 }
 
 .specialization-icon {
@@ -1182,14 +1190,19 @@ canvas {
   justify-content: center;
   border-radius: 12px;
   position: relative;
-  z-index: 200; /* Z-index altíssimo para o ícone */
+  z-index: 200;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0; /* Não encolher */
 }
 
 .specialization-info {
   flex: 1;
   position: relative;
   z-index: 180;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
 }
 
 .specialization-name {
@@ -1199,6 +1212,13 @@ canvas {
   margin-bottom: 4px;
   position: relative;
   z-index: 181;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limitar a 2 linhas */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 36px;
 }
 
 .specialization-desc {
@@ -1207,8 +1227,15 @@ canvas {
   line-height: 1.3;
   position: relative;
   z-index: 182;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Limitar a 2 linhas */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 28px;
 }
 
+/* Área de nível - altura fixa */
 .specialization-level {
   display: flex;
   justify-content: space-between;
@@ -1216,6 +1243,9 @@ canvas {
   gap: 10px;
   position: relative;
   z-index: 160;
+  height: 24px; /* Altura fixa */
+  min-height: 24px;
+  margin: 5px 0;
 }
 
 .level-bar {
@@ -1245,38 +1275,51 @@ canvas {
   text-align: right;
   position: relative;
   z-index: 163;
+  flex-shrink: 0;
 }
 
+/* Bônus - altura fixa */
 .specialization-bonus {
   font-size: 13px;
   color: #4caf50;
   font-weight: bold;
-  text-align: right;
+  text-align: center;
   background: rgba(76, 175, 80, 0.1);
   padding: 4px 8px;
   border-radius: 12px;
   display: inline-block;
-  align-self: flex-end;
+  align-self: center;
   position: relative;
   z-index: 190;
+  height: 26px; /* Altura fixa */
+  min-height: 26px;
+  width: fit-content;
+  margin: 0 auto 5px auto;
 }
 
+/* Botão - altura fixa */
 .specialization-buy {
   background: #4caf50;
   color: white;
   border: none;
-  padding: 10px;
+  padding: 8px 10px;
   border-radius: 20px;
   cursor: pointer;
   font-weight: bold;
   transition: all 0.3s;
   width: 100%;
-  margin-top: 5px;
-  font-size: 13px;
+  font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   position: relative;
-  z-index: 250; /* Z-index mais alto para o botão */
+  z-index: 250;
+  height: 36px; /* Altura fixa */
+  min-height: 36px;
+  max-height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: auto; /* Empurrar para o final */
 }
 
 .specialization-buy:hover:not(:disabled) {
@@ -1296,6 +1339,19 @@ canvas {
   color: #888;
   cursor: not-allowed;
   border: 1px solid #555;
+}
+
+/* Garantir que todos os cards tenham o mesmo layout */
+.specialization-item > * {
+  flex-shrink: 0;
+}
+
+.specialization-item .specialization-bonus {
+  flex-shrink: 0;
+}
+
+.specialization-item .specialization-buy {
+  flex-shrink: 0;
 }
 
 /* Scrollbar personalizada para o conteúdo das abas */
