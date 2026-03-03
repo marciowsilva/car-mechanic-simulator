@@ -105,6 +105,9 @@
           <button class="action-btn secondary" id="upgrade-shop-btn">
             🛠️ Upgrades
           </button>
+          <button class="action-btn market-btn" id="market-btn">
+            🏪 Usados
+          </button>
           <button class="action-btn" id="inventory-btn">📦 Estoque</button>
           <button class="action-btn success" id="deliver-car" disabled>
             ✅ Entregar Carro
@@ -353,6 +356,61 @@
       <!-- Lista de Desafios Completados -->
       <h4 style="margin-top: 20px">✅ DESAFIOS CONCLUÍDOS</h4>
       <div class="challenges-list" id="completed-challenges"></div>
+    </div>
+
+    <!-- Painel do Mercado de Peças Usadas -->
+    <div id="used-market-panel" class="used-market-panel">
+      <div class="market-header">
+        <span class="market-title">🏪 MERCADO DE PEÇAS USADAS</span>
+        <span class="market-close" id="close-market-panel">×</span>
+      </div>
+
+      <!-- Estatísticas do Mercado -->
+      <div class="market-stats">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-label">Peças Disponíveis</div>
+          <div class="stat-value" id="market-count">0/8</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏰</div>
+          <div class="stat-label">Próxima Atualização</div>
+          <div class="stat-value" id="market-timer">5m 0s</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-label">Desconto Médio</div>
+          <div class="stat-value" id="market-discount">0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-label">Condição Média</div>
+          <div class="stat-value" id="market-condition">0%</div>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="market-filters">
+        <button class="filter-btn active" data-filter="all">Todas</button>
+        <button class="filter-btn" data-filter="excellent">Excelente</button>
+        <button class="filter-btn" data-filter="good">Bom</button>
+        <button class="filter-btn" data-filter="regular">Regular</button>
+        <button class="filter-btn" data-filter="worn">Desgastado</button>
+        <button class="filter-btn" data-filter="premium">✨ Premium</button>
+      </div>
+
+      <!-- Lista de Peças -->
+      <div class="market-grid" id="market-grid">
+        <!-- Peças serão inseridas aqui -->
+      </div>
+
+      <!-- Ações do Mercado -->
+      <div class="market-actions">
+        <button class="action-btn secondary" id="refresh-market">
+          🔄 Atualizar (R$ 500)
+        </button>
+        <button class="action-btn" id="best-deals">🏷️ Melhores Ofertas</button>
+      </div>
     </div>
 
     <div class="version-label">v1.2.0-desenvolvimento</div>

@@ -2049,3 +2049,290 @@ canvas {
   background: #666;
   cursor: not-allowed;
 }
+
+/* ===== MERCADO DE PEÇAS USADAS ===== */
+.used-market-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30, 30, 30, 0.98);
+  color: white;
+  padding: 30px;
+  border-radius: 20px;
+  border: 3px solid #ff6b00;
+  pointer-events: auto;
+  z-index: 1000;
+  width: 800px;
+  max-height: 80vh;
+  overflow-y: auto;
+  backdrop-filter: blur(10px);
+  display: none;
+}
+
+.used-market-panel.show {
+  display: block;
+  animation: slideIn 0.3s ease;
+}
+
+.market-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ff6b00;
+}
+
+.market-title {
+  font-size: 24px;
+  color: #ff6b00;
+  font-weight: bold;
+}
+
+.market-close {
+  font-size: 30px;
+  cursor: pointer;
+  color: #888;
+  transition: all 0.3s;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.market-close:hover {
+  color: #ff6b00;
+  background: rgba(255, 107, 0, 0.1);
+}
+
+.market-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.market-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  background: #3a3a3a;
+  color: white;
+  border: none;
+  padding: 8px 15px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.filter-btn:hover {
+  background: #ff6b00;
+}
+
+.filter-btn.active {
+  background: #ff6b00;
+}
+
+.market-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.market-item {
+  background: #3a3a3a;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid transparent;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.market-item:hover {
+  border-color: #ff6b00;
+  transform: translateY(-2px);
+}
+
+.market-item.premium {
+  background: linear-gradient(145deg, #3a3a3a, #4a3a2a);
+  border-color: gold;
+}
+
+.premium-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: gold;
+  color: black;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.market-item-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.market-item-icon {
+  font-size: 32px;
+  background: rgba(255, 107, 0, 0.2);
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+}
+
+.market-item-info {
+  flex: 1;
+}
+
+.market-item-name {
+  font-weight: bold;
+  color: #ff6b00;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.market-item-condition {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 4px;
+}
+
+.market-item-condition span {
+  color: #ffd700;
+  font-weight: bold;
+}
+
+.market-item-quality {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.quality-excelente {
+  background: #4caf50;
+  color: white;
+}
+
+.quality-bom {
+  background: #2196f3;
+  color: white;
+}
+
+.quality-regular {
+  background: #ffaa00;
+  color: black;
+}
+
+.quality-desgastado {
+  background: #ff6b00;
+  color: white;
+}
+
+.market-item-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.market-item-price {
+  display: flex;
+  flex-direction: column;
+}
+
+.current-price {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd700;
+}
+
+.original-price {
+  font-size: 11px;
+  color: #888;
+  text-decoration: line-through;
+}
+
+.discount-badge {
+  background: #4caf50;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.market-item-buy {
+  background: #ff6b00;
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: bold;
+  width: 100%;
+  margin-top: 10px;
+  transition: all 0.3s;
+}
+
+.market-item-buy:hover {
+  background: #ff8c00;
+  transform: scale(1.02);
+}
+
+.market-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+#refresh-market {
+  flex: 1;
+}
+
+#best-deals {
+  flex: 1;
+  background: #2196f3;
+}
+
+#best-deals:hover {
+  background: #1976d2;
+}
+
+/* Scrollbar para o grid */
+.market-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.market-grid::-webkit-scrollbar-track {
+  background: #3a3a3a;
+  border-radius: 4px;
+}
+
+.market-grid::-webkit-scrollbar-thumb {
+  background: #ff6b00;
+  border-radius: 4px;
+}

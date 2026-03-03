@@ -1,295 +1,371 @@
 // ui.js - GERENCIADOR DE INTERFACE COMPLETO
 
-import { gameState, scene3D, upgradeSystem, achievementSystem, db, audioManager, inventory, specializationSystem, garageSystem, customerSystem, dailyChallenges } from './game.js';
-import { TOOL_BASE_STATS, PART_TRANSLATIONS } from './constants.js';
-import { GARAGE_UPGRADES } from './garage.js';
-import { Job } from './job.js';
-import { CustomerCar } from './car.js';
+import {
+  gameState,
+  scene3D,
+  upgradeSystem,
+  achievementSystem,
+  db,
+  audioManager,
+  inventory,
+  specializationSystem,
+  garageSystem,
+  customerSystem,
+  dailyChallenges,
+} from "./game.js";
+import { TOOL_BASE_STATS, PART_TRANSLATIONS } from "./constants.js";
+import { GARAGE_UPGRADES } from "./garage.js";
+import { Job } from "./job.js";
+import { CustomerCar } from "./car.js";
 
 export class UIManager {
-    constructor() {
-        this.notificationTimeout = null;
-        this.challengesInterval = null;
-        this.initEventListeners();
-        this.updateToolDisplay();
-        setInterval(() => this.updateTimer(), 1000);
-        this.handleTabClick = this.handleTabClick.bind(this);
+  constructor() {
+    this.notificationTimeout = null;
+    this.challengesInterval = null;
+    this.initEventListeners();
+    this.updateToolDisplay();
+    setInterval(() => this.updateTimer(), 1000);
+    this.handleTabClick = this.handleTabClick.bind(this);
+  }
+
+  initEventListeners() {
+    // Tool selection
+    document.querySelectorAll(".tool-item").forEach((tool) => {
+      tool.addEventListener("click", () => {
+        document
+          .querySelectorAll(".tool-item")
+          .forEach((t) => t.classList.remove("selected"));
+        tool.classList.add("selected");
+        gameState.selectedTool = tool.dataset.tool;
+        this.showNotification(
+          `🔧 Ferramenta: ${TOOL_BASE_STATS[gameState.selectedTool]?.name || "Diagnóstico"}`,
+          "info",
+        );
+        if (gameState.currentCar) this.updatePartsList();
+      });
+    });
+
+    // New job button
+    document.getElementById("new-job").addEventListener("click", () => {
+      if (
+        gameState.currentJob &&
+        !document.getElementById("deliver-car").disabled
+      ) {
+        if (
+          !confirm(
+            "Há um carro pronto. Iniciar novo serviço fará você perder o pagamento. Continuar?",
+          )
+        )
+          return;
+      }
+
+      // 30% de chance de ser cliente regular, 10% de ser VIP
+      const rand = Math.random();
+      let customerType = "random";
+      if (rand < 0.1) customerType = "vip";
+      else if (rand < 0.4) customerType = "regular";
+
+      const job = new Job(customerType);
+      const car = new CustomerCar(job);
+
+      gameState.currentJob = job;
+      gameState.currentCar = car;
+      gameState.selectedPart = null;
+
+      scene3D?.createCar(car, job);
+      this.updateJobInfo();
+      this.updatePartsList();
+
+      document.getElementById("deliver-car").disabled = true;
+
+      const customerInfo = job.getCustomerInfo();
+      this.showNotification(
+        `${customerInfo.icon} Cliente: ${job.customerName} - Pagamento: R$ ${job.payment}`,
+        "success",
+      );
+
+      db.saveJob(job);
+      audioManager?.playSound("newJob");
+    });
+
+    // Deliver car button
+    document.getElementById("deliver-car").addEventListener("click", () => {
+      if (!gameState.currentJob || !gameState.currentCar) return;
+
+      if (!gameState.currentJob.checkCompletion(gameState.currentCar.parts)) {
+        this.showNotification("⚠️ Carro não atende aos requisitos!", "error");
+        return;
+      }
+
+      let perfectCount = 0;
+      const totalParts = Object.keys(gameState.currentCar.parts).length;
+
+      Object.values(gameState.currentCar.parts).forEach((part) => {
+        if (part.condition >= 100) perfectCount++;
+      });
+
+      const qualityBonus = Math.min(50, perfectCount * 10);
+      const finalPayment = Math.floor(
+        gameState.currentJob.payment * (1 + qualityBonus / 100),
+      );
+      const allPerfect = perfectCount === totalParts;
+
+      // Registrar no sistema de desafios
+      dailyChallenges?.onJobComplete(gameState.currentJob);
+      dailyChallenges?.onCustomerServed(gameState.currentJob.customerData);
+
+      gameState.updateMoney(finalPayment);
+      gameState.addExperience(500 + (allPerfect ? 300 : 0));
+      gameState.updateReputation(allPerfect ? 2 : 1);
+      gameState.jobsCompleted++;
+      document.getElementById("jobs-completed").textContent =
+        gameState.jobsCompleted;
+
+      this.showNotification(
+        `💰 Serviço concluído! Pagamento: R$ ${finalPayment}${qualityBonus > 0 ? ` (bônus ${qualityBonus}%)` : ""}`,
+        "success",
+      );
+      audioManager?.playSound("deliver");
+
+      if (allPerfect) {
+        this.showNotification("✨ SERVIÇO PERFEITO!", "success");
+        achievementSystem?.checkAchievements();
+      }
+
+      if (scene3D) {
+        scene3D.clearAllLabels();
+        if (scene3D.currentCar) {
+          scene3D.scene.remove(scene3D.currentCar);
+          scene3D.currentCar = null;
+        }
+      }
+
+      if (gameState.currentJob) {
+        gameState.currentJob.completeJob();
+        db?.updateJob(gameState.currentJob);
+      }
+
+      gameState.currentJob = null;
+      gameState.currentCar = null;
+      gameState.selectedPart = null;
+
+      document.getElementById("job-info").innerHTML =
+        '<div style="color: #888; text-align: center; padding: 20px;">🚗 Nenhum serviço ativo</div>';
+      document.getElementById("parts-list").innerHTML =
+        '<div style="color: #888; text-align: center; padding: 20px;">🔧 Nenhum carro na oficina</div>';
+      document.getElementById("deliver-car").disabled = true;
+      document.getElementById("interaction-info").textContent =
+        '👆 Clique em "Novo Cliente" para começar';
+
+      achievementSystem?.checkAchievements();
+      db?.savePlayerData();
+    });
+
+    // Inventory button
+    document.getElementById("inventory-btn").addEventListener("click", () => {
+      this.toggleInventoryPanel();
+    });
+
+    // Upgrade shop button
+    document
+      .getElementById("upgrade-shop-btn")
+      .addEventListener("click", () => {
+        this.openUpgradeShop();
+      });
+
+    // Garage button
+    document.getElementById("garage-btn").addEventListener("click", () => {
+      this.toggleGaragePanel();
+    });
+
+    // Customers button
+    document.getElementById("customers-btn").addEventListener("click", () => {
+      this.toggleCustomersPanel();
+    });
+
+    // Challenges button
+    document.getElementById("challenges-btn").addEventListener("click", () => {
+      this.toggleChallengesPanel();
+    });
+
+    // Audio controls
+    document.getElementById("toggle-music").addEventListener("click", () => {
+      const isEnabled = audioManager?.toggleMusic();
+      const btn = document.getElementById("toggle-music");
+      if (btn) {
+        btn.textContent = isEnabled ? "🎵" : "🔇";
+        btn.classList.toggle("muted", !isEnabled);
+      }
+    });
+
+    document.getElementById("toggle-sfx").addEventListener("click", () => {
+      const isEnabled = audioManager?.toggleSFX();
+      const btn = document.getElementById("toggle-sfx");
+      if (btn) {
+        btn.textContent = isEnabled ? "🔊" : "🔈";
+        btn.classList.toggle("muted", !isEnabled);
+      }
+    });
+
+    // Close buttons
+    const closeUpgradeBtn = document.getElementById("close-upgrade-shop");
+    if (closeUpgradeBtn) {
+      closeUpgradeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.closeUpgradeShop();
+      });
     }
 
-    initEventListeners() {
-        // Tool selection
-        document.querySelectorAll('.tool-item').forEach(tool => {
-            tool.addEventListener('click', () => {
-                document.querySelectorAll('.tool-item').forEach(t => t.classList.remove('selected'));
-                tool.classList.add('selected');
-                gameState.selectedTool = tool.dataset.tool;
-                this.showNotification(`🔧 Ferramenta: ${TOOL_BASE_STATS[gameState.selectedTool]?.name || 'Diagnóstico'}`, 'info');
-                if (gameState.currentCar) this.updatePartsList();
-            });
-        });
-
-        // New job button
-        document.getElementById('new-job').addEventListener('click', () => {
-            if (gameState.currentJob && !document.getElementById('deliver-car').disabled) {
-                if (!confirm('Há um carro pronto. Iniciar novo serviço fará você perder o pagamento. Continuar?')) return;
-            }
-            
-            // 30% de chance de ser cliente regular, 10% de ser VIP
-            const rand = Math.random();
-            let customerType = 'random';
-            if (rand < 0.1) customerType = 'vip';
-            else if (rand < 0.4) customerType = 'regular';
-            
-            const job = new Job(customerType);
-            const car = new CustomerCar(job);
-            
-            gameState.currentJob = job;
-            gameState.currentCar = car;
-            gameState.selectedPart = null;
-            
-            scene3D?.createCar(car, job);
-            this.updateJobInfo();
-            this.updatePartsList();
-            
-            document.getElementById('deliver-car').disabled = true;
-            
-            const customerInfo = job.getCustomerInfo();
-            this.showNotification(`${customerInfo.icon} Cliente: ${job.customerName} - Pagamento: R$ ${job.payment}`, 'success');
-            
-            db.saveJob(job);
-            audioManager?.playSound('newJob');
-        });
-
-        // Deliver car button
-        document.getElementById('deliver-car').addEventListener('click', () => {
-            if (!gameState.currentJob || !gameState.currentCar) return;
-            
-            if (!gameState.currentJob.checkCompletion(gameState.currentCar.parts)) {
-                this.showNotification('⚠️ Carro não atende aos requisitos!', 'error');
-                return;
-            }
-            
-            let perfectCount = 0;
-            const totalParts = Object.keys(gameState.currentCar.parts).length;
-            
-            Object.values(gameState.currentCar.parts).forEach(part => {
-                if (part.condition >= 100) perfectCount++;
-            });
-            
-            const qualityBonus = Math.min(50, perfectCount * 10);
-            const finalPayment = Math.floor(gameState.currentJob.payment * (1 + qualityBonus / 100));
-            const allPerfect = perfectCount === totalParts;
-            
-            // Registrar no sistema de desafios
-            dailyChallenges?.onJobComplete(gameState.currentJob);
-            dailyChallenges?.onCustomerServed(gameState.currentJob.customerData);
-            
-            gameState.updateMoney(finalPayment);
-            gameState.addExperience(500 + (allPerfect ? 300 : 0));
-            gameState.updateReputation(allPerfect ? 2 : 1);
-            gameState.jobsCompleted++;
-            document.getElementById('jobs-completed').textContent = gameState.jobsCompleted;
-            
-            this.showNotification(`💰 Serviço concluído! Pagamento: R$ ${finalPayment}${qualityBonus > 0 ? ` (bônus ${qualityBonus}%)` : ''}`, 'success');
-            audioManager?.playSound('deliver');
-            
-            if (allPerfect) {
-                this.showNotification('✨ SERVIÇO PERFEITO!', 'success');
-                achievementSystem?.checkAchievements();
-            }
-            
-            if (scene3D) {
-                scene3D.clearAllLabels();
-                if (scene3D.currentCar) {
-                    scene3D.scene.remove(scene3D.currentCar);
-                    scene3D.currentCar = null;
-                }
-            }
-            
-            if (gameState.currentJob) {
-                gameState.currentJob.completeJob();
-                db?.updateJob(gameState.currentJob);
-            }
-            
-            gameState.currentJob = null;
-            gameState.currentCar = null;
-            gameState.selectedPart = null;
-            
-            document.getElementById('job-info').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">🚗 Nenhum serviço ativo</div>';
-            document.getElementById('parts-list').innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">🔧 Nenhum carro na oficina</div>';
-            document.getElementById('deliver-car').disabled = true;
-            document.getElementById('interaction-info').textContent = '👆 Clique em "Novo Cliente" para começar';
-            
-            achievementSystem?.checkAchievements();
-            db?.savePlayerData();
-        });
-
-        // Inventory button
-        document.getElementById('inventory-btn').addEventListener('click', () => {
-            this.toggleInventoryPanel();
-        });
-
-        // Upgrade shop button
-        document.getElementById('upgrade-shop-btn').addEventListener('click', () => {
-            this.openUpgradeShop();
-        });
-
-        // Garage button
-        document.getElementById('garage-btn').addEventListener('click', () => {
-            this.toggleGaragePanel();
-        });
-
-        // Customers button
-        document.getElementById('customers-btn').addEventListener('click', () => {
-            this.toggleCustomersPanel();
-        });
-
-        // Challenges button
-        document.getElementById('challenges-btn').addEventListener('click', () => {
-            this.toggleChallengesPanel();
-        });
-
-        // Audio controls
-        document.getElementById('toggle-music').addEventListener('click', () => {
-            const isEnabled = audioManager?.toggleMusic();
-            const btn = document.getElementById('toggle-music');
-            if (btn) {
-                btn.textContent = isEnabled ? '🎵' : '🔇';
-                btn.classList.toggle('muted', !isEnabled);
-            }
-        });
-
-        document.getElementById('toggle-sfx').addEventListener('click', () => {
-            const isEnabled = audioManager?.toggleSFX();
-            const btn = document.getElementById('toggle-sfx');
-            if (btn) {
-                btn.textContent = isEnabled ? '🔊' : '🔈';
-                btn.classList.toggle('muted', !isEnabled);
-            }
-        });
-
-        // Close buttons
-        const closeUpgradeBtn = document.getElementById('close-upgrade-shop');
-        if (closeUpgradeBtn) {
-            closeUpgradeBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.closeUpgradeShop();
-            });
-        }
-
-        const closeInventoryBtn = document.getElementById('close-inventory-panel');
-        if (closeInventoryBtn) {
-            closeInventoryBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.closeInventory();
-            });
-        }
-
-        const closeGarageBtn = document.getElementById('close-garage-panel');
-        if (closeGarageBtn) {
-            closeGarageBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.closeGaragePanel();
-            });
-        }
-
-        const closeCustomersBtn = document.getElementById('close-customers-panel');
-        if (closeCustomersBtn) {
-            closeCustomersBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.closeCustomersPanel();
-            });
-        }
-
-        const closeChallengesBtn = document.getElementById('close-challenges-panel');
-        if (closeChallengesBtn) {
-            closeChallengesBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.closeChallengesPanel();
-            });
-        }
-
-        // Click outside to close
-        const upgradeShop = document.getElementById('upgrade-shop');
-        if (upgradeShop) {
-            upgradeShop.addEventListener('click', (e) => {
-                if (e.target === upgradeShop) this.closeUpgradeShop();
-            });
-        }
-
-        const inventoryPanel = document.getElementById('inventory-panel');
-        if (inventoryPanel) {
-            inventoryPanel.addEventListener('click', (e) => {
-                if (e.target === inventoryPanel) this.closeInventory();
-            });
-        }
-
-        const garagePanel = document.getElementById('garage-panel');
-        if (garagePanel) {
-            garagePanel.addEventListener('click', (e) => {
-                if (e.target === garagePanel) this.closeGaragePanel();
-            });
-        }
-
-        const customersPanel = document.getElementById('customers-panel');
-        if (customersPanel) {
-            customersPanel.addEventListener('click', (e) => {
-                if (e.target === customersPanel) this.closeCustomersPanel();
-            });
-        }
-
-        const challengesPanel = document.getElementById('challenges-panel');
-        if (challengesPanel) {
-            challengesPanel.addEventListener('click', (e) => {
-                if (e.target === challengesPanel) this.closeChallengesPanel();
-            });
-        }
-
-        // Escape key
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.closeUpgradeShop();
-                this.closeInventory();
-                this.closeGaragePanel();
-                this.closeCustomersPanel();
-                this.closeChallengesPanel();
-            }
-        });
-
-        // Upgrade inventory button
-        const upgradeInventoryBtn = document.getElementById('upgrade-inventory');
-        if (upgradeInventoryBtn) {
-            upgradeInventoryBtn.addEventListener('click', () => {
-                this.upgradeInventory();
-            });
-        }
-
-        // Upgrade garage button
-        const upgradeGarageBtn = document.getElementById('upgrade-garage');
-        if (upgradeGarageBtn) {
-            upgradeGarageBtn.addEventListener('click', () => {
-                this.upgradeGarage();
-            });
-        }
+    const closeInventoryBtn = document.getElementById("close-inventory-panel");
+    if (closeInventoryBtn) {
+      closeInventoryBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.closeInventory();
+      });
     }
 
-    // ===== MÉTODOS DE INTERFACE =====
+    const closeGarageBtn = document.getElementById("close-garage-panel");
+    if (closeGarageBtn) {
+      closeGarageBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.closeGaragePanel();
+      });
+    }
 
-    updateJobInfo() {
-        const jobInfo = document.getElementById('job-info');
-        if (!gameState.currentJob) {
-            jobInfo.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">🚗 Nenhum serviço ativo</div>';
-            return;
-        }
-        
-        const remaining = gameState.currentJob.getRemainingParts(gameState.currentCar.parts);
-        const timeRemaining = gameState.currentJob.getTimeRemaining();
-        const minutes = Math.floor(timeRemaining / 60000);
-        const seconds = Math.floor((timeRemaining % 60000) / 1000);
-        const progress = gameState.currentJob.getProgress(gameState.currentCar.parts);
-        const customerInfo = gameState.currentJob.getCustomerInfo();
-        
-        jobInfo.innerHTML = `
+    const closeCustomersBtn = document.getElementById("close-customers-panel");
+    if (closeCustomersBtn) {
+      closeCustomersBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.closeCustomersPanel();
+      });
+    }
+
+    const closeChallengesBtn = document.getElementById(
+      "close-challenges-panel",
+    );
+    if (closeChallengesBtn) {
+      closeChallengesBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.closeChallengesPanel();
+      });
+    }
+
+    // Click outside to close
+    const upgradeShop = document.getElementById("upgrade-shop");
+    if (upgradeShop) {
+      upgradeShop.addEventListener("click", (e) => {
+        if (e.target === upgradeShop) this.closeUpgradeShop();
+      });
+    }
+
+    const inventoryPanel = document.getElementById("inventory-panel");
+    if (inventoryPanel) {
+      inventoryPanel.addEventListener("click", (e) => {
+        if (e.target === inventoryPanel) this.closeInventory();
+      });
+    }
+
+    const garagePanel = document.getElementById("garage-panel");
+    if (garagePanel) {
+      garagePanel.addEventListener("click", (e) => {
+        if (e.target === garagePanel) this.closeGaragePanel();
+      });
+    }
+
+    const customersPanel = document.getElementById("customers-panel");
+    if (customersPanel) {
+      customersPanel.addEventListener("click", (e) => {
+        if (e.target === customersPanel) this.closeCustomersPanel();
+      });
+    }
+
+    const challengesPanel = document.getElementById("challenges-panel");
+    if (challengesPanel) {
+      challengesPanel.addEventListener("click", (e) => {
+        if (e.target === challengesPanel) this.closeChallengesPanel();
+      });
+    }
+
+    // Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        this.closeUpgradeShop();
+        this.closeInventory();
+        this.closeGaragePanel();
+        this.closeCustomersPanel();
+        this.closeChallengesPanel();
+      }
+    });
+
+    // Upgrade inventory button
+    const upgradeInventoryBtn = document.getElementById("upgrade-inventory");
+    if (upgradeInventoryBtn) {
+      upgradeInventoryBtn.addEventListener("click", () => {
+        this.upgradeInventory();
+      });
+    }
+
+    // Upgrade garage button
+    const upgradeGarageBtn = document.getElementById("upgrade-garage");
+    if (upgradeGarageBtn) {
+      upgradeGarageBtn.addEventListener("click", () => {
+        this.upgradeGarage();
+      });
+    }
+
+    // Botão do mercado de usados
+    document.getElementById("market-btn").addEventListener("click", () => {
+      this.toggleMarketPanel();
+    });
+
+    document
+      .getElementById("close-market-panel")
+      .addEventListener("click", () => {
+        this.closeMarketPanel();
+      });
+
+    document.getElementById("refresh-market").addEventListener("click", () => {
+      this.refreshMarket();
+    });
+
+    document.getElementById("best-deals").addEventListener("click", () => {
+      this.showBestDeals();
+    });
+
+    // Filtros do mercado
+    document.querySelectorAll(".filter-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        document
+          .querySelectorAll(".filter-btn")
+          .forEach((b) => b.classList.remove("active"));
+        e.target.classList.add("active");
+        this.filterMarket(e.target.dataset.filter);
+      });
+    });
+  }
+
+  // ===== MÉTODOS DE INTERFACE =====
+
+  updateJobInfo() {
+    const jobInfo = document.getElementById("job-info");
+    if (!gameState.currentJob) {
+      jobInfo.innerHTML =
+        '<div style="color: #888; text-align: center; padding: 20px;">🚗 Nenhum serviço ativo</div>';
+      return;
+    }
+
+    const remaining = gameState.currentJob.getRemainingParts(
+      gameState.currentCar.parts,
+    );
+    const timeRemaining = gameState.currentJob.getTimeRemaining();
+    const minutes = Math.floor(timeRemaining / 60000);
+    const seconds = Math.floor((timeRemaining % 60000) / 1000);
+    const progress = gameState.currentJob.getProgress(
+      gameState.currentCar.parts,
+    );
+    const customerInfo = gameState.currentJob.getCustomerInfo();
+
+    jobInfo.innerHTML = `
             <div class="job-header">
                 <span class="job-customer" style="color: ${customerInfo.color}">${customerInfo.icon} ${gameState.currentJob.customerName}</span>
                 <span class="job-difficulty ${gameState.currentJob.getDifficultyClass()}">${gameState.currentJob.getDifficultyText()}</span>
@@ -300,7 +376,7 @@ export class UIManager {
             </div>
             <div class="job-info-item">
                 <span class="job-info-label">Visitas:</span>
-                <span class="job-info-value">${customerInfo.visits} ${customerInfo.isReturning ? '⭐' : '🆕'}</span>
+                <span class="job-info-value">${customerInfo.visits} ${customerInfo.isReturning ? "⭐" : "🆕"}</span>
             </div>
             <div class="job-info-item">
                 <span class="job-info-label">Progresso:</span>
@@ -310,187 +386,217 @@ export class UIManager {
                 <span class="job-info-label">Peças pendentes:</span>
                 <span class="job-info-value">${remaining.length}</span>
             </div>
-            <div class="job-timer ${timeRemaining < 60000 ? 'timer-urgent' : ''}">
-                ⏰ ${minutes}:${seconds.toString().padStart(2, '0')}
+            <div class="job-timer ${timeRemaining < 60000 ? "timer-urgent" : ""}">
+                ⏰ ${minutes}:${seconds.toString().padStart(2, "0")}
             </div>
             <div class="job-payment">
                 Pagamento: R$ ${gameState.currentJob.payment}
             </div>
         `;
+  }
+
+  updatePartsList() {
+    const partsList = document.getElementById("parts-list");
+
+    if (!gameState.currentCar || !gameState.currentJob) {
+      partsList.innerHTML =
+        '<div style="color: #888; text-align: center; padding: 20px;">🔧 Nenhum carro na oficina</div>';
+      return;
     }
 
-    updatePartsList() {
-        const partsList = document.getElementById('parts-list');
-        
-        if (!gameState.currentCar || !gameState.currentJob) {
-            partsList.innerHTML = '<div style="color: #888; text-align: center; padding: 20px;">🔧 Nenhum carro na oficina</div>';
-            return;
+    partsList.innerHTML = "";
+
+    Object.entries(gameState.currentCar.parts).forEach(
+      ([partName, partData]) => {
+        const displayName = PART_TRANSLATIONS[partName].display;
+        const icon = PART_TRANSLATIONS[partName].icon;
+        const condition = Math.min(100, Math.round(partData.condition));
+        const targetCondition = Math.min(
+          100,
+          Math.round(gameState.currentJob.targetConditions[partName]),
+        );
+
+        let conditionClass = "";
+        let displayText = "";
+
+        if (condition === 100) {
+          conditionClass = "condition-good";
+          displayText = `100%`;
+        } else if (condition >= targetCondition) {
+          conditionClass = "condition-good";
+          displayText = `${condition}% ✓`;
+        } else if (condition >= targetCondition * 0.7) {
+          conditionClass = "condition-medium";
+          displayText = `${condition}% / ${targetCondition}%`;
+        } else {
+          conditionClass = "condition-bad";
+          displayText = `${condition}% / ${targetCondition}%`;
         }
-        
-        partsList.innerHTML = '';
-        
-        Object.entries(gameState.currentCar.parts).forEach(([partName, partData]) => {
-            const displayName = PART_TRANSLATIONS[partName].display;
-            const icon = PART_TRANSLATIONS[partName].icon;
-            const condition = Math.min(100, Math.round(partData.condition));
-            const targetCondition = Math.min(100, Math.round(gameState.currentJob.targetConditions[partName]));
-            
-            let conditionClass = '';
-            let displayText = '';
-            
-            if (condition === 100) {
-                conditionClass = 'condition-good';
-                displayText = `100%`;
-            } else if (condition >= targetCondition) {
-                conditionClass = 'condition-good';
-                displayText = `${condition}% ✓`;
-            } else if (condition >= targetCondition * 0.7) {
-                conditionClass = 'condition-medium';
-                displayText = `${condition}% / ${targetCondition}%`;
-            } else {
-                conditionClass = 'condition-bad';
-                displayText = `${condition}% / ${targetCondition}%`;
-            }
-            
-            const toolStats = upgradeSystem?.getToolStats(gameState.selectedTool) || { repair: 0, cost: 0 };
-            const baseEfficiency = upgradeSystem?.calculateRepairEfficiency(toolStats.repair) || 0;
-            const repairEfficiency = specializationSystem?.calculateRepairEfficiency(baseEfficiency, partName) || baseEfficiency;
-            const repairCost = upgradeSystem?.calculateRepairCost(toolStats.cost) || 0;
-            const partPrice = upgradeSystem?.calculatePartPrice(partData.price) || partData.price;
-            const stockQuantity = inventory?.getPartCount(partName) || 0;
-            
-            const canRepair = gameState.money >= repairCost && condition < targetCondition && condition < 100 && gameState.selectedTool !== 'diagnostic';
-            const canBuy = gameState.money >= partPrice && condition < targetCondition && condition < 100;
-            
-            const progressPercent = condition === 100 ? 100 : Math.min(100, (condition / targetCondition) * 100);
-            const targetPosition = (targetCondition / 100) * 100;
-            
-            const partElement = document.createElement('div');
-            partElement.className = `part-item ${gameState.selectedPart === partName ? 'selected' : ''}`;
-            
-            partElement.innerHTML = `
+
+        const toolStats = upgradeSystem?.getToolStats(
+          gameState.selectedTool,
+        ) || { repair: 0, cost: 0 };
+        const baseEfficiency =
+          upgradeSystem?.calculateRepairEfficiency(toolStats.repair) || 0;
+        const repairEfficiency =
+          specializationSystem?.calculateRepairEfficiency(
+            baseEfficiency,
+            partName,
+          ) || baseEfficiency;
+        const repairCost =
+          upgradeSystem?.calculateRepairCost(toolStats.cost) || 0;
+        const partPrice =
+          upgradeSystem?.calculatePartPrice(partData.price) || partData.price;
+        const stockQuantity = inventory?.getPartCount(partName) || 0;
+
+        const canRepair =
+          gameState.money >= repairCost &&
+          condition < targetCondition &&
+          condition < 100 &&
+          gameState.selectedTool !== "diagnostic";
+        const canBuy =
+          gameState.money >= partPrice &&
+          condition < targetCondition &&
+          condition < 100;
+
+        const progressPercent =
+          condition === 100
+            ? 100
+            : Math.min(100, (condition / targetCondition) * 100);
+        const targetPosition = (targetCondition / 100) * 100;
+
+        const partElement = document.createElement("div");
+        partElement.className = `part-item ${gameState.selectedPart === partName ? "selected" : ""}`;
+
+        partElement.innerHTML = `
                 <div class="part-header">
                     <span class="part-name">${icon} ${displayName}</span>
                     <span class="part-condition-badge ${conditionClass}">${displayText}</span>
                 </div>
                 <div class="part-progress">
                     <div class="progress-bar" style="width: ${progressPercent}%"></div>
-                    ${condition !== 100 ? `<div class="target-marker" style="left: ${targetPosition}%"></div>` : ''}
+                    ${condition !== 100 ? `<div class="target-marker" style="left: ${targetPosition}%"></div>` : ""}
                 </div>
                 <div class="part-details">
                     <div>🔧 Reparo: +${repairEfficiency}% | R$ ${repairCost}</div>
                     <div class="part-price">🛒 Nova: R$ ${partPrice}</div>
                 </div>
                 <div class="part-actions">
-                    <button class="part-action-btn repair-btn" ${!canRepair ? 'disabled' : ''} onclick="repairPart('${partName}')">🔧 Reparar</button>
-                    <button class="part-action-btn buy-btn" ${!canBuy ? 'disabled' : ''} onclick="buyNewPart('${partName}')">🛒 Comprar Nova</button>
+                    <button class="part-action-btn repair-btn" ${!canRepair ? "disabled" : ""} onclick="repairPart('${partName}')">🔧 Reparar</button>
+                    <button class="part-action-btn buy-btn" ${!canBuy ? "disabled" : ""} onclick="buyNewPart('${partName}')">🛒 Comprar Nova</button>
                 </div>
                 <div style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
                     <span style="color: #888; font-size: 11px;">📦 Estoque: <span style="color: #ffd700; font-weight: bold;">${stockQuantity}</span></span>
                     <button class="buy-to-stock-btn" data-part="${partName}" onclick="uiManager?.buyPartToStock('${partName}')">📦 Comprar p/ Estoque (R$ 500)</button>
                 </div>
             `;
-            
-            partElement.addEventListener('click', (e) => {
-                if (!e.target.classList.contains('part-action-btn') && !e.target.classList.contains('buy-to-stock-btn')) {
-                    scene3D?.selectPart(partName);
-                }
-            });
-            
-            partsList.appendChild(partElement);
-        });
-    }
 
-    updateToolDisplay() {
-        const container = document.getElementById('tool-upgrades');
-        if (!container || !upgradeSystem) return;
-        
-        container.innerHTML = '';
-        
-        Object.entries(upgradeSystem.toolLevels).forEach(([toolId, level]) => {
-            if (level >= 5) return;
-            
-            const tool = TOOL_BASE_STATS[toolId];
-            const price = 500 * level;
-            const canBuy = gameState.money >= price;
-            
-            const element = document.createElement('div');
-            element.className = 'upgrade-item';
-            element.innerHTML = `
+        partElement.addEventListener("click", (e) => {
+          if (
+            !e.target.classList.contains("part-action-btn") &&
+            !e.target.classList.contains("buy-to-stock-btn")
+          ) {
+            scene3D?.selectPart(partName);
+          }
+        });
+
+        partsList.appendChild(partElement);
+      },
+    );
+  }
+
+  updateToolDisplay() {
+    const container = document.getElementById("tool-upgrades");
+    if (!container || !upgradeSystem) return;
+
+    container.innerHTML = "";
+
+    Object.entries(upgradeSystem.toolLevels).forEach(([toolId, level]) => {
+      if (level >= 5) return;
+
+      const tool = TOOL_BASE_STATS[toolId];
+      const price = 500 * level;
+      const canBuy = gameState.money >= price;
+
+      const element = document.createElement("div");
+      element.className = "upgrade-item";
+      element.innerHTML = `
                 <div class="upgrade-info">
                     <div class="upgrade-name">${tool.icon} ${tool.name}</div>
                     <div class="upgrade-desc">Nível ${level} → ${level + 1}</div>
                     <div class="upgrade-level">+20% eficiência, +10% custo</div>
                 </div>
                 <span class="upgrade-price">R$ ${price}</span>
-                <button class="upgrade-buy" onclick="upgradeTool('${toolId}')" ${!canBuy ? 'disabled' : ''}>Upgrade</button>
+                <button class="upgrade-buy" onclick="upgradeTool('${toolId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
             `;
-            container.appendChild(element);
-        });
-    }
+      container.appendChild(element);
+    });
+  }
 
-    updateWorkshopDisplay() {
-        const container = document.getElementById('workshop-upgrades');
-        if (!container || !upgradeSystem) return;
-        
-        container.innerHTML = '';
-        
-        Object.entries(upgradeSystem.workshopUpgrades).forEach(([upgradeId, upgrade]) => {
-            if (upgrade.level >= upgrade.maxLevel) return;
-            
-            const price = upgrade.price * (upgrade.level + 1);
-            const canBuy = gameState.money >= price;
-            
-            const element = document.createElement('div');
-            element.className = 'upgrade-item';
-            element.innerHTML = `
+  updateWorkshopDisplay() {
+    const container = document.getElementById("workshop-upgrades");
+    if (!container || !upgradeSystem) return;
+
+    container.innerHTML = "";
+
+    Object.entries(upgradeSystem.workshopUpgrades).forEach(
+      ([upgradeId, upgrade]) => {
+        if (upgrade.level >= upgrade.maxLevel) return;
+
+        const price = upgrade.price * (upgrade.level + 1);
+        const canBuy = gameState.money >= price;
+
+        const element = document.createElement("div");
+        element.className = "upgrade-item";
+        element.innerHTML = `
                 <div class="upgrade-info">
                     <div class="upgrade-name">${upgrade.name}</div>
                     <div class="upgrade-desc">${upgrade.desc}</div>
                     <div class="upgrade-level">Nível ${upgrade.level}/${upgrade.maxLevel}</div>
                 </div>
                 <span class="upgrade-price">R$ ${price}</span>
-                <button class="upgrade-buy" onclick="upgradeWorkshop('${upgradeId}')" ${!canBuy ? 'disabled' : ''}>Upgrade</button>
+                <button class="upgrade-buy" onclick="upgradeWorkshop('${upgradeId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
             `;
-            container.appendChild(element);
-        });
-    }
+        container.appendChild(element);
+      },
+    );
+  }
 
-    updateSkillsDisplay() {
-        const container = document.getElementById('skill-upgrades');
-        if (!container || !upgradeSystem) return;
-        
-        container.innerHTML = '';
-        
-        Object.entries(upgradeSystem.skillUpgrades).forEach(([skillId, skill]) => {
-            if (skill.level >= skill.maxLevel) return;
-            
-            const price = skill.price * (skill.level + 1);
-            const canBuy = gameState.money >= price;
-            
-            const element = document.createElement('div');
-            element.className = 'upgrade-item';
-            element.innerHTML = `
+  updateSkillsDisplay() {
+    const container = document.getElementById("skill-upgrades");
+    if (!container || !upgradeSystem) return;
+
+    container.innerHTML = "";
+
+    Object.entries(upgradeSystem.skillUpgrades).forEach(([skillId, skill]) => {
+      if (skill.level >= skill.maxLevel) return;
+
+      const price = skill.price * (skill.level + 1);
+      const canBuy = gameState.money >= price;
+
+      const element = document.createElement("div");
+      element.className = "upgrade-item";
+      element.innerHTML = `
                 <div class="upgrade-info">
                     <div class="upgrade-name">${skill.name}</div>
                     <div class="upgrade-desc">${skill.desc}</div>
                     <div class="upgrade-level">Nível ${skill.level}/${skill.maxLevel}</div>
                 </div>
                 <span class="upgrade-price">R$ ${price}</span>
-                <button class="upgrade-buy" onclick="upgradeSkill('${skillId}')" ${!canBuy ? 'disabled' : ''}>Upgrade</button>
+                <button class="upgrade-buy" onclick="upgradeSkill('${skillId}')" ${!canBuy ? "disabled" : ""}>Upgrade</button>
             `;
-            container.appendChild(element);
-        });
-    }
+      container.appendChild(element);
+    });
+  }
 
-    updateSpecializationsDisplay() {
-        const container = document.getElementById('specializations-list');
-        const statsEl = document.getElementById('specializations-stats');
-        
-        if (!container || !statsEl || !specializationSystem) return;
-        
-        const stats = specializationSystem.getStats();
-        statsEl.innerHTML = `
+  updateSpecializationsDisplay() {
+    const container = document.getElementById("specializations-list");
+    const statsEl = document.getElementById("specializations-stats");
+
+    if (!container || !statsEl || !specializationSystem) return;
+
+    const stats = specializationSystem.getStats();
+    statsEl.innerHTML = `
             <div>
                 <div>
                     <div>NÍVEIS</div>
@@ -506,29 +612,29 @@ export class UIManager {
                 </div>
             </div>
         `;
-        
-        container.innerHTML = '';
-        
-        Object.values(specializationSystem.specializations).forEach(spec => {
-            const nextPrice = specializationSystem.getNextLevelPrice(spec.id);
-            const canBuy = nextPrice ? gameState.money >= nextPrice : false;
-            const progressPercent = (spec.level / spec.maxLevel) * 100;
-            
-            const item = document.createElement('div');
-            item.className = 'specialization-item';
-            
-            let buyButton = '';
-            if (spec.level >= spec.maxLevel) {
-                buyButton = `<button class="specialization-buy maxed" disabled>⭐ NÍVEL MÁXIMO</button>`;
-            } else {
-                buyButton = `<button class="specialization-buy" onclick="uiManager?.buySpecialization('${spec.id}')" ${!canBuy ? 'disabled' : ''}>
+
+    container.innerHTML = "";
+
+    Object.values(specializationSystem.specializations).forEach((spec) => {
+      const nextPrice = specializationSystem.getNextLevelPrice(spec.id);
+      const canBuy = nextPrice ? gameState.money >= nextPrice : false;
+      const progressPercent = (spec.level / spec.maxLevel) * 100;
+
+      const item = document.createElement("div");
+      item.className = "specialization-item";
+
+      let buyButton = "";
+      if (spec.level >= spec.maxLevel) {
+        buyButton = `<button class="specialization-buy maxed" disabled>⭐ NÍVEL MÁXIMO</button>`;
+      } else {
+        buyButton = `<button class="specialization-buy" onclick="uiManager?.buySpecialization('${spec.id}')" ${!canBuy ? "disabled" : ""}>
                                 NÍVEL ${spec.level + 1} • R$ ${nextPrice}
                             </button>`;
-            }
-            
-            const currentBonus = Math.round(spec.bonus * spec.level * 100);
-            
-            item.innerHTML = `
+      }
+
+      const currentBonus = Math.round(spec.bonus * spec.level * 100);
+
+      item.innerHTML = `
                 <div class="specialization-header">
                     <div class="specialization-icon">${spec.icon}</div>
                     <div class="specialization-info">
@@ -547,367 +653,397 @@ export class UIManager {
                 </div>
                 ${buyButton}
             `;
-            
-            container.appendChild(item);
-        });
+
+      container.appendChild(item);
+    });
+  }
+
+  updateUpgradeShop() {
+    this.updateToolDisplay();
+    this.updateWorkshopDisplay();
+    this.updateSkillsDisplay();
+    this.updateSpecializationsDisplay();
+  }
+
+  // ===== MÉTODOS DE AÇÃO =====
+
+  buySpecialization(specId) {
+    if (!specializationSystem) return;
+    const result = specializationSystem.buySpecialization(specId);
+    if (result.success) {
+      this.updateSpecializationsDisplay();
+      this.showNotification(result.message, "success");
+    } else {
+      this.showNotification(result.message, "error");
     }
+  }
 
-    updateUpgradeShop() {
-        this.updateToolDisplay();
-        this.updateWorkshopDisplay();
-        this.updateSkillsDisplay();
-        this.updateSpecializationsDisplay();
+  // ===== MÉTODOS DE ESTOQUE =====
+
+  toggleInventoryPanel() {
+    const panel = document.getElementById("inventory-panel");
+    if (panel) {
+      panel.classList.contains("show")
+        ? this.closeInventory()
+        : this.openInventory();
     }
+  }
 
-    // ===== MÉTODOS DE AÇÃO =====
-
-    buySpecialization(specId) {
-        if (!specializationSystem) return;
-        const result = specializationSystem.buySpecialization(specId);
-        if (result.success) {
-            this.updateSpecializationsDisplay();
-            this.showNotification(result.message, 'success');
-        } else {
-            this.showNotification(result.message, 'error');
-        }
+  openInventory() {
+    const panel = document.getElementById("inventory-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateInventoryDisplay();
     }
+  }
 
-    // ===== MÉTODOS DE ESTOQUE =====
+  closeInventory() {
+    const panel = document.getElementById("inventory-panel");
+    if (panel) panel.classList.remove("show");
+  }
 
-    toggleInventoryPanel() {
-        const panel = document.getElementById('inventory-panel');
-        if (panel) {
-            panel.classList.contains('show') ? this.closeInventory() : this.openInventory();
-        }
-    }
+  updateInventoryDisplay() {
+    const grid = document.getElementById("inventory-grid");
+    const capacityEl = document.getElementById("inventory-capacity");
+    const valueEl = document.getElementById("inventory-value");
 
-    openInventory() {
-        const panel = document.getElementById('inventory-panel');
-        if (panel) {
-            panel.classList.add('show');
-            this.updateInventoryDisplay();
-        }
-    }
+    if (!grid || !capacityEl || !valueEl || !inventory) return;
 
-    closeInventory() {
-        const panel = document.getElementById('inventory-panel');
-        if (panel) panel.classList.remove('show');
-    }
+    const stats = inventory.getStats();
+    capacityEl.textContent = `${stats.usedCapacity}/${stats.maxCapacity}`;
+    valueEl.textContent = `R$ ${stats.totalValue}`;
 
-    updateInventoryDisplay() {
-        const grid = document.getElementById('inventory-grid');
-        const capacityEl = document.getElementById('inventory-capacity');
-        const valueEl = document.getElementById('inventory-value');
-        
-        if (!grid || !capacityEl || !valueEl || !inventory) return;
-        
-        const stats = inventory.getStats();
-        capacityEl.textContent = `${stats.usedCapacity}/${stats.maxCapacity}`;
-        valueEl.textContent = `R$ ${stats.totalValue}`;
-        
-        grid.innerHTML = '';
-        
-        Object.entries(inventory.parts).forEach(([partName, quantity]) => {
-            if (quantity > 0) {
-                const item = document.createElement('div');
-                item.className = 'inventory-item';
-                item.innerHTML = `
+    grid.innerHTML = "";
+
+    Object.entries(inventory.parts).forEach(([partName, quantity]) => {
+      if (quantity > 0) {
+        const item = document.createElement("div");
+        item.className = "inventory-item";
+        item.innerHTML = `
                     <div class="inventory-item-icon">${PART_TRANSLATIONS[partName].icon}</div>
                     <div class="inventory-item-info">
                         <div class="inventory-item-name">${PART_TRANSLATIONS[partName].display}</div>
                         <div class="inventory-item-quantity">Quantidade: <span>${quantity}</span></div>
                     </div>
                 `;
-                grid.appendChild(item);
-            }
+        grid.appendChild(item);
+      }
+    });
+
+    if (grid.children.length === 0) {
+      grid.innerHTML =
+        '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #888;">📦 Estoque vazio</div>';
+    }
+  }
+
+  buyPartToStock(partName) {
+    if (!inventory) return;
+
+    const partPrice = 500;
+    if (gameState.money >= partPrice) {
+      if (inventory.addPart(partName)) {
+        gameState.updateMoney(-partPrice);
+        dailyChallenges?.onInventoryBuy();
+        this.updateInventoryDisplay();
+        this.updatePartsList();
+        this.showNotification(
+          `📦 Comprou ${PART_TRANSLATIONS[partName].display} para o estoque!`,
+          "success",
+        );
+      } else {
+        this.showNotification("❌ Estoque cheio! Faça upgrade.", "error");
+      }
+    } else {
+      this.showNotification("💰 Dinheiro insuficiente!", "error");
+    }
+  }
+
+  upgradeInventory() {
+    if (!inventory) return;
+
+    const upgradePrice = 1000;
+    if (gameState.money >= upgradePrice) {
+      inventory.upgradeCapacity(2);
+      gameState.updateMoney(-upgradePrice);
+      this.updateInventoryDisplay();
+      this.showNotification("📦 Capacidade aumentada!", "success");
+    } else {
+      this.showNotification("💰 Dinheiro insuficiente!", "error");
+    }
+  }
+
+  // ===== MÉTODOS DA LOJA DE UPGRADES =====
+
+  openUpgradeShop() {
+    const shop = document.getElementById("upgrade-shop");
+    if (shop) {
+      shop.classList.add("show");
+
+      shop.style.width = "700px";
+      shop.style.height = "600px";
+
+      this.updateUpgradeShop();
+
+      const tabs = document.querySelectorAll(".tab-btn");
+
+      tabs.forEach((btn) => {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+      });
+
+      document.querySelectorAll(".tab-btn").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.handleTabClick(e);
         });
-        
-        if (grid.children.length === 0) {
-            grid.innerHTML = '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #888;">📦 Estoque vazio</div>';
+      });
+
+      if (!document.querySelector(".tab-btn.active")) {
+        const firstTab = document.querySelector(".tab-btn");
+        if (firstTab) {
+          firstTab.classList.add("active");
+          const firstTabId = firstTab.dataset.tab;
+          document
+            .querySelectorAll(".tab-content")
+            .forEach((c) => c.classList.remove("active"));
+          const firstContent = document.getElementById(`${firstTabId}-tab`);
+          if (firstContent) firstContent.classList.add("active");
         }
+      }
+    }
+  }
+
+  closeUpgradeShop() {
+    const shop = document.getElementById("upgrade-shop");
+    if (shop) shop.classList.remove("show");
+  }
+
+  handleTabClick(e) {
+    const tab = e.currentTarget.dataset.tab;
+
+    document
+      .querySelectorAll(".tab-btn")
+      .forEach((b) => b.classList.remove("active"));
+    e.currentTarget.classList.add("active");
+
+    document
+      .querySelectorAll(".tab-content")
+      .forEach((c) => c.classList.remove("active"));
+    const activeTab = document.getElementById(`${tab}-tab`);
+    if (activeTab) {
+      activeTab.classList.add("active");
+      activeTab.scrollTop = 0;
+
+      switch (tab) {
+        case "tools":
+          this.updateToolDisplay();
+          break;
+        case "workshop":
+          this.updateWorkshopDisplay();
+          break;
+        case "skills":
+          this.updateSkillsDisplay();
+          break;
+        case "specializations":
+          this.updateSpecializationsDisplay();
+          break;
+      }
     }
 
-    buyPartToStock(partName) {
-        if (!inventory) return;
-        
-        const partPrice = 500;
-        if (gameState.money >= partPrice) {
-            if (inventory.addPart(partName)) {
-                gameState.updateMoney(-partPrice);
-                dailyChallenges?.onInventoryBuy();
-                this.updateInventoryDisplay();
-                this.updatePartsList();
-                this.showNotification(`📦 Comprou ${PART_TRANSLATIONS[partName].display} para o estoque!`, 'success');
-            } else {
-                this.showNotification('❌ Estoque cheio! Faça upgrade.', 'error');
+    const shop = document.getElementById("upgrade-shop");
+    if (shop) {
+      shop.style.width = "700px";
+      shop.style.height = "600px";
+    }
+  }
+
+  // ===== MÉTODOS DA GARAGEM =====
+
+  toggleGaragePanel() {
+    const panel = document.getElementById("garage-panel");
+    if (panel) {
+      panel.classList.contains("show")
+        ? this.closeGaragePanel()
+        : this.openGaragePanel();
+    }
+  }
+
+  openGaragePanel() {
+    const panel = document.getElementById("garage-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateGarageDisplay();
+    }
+  }
+
+  closeGaragePanel() {
+    const panel = document.getElementById("garage-panel");
+    if (panel) panel.classList.remove("show");
+  }
+
+  updateGarageDisplay() {
+    if (!garageSystem) return;
+
+    try {
+      const stats = garageSystem.getStats();
+      const currentLevel = GARAGE_UPGRADES[`level${stats.currentLevel}`];
+
+      if (!currentLevel) return;
+
+      const levelIcon = document.getElementById("garage-level-icon");
+      const levelName = document.getElementById("garage-level-name");
+      const levelDesc = document.getElementById("garage-level-desc");
+
+      if (levelIcon) levelIcon.textContent = currentLevel.image || "🏚️";
+      if (levelName) levelName.textContent = currentLevel.name || "Garagem";
+      if (levelDesc)
+        levelDesc.textContent = `Nível ${stats.currentLevel}/${stats.maxLevel}`;
+
+      const slotsEl = document.getElementById("garage-slots");
+      const toolsEl = document.getElementById("garage-tools");
+      const storageEl = document.getElementById("garage-storage");
+      const diagnosticEl = document.getElementById("garage-diagnostic");
+
+      if (slotsEl)
+        slotsEl.textContent = `${stats.usedSlots || 0}/${stats.carSlots || 1}`;
+      if (toolsEl) toolsEl.textContent = stats.toolRacks || 1;
+      if (storageEl) storageEl.textContent = stats.partsStorage || 50;
+      if (diagnosticEl)
+        diagnosticEl.textContent = `+${stats.diagnosticBonus || 0}%`;
+
+      const bonusList = document.getElementById("garage-bonus-list");
+      if (bonusList) {
+        bonusList.innerHTML = "";
+
+        if (stats.diagnosticBonus > 0) {
+          bonusList.innerHTML += `<div class="bonus-item">🔍 Diagnóstico +${stats.diagnosticBonus}%</div>`;
+        }
+        if (stats.partsDiscount > 0) {
+          bonusList.innerHTML += `<div class="bonus-item">💰 Desconto em peças ${stats.partsDiscount}%</div>`;
+        }
+        if (stats.currentLevel >= 3) {
+          bonusList.innerHTML += `<div class="bonus-item">⬆️ Estoque +5 capacidade</div>`;
+        }
+        if (stats.currentLevel >= 4) {
+          bonusList.innerHTML += `<div class="bonus-item">🎨 Serviços de pintura</div>`;
+        }
+        if (stats.currentLevel >= 5) {
+          bonusList.innerHTML += `<div class="bonus-item">⚡ Preparação de motor</div>`;
+        }
+
+        if (bonusList.children.length === 0) {
+          bonusList.innerHTML =
+            '<div class="bonus-item">🔧 Reparos mais rápidos</div>';
+        }
+      }
+
+      const nextUpgrade = document.getElementById("garage-next-upgrade");
+      if (nextUpgrade) {
+        if (stats.nextUpgrade) {
+          nextUpgrade.style.display = "block";
+
+          const nextName = document.getElementById("next-name");
+          const nextDesc = document.getElementById("next-desc");
+          const nextPrice = document.getElementById("next-price");
+          const nextLevel = document.getElementById("next-level");
+          const upgradeBtn = document.getElementById("upgrade-garage");
+
+          if (nextName)
+            nextName.textContent = stats.nextUpgrade.name || "Próximo nível";
+          if (nextDesc) {
+            const nextLevelData =
+              GARAGE_UPGRADES[`level${stats.currentLevel + 1}`];
+            if (nextLevelData) {
+              nextDesc.textContent = `${nextLevelData.carSlots} vagas, estoque ${nextLevelData.partsStorage}`;
             }
+          }
+          if (nextPrice)
+            nextPrice.innerHTML = `💰 R$ ${stats.nextUpgrade.price}`;
+          if (nextLevel)
+            nextLevel.innerHTML = `⭐ Nível ${stats.nextUpgrade.requiredLevel}`;
+
+          if (upgradeBtn) {
+            const canBuy =
+              gameState.money >= stats.nextUpgrade.price &&
+              gameState.level >= stats.nextUpgrade.requiredLevel;
+            upgradeBtn.disabled = !canBuy;
+          }
         } else {
-            this.showNotification('💰 Dinheiro insuficiente!', 'error');
+          nextUpgrade.style.display = "none";
         }
+      }
+    } catch (error) {
+      console.error("❌ Erro ao atualizar display da garagem:", error);
     }
+  }
 
-    upgradeInventory() {
-        if (!inventory) return;
-        
-        const upgradePrice = 1000;
-        if (gameState.money >= upgradePrice) {
-            inventory.upgradeCapacity(2);
-            gameState.updateMoney(-upgradePrice);
-            this.updateInventoryDisplay();
-            this.showNotification('📦 Capacidade aumentada!', 'success');
-        } else {
-            this.showNotification('💰 Dinheiro insuficiente!', 'error');
-        }
+  upgradeGarage() {
+    if (!garageSystem) return;
+
+    const result = garageSystem.buyUpgrade();
+
+    if (result.success) {
+      this.updateGarageDisplay();
+      this.showNotification(result.message, "success");
+
+      if (window.scene3D) {
+        scene3D.updateGarageAppearance(garageSystem.getGarageAppearance());
+      }
+    } else {
+      this.showNotification(result.message, "error");
     }
+  }
 
-    // ===== MÉTODOS DA LOJA DE UPGRADES =====
+  // ===== MÉTODOS DE CLIENTES =====
 
-    openUpgradeShop() {
-        const shop = document.getElementById('upgrade-shop');
-        if (shop) {
-            shop.classList.add('show');
-            
-            shop.style.width = '700px';
-            shop.style.height = '600px';
-            
-            this.updateUpgradeShop();
-            
-            const tabs = document.querySelectorAll('.tab-btn');
-            
-            tabs.forEach(btn => {
-                const newBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(newBtn, btn);
-            });
-            
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.handleTabClick(e);
-                });
-            });
-            
-            if (!document.querySelector('.tab-btn.active')) {
-                const firstTab = document.querySelector('.tab-btn');
-                if (firstTab) {
-                    firstTab.classList.add('active');
-                    const firstTabId = firstTab.dataset.tab;
-                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                    const firstContent = document.getElementById(`${firstTabId}-tab`);
-                    if (firstContent) firstContent.classList.add('active');
-                }
-            }
-        }
+  toggleCustomersPanel() {
+    const panel = document.getElementById("customers-panel");
+    if (panel) {
+      panel.classList.contains("show")
+        ? this.closeCustomersPanel()
+        : this.openCustomersPanel();
     }
+  }
 
-    closeUpgradeShop() {
-        const shop = document.getElementById('upgrade-shop');
-        if (shop) shop.classList.remove('show');
+  openCustomersPanel() {
+    const panel = document.getElementById("customers-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateCustomersDisplay();
     }
+  }
 
-    handleTabClick(e) {
-        const tab = e.currentTarget.dataset.tab;
-        
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-        
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        const activeTab = document.getElementById(`${tab}-tab`);
-        if (activeTab) {
-            activeTab.classList.add('active');
-            activeTab.scrollTop = 0;
-            
-            switch(tab) {
-                case 'tools':
-                    this.updateToolDisplay();
-                    break;
-                case 'workshop':
-                    this.updateWorkshopDisplay();
-                    break;
-                case 'skills':
-                    this.updateSkillsDisplay();
-                    break;
-                case 'specializations':
-                    this.updateSpecializationsDisplay();
-                    break;
-            }
-        }
-        
-        const shop = document.getElementById('upgrade-shop');
-        if (shop) {
-            shop.style.width = '700px';
-            shop.style.height = '600px';
-        }
-    }
+  closeCustomersPanel() {
+    const panel = document.getElementById("customers-panel");
+    if (panel) panel.classList.remove("show");
+  }
 
-    // ===== MÉTODOS DA GARAGEM =====
+  updateCustomersDisplay() {
+    if (!customerSystem) return;
 
-    toggleGaragePanel() {
-        const panel = document.getElementById('garage-panel');
-        if (panel) {
-            panel.classList.contains('show') ? this.closeGaragePanel() : this.openGaragePanel();
-        }
-    }
+    const stats = customerSystem.getStats();
 
-    openGaragePanel() {
-        const panel = document.getElementById('garage-panel');
-        if (panel) {
-            panel.classList.add('show');
-            this.updateGarageDisplay();
-        }
-    }
+    document.getElementById("total-customers").textContent =
+      stats.totalCustomers;
+    document.getElementById("regular-customers").textContent =
+      stats.regularCustomers;
+    document.getElementById("vip-customers").textContent = stats.vipCustomers;
+    document.getElementById("avg-satisfaction").textContent =
+      stats.averageSatisfaction + "%";
 
-    closeGaragePanel() {
-        const panel = document.getElementById('garage-panel');
-        if (panel) panel.classList.remove('show');
-    }
+    const list = document.getElementById("customers-list");
+    list.innerHTML = "";
 
-    updateGarageDisplay() {
-        if (!garageSystem) return;
-        
-        try {
-            const stats = garageSystem.getStats();
-            const currentLevel = GARAGE_UPGRADES[`level${stats.currentLevel}`];
-            
-            if (!currentLevel) return;
-            
-            const levelIcon = document.getElementById('garage-level-icon');
-            const levelName = document.getElementById('garage-level-name');
-            const levelDesc = document.getElementById('garage-level-desc');
-            
-            if (levelIcon) levelIcon.textContent = currentLevel.image || '🏚️';
-            if (levelName) levelName.textContent = currentLevel.name || 'Garagem';
-            if (levelDesc) levelDesc.textContent = `Nível ${stats.currentLevel}/${stats.maxLevel}`;
-            
-            const slotsEl = document.getElementById('garage-slots');
-            const toolsEl = document.getElementById('garage-tools');
-            const storageEl = document.getElementById('garage-storage');
-            const diagnosticEl = document.getElementById('garage-diagnostic');
-            
-            if (slotsEl) slotsEl.textContent = `${stats.usedSlots || 0}/${stats.carSlots || 1}`;
-            if (toolsEl) toolsEl.textContent = stats.toolRacks || 1;
-            if (storageEl) storageEl.textContent = stats.partsStorage || 50;
-            if (diagnosticEl) diagnosticEl.textContent = `+${stats.diagnosticBonus || 0}%`;
-            
-            const bonusList = document.getElementById('garage-bonus-list');
-            if (bonusList) {
-                bonusList.innerHTML = '';
-                
-                if (stats.diagnosticBonus > 0) {
-                    bonusList.innerHTML += `<div class="bonus-item">🔍 Diagnóstico +${stats.diagnosticBonus}%</div>`;
-                }
-                if (stats.partsDiscount > 0) {
-                    bonusList.innerHTML += `<div class="bonus-item">💰 Desconto em peças ${stats.partsDiscount}%</div>`;
-                }
-                if (stats.currentLevel >= 3) {
-                    bonusList.innerHTML += `<div class="bonus-item">⬆️ Estoque +5 capacidade</div>`;
-                }
-                if (stats.currentLevel >= 4) {
-                    bonusList.innerHTML += `<div class="bonus-item">🎨 Serviços de pintura</div>`;
-                }
-                if (stats.currentLevel >= 5) {
-                    bonusList.innerHTML += `<div class="bonus-item">⚡ Preparação de motor</div>`;
-                }
-                
-                if (bonusList.children.length === 0) {
-                    bonusList.innerHTML = '<div class="bonus-item">🔧 Reparos mais rápidos</div>';
-                }
-            }
-            
-            const nextUpgrade = document.getElementById('garage-next-upgrade');
-            if (nextUpgrade) {
-                if (stats.nextUpgrade) {
-                    nextUpgrade.style.display = 'block';
-                    
-                    const nextName = document.getElementById('next-name');
-                    const nextDesc = document.getElementById('next-desc');
-                    const nextPrice = document.getElementById('next-price');
-                    const nextLevel = document.getElementById('next-level');
-                    const upgradeBtn = document.getElementById('upgrade-garage');
-                    
-                    if (nextName) nextName.textContent = stats.nextUpgrade.name || 'Próximo nível';
-                    if (nextDesc) {
-                        const nextLevelData = GARAGE_UPGRADES[`level${stats.currentLevel + 1}`];
-                        if (nextLevelData) {
-                            nextDesc.textContent = `${nextLevelData.carSlots} vagas, estoque ${nextLevelData.partsStorage}`;
-                        }
-                    }
-                    if (nextPrice) nextPrice.innerHTML = `💰 R$ ${stats.nextUpgrade.price}`;
-                    if (nextLevel) nextLevel.innerHTML = `⭐ Nível ${stats.nextUpgrade.requiredLevel}`;
-                    
-                    if (upgradeBtn) {
-                        const canBuy = gameState.money >= stats.nextUpgrade.price && 
-                                      gameState.level >= stats.nextUpgrade.requiredLevel;
-                        upgradeBtn.disabled = !canBuy;
-                    }
-                } else {
-                    nextUpgrade.style.display = 'none';
-                }
-            }
-        } catch (error) {
-            console.error('❌ Erro ao atualizar display da garagem:', error);
-        }
-    }
+    Object.values(customerSystem.customers)
+      .slice(0, 10)
+      .forEach((customer) => {
+        const card = customerSystem.getCustomerCard(customer.name);
+        if (!card) return;
 
-    upgradeGarage() {
-        if (!garageSystem) return;
-        
-        const result = garageSystem.buyUpgrade();
-        
-        if (result.success) {
-            this.updateGarageDisplay();
-            this.showNotification(result.message, 'success');
-            
-            if (window.scene3D) {
-                scene3D.updateGarageAppearance(garageSystem.getGarageAppearance());
-            }
-        } else {
-            this.showNotification(result.message, 'error');
-        }
-    }
-
-    // ===== MÉTODOS DE CLIENTES =====
-
-    toggleCustomersPanel() {
-        const panel = document.getElementById('customers-panel');
-        if (panel) {
-            panel.classList.contains('show') ? this.closeCustomersPanel() : this.openCustomersPanel();
-        }
-    }
-
-    openCustomersPanel() {
-        const panel = document.getElementById('customers-panel');
-        if (panel) {
-            panel.classList.add('show');
-            this.updateCustomersDisplay();
-        }
-    }
-
-    closeCustomersPanel() {
-        const panel = document.getElementById('customers-panel');
-        if (panel) panel.classList.remove('show');
-    }
-
-    updateCustomersDisplay() {
-        if (!customerSystem) return;
-        
-        const stats = customerSystem.getStats();
-        
-        document.getElementById('total-customers').textContent = stats.totalCustomers;
-        document.getElementById('regular-customers').textContent = stats.regularCustomers;
-        document.getElementById('vip-customers').textContent = stats.vipCustomers;
-        document.getElementById('avg-satisfaction').textContent = stats.averageSatisfaction + '%';
-        
-        const list = document.getElementById('customers-list');
-        list.innerHTML = '';
-        
-        Object.values(customerSystem.customers).slice(0, 10).forEach(customer => {
-            const card = customerSystem.getCustomerCard(customer.name);
-            if (!card) return;
-            
-            const item = document.createElement('div');
-            item.className = 'customer-item';
-            item.innerHTML = `
+        const item = document.createElement("div");
+        item.className = "customer-item";
+        item.innerHTML = `
                 <div class="customer-status" style="color: ${card.color}">${card.icon}</div>
                 <div class="customer-info">
                     <div class="customer-name" style="color: ${card.color}">${card.name}</div>
@@ -919,65 +1055,70 @@ export class UIManager {
                 </div>
                 <div class="customer-favorite">❤️ ${card.favoritePart}</div>
             `;
-            list.appendChild(item);
-        });
+        list.appendChild(item);
+      });
+  }
+
+  // ===== MÉTODOS DE DESAFIOS =====
+
+  toggleChallengesPanel() {
+    const panel = document.getElementById("challenges-panel");
+    if (panel) {
+      panel.classList.contains("show")
+        ? this.closeChallengesPanel()
+        : this.openChallengesPanel();
     }
+  }
 
-    // ===== MÉTODOS DE DESAFIOS =====
+  openChallengesPanel() {
+    const panel = document.getElementById("challenges-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateChallengesDisplay();
 
-    toggleChallengesPanel() {
-        const panel = document.getElementById('challenges-panel');
-        if (panel) {
-            panel.classList.contains('show') ? this.closeChallengesPanel() : this.openChallengesPanel();
-        }
+      if (this.challengesInterval) clearInterval(this.challengesInterval);
+      this.challengesInterval = setInterval(() => {
+        this.updateChallengesTimer();
+      }, 60000);
     }
+  }
 
-    openChallengesPanel() {
-        const panel = document.getElementById('challenges-panel');
-        if (panel) {
-            panel.classList.add('show');
-            this.updateChallengesDisplay();
-            
-            if (this.challengesInterval) clearInterval(this.challengesInterval);
-            this.challengesInterval = setInterval(() => {
-                this.updateChallengesTimer();
-            }, 60000);
-        }
+  closeChallengesPanel() {
+    const panel = document.getElementById("challenges-panel");
+    if (panel) {
+      panel.classList.remove("show");
+      if (this.challengesInterval) {
+        clearInterval(this.challengesInterval);
+        this.challengesInterval = null;
+      }
     }
+  }
 
-    closeChallengesPanel() {
-        const panel = document.getElementById('challenges-panel');
-        if (panel) {
-            panel.classList.remove('show');
-            if (this.challengesInterval) {
-                clearInterval(this.challengesInterval);
-                this.challengesInterval = null;
-            }
-        }
-    }
+  updateChallengesDisplay() {
+    if (!dailyChallenges) return;
 
-    updateChallengesDisplay() {
-        if (!dailyChallenges) return;
-        
-        const progress = dailyChallenges.getProgress();
-        const timeLeft = dailyChallenges.formatTimeLeft();
-        
-        document.getElementById('challenges-timer').textContent = timeLeft;
-        document.getElementById('consecutive-days').textContent = dailyChallenges.consecutiveDays;
-        document.getElementById('bonus-multiplier').textContent = dailyChallenges.bonusMultiplier.toFixed(1) + 'x';
-        document.getElementById('challenges-progress').textContent = progress.percentage + '%';
-        
-        const activeList = document.getElementById('active-challenges');
-        const completedList = document.getElementById('completed-challenges');
-        
-        activeList.innerHTML = '';
-        completedList.innerHTML = '';
-        
-        dailyChallenges.getActiveChallenges().forEach(challenge => {
-            const percent = (challenge.progress / challenge.target) * 100;
-            const item = document.createElement('div');
-            item.className = 'challenge-item';
-            item.innerHTML = `
+    const progress = dailyChallenges.getProgress();
+    const timeLeft = dailyChallenges.formatTimeLeft();
+
+    document.getElementById("challenges-timer").textContent = timeLeft;
+    document.getElementById("consecutive-days").textContent =
+      dailyChallenges.consecutiveDays;
+    document.getElementById("bonus-multiplier").textContent =
+      dailyChallenges.bonusMultiplier.toFixed(1) + "x";
+    document.getElementById("challenges-progress").textContent =
+      progress.percentage + "%";
+
+    const activeList = document.getElementById("active-challenges");
+    const completedList = document.getElementById("completed-challenges");
+
+    activeList.innerHTML = "";
+    completedList.innerHTML = "";
+
+    dailyChallenges.getActiveChallenges().forEach((challenge) => {
+      const percent = (challenge.progress / challenge.target) * 100;
+      const item = document.createElement("div");
+      item.className = "challenge-item";
+      item.innerHTML = `
                 <div class="challenge-icon">${challenge.icon}</div>
                 <div class="challenge-info">
                     <div class="challenge-name">${challenge.name}</div>
@@ -994,13 +1135,13 @@ export class UIManager {
                     <span>${challenge.reward}</span>
                 </div>
             `;
-            activeList.appendChild(item);
-        });
-        
-        dailyChallenges.getCompletedChallenges().forEach(challenge => {
-            const item = document.createElement('div');
-            item.className = 'challenge-item completed';
-            item.innerHTML = `
+      activeList.appendChild(item);
+    });
+
+    dailyChallenges.getCompletedChallenges().forEach((challenge) => {
+      const item = document.createElement("div");
+      item.className = "challenge-item completed";
+      item.innerHTML = `
                 <div class="challenge-icon">${challenge.icon}</div>
                 <div class="challenge-info">
                     <div class="challenge-name">${challenge.name}</div>
@@ -1017,68 +1158,290 @@ export class UIManager {
                     RESGATAR
                 </button>
             `;
-            completedList.appendChild(item);
-        });
+      completedList.appendChild(item);
+    });
+  }
+
+  updateChallengesTimer() {
+    if (!dailyChallenges) return;
+    document.getElementById("challenges-timer").textContent =
+      dailyChallenges.formatTimeLeft();
+  }
+
+  claimChallenge(challengeId) {
+    if (!dailyChallenges) return;
+
+    const reward = dailyChallenges.claimReward(challengeId);
+    if (reward > 0) {
+      gameState.updateMoney(reward);
+      this.showNotification(
+        `💰 Recompensa de R$ ${reward} resgatada!`,
+        "success",
+      );
+      this.updateChallengesDisplay();
+    }
+  }
+
+  toggleMarketPanel() {
+    const panel = document.getElementById("used-market-panel");
+    if (panel) {
+      panel.classList.contains("show")
+        ? this.closeMarketPanel()
+        : this.openMarketPanel();
+    }
+  }
+
+  openMarketPanel() {
+    const panel = document.getElementById("used-market-panel");
+    if (panel) {
+      panel.classList.add("show");
+      this.updateMarketDisplay();
+
+      // Atualizar timer a cada segundo
+      if (this.marketInterval) clearInterval(this.marketInterval);
+      this.marketInterval = setInterval(() => {
+        this.updateMarketTimer();
+      }, 1000);
+    }
+  }
+
+  closeMarketPanel() {
+    const panel = document.getElementById("used-market-panel");
+    if (panel) {
+      panel.classList.remove("show");
+      if (this.marketInterval) {
+        clearInterval(this.marketInterval);
+        this.marketInterval = null;
+      }
+    }
+  }
+
+  updateMarketDisplay(filter = "all") {
+    if (!usedPartsMarket) return;
+
+    usedPartsMarket.refreshMarket();
+    const stats = usedPartsMarket.getStats();
+
+    document.getElementById("market-count").textContent =
+      `${stats.availableCount}/${stats.maxOffers}`;
+    document.getElementById("market-timer").textContent = stats.refreshTime;
+    document.getElementById("market-discount").textContent =
+      stats.avgDiscount + "%";
+    document.getElementById("market-condition").textContent =
+      stats.avgCondition + "%";
+
+    const grid = document.getElementById("market-grid");
+    grid.innerHTML = "";
+
+    let partsToShow = usedPartsMarket.availableParts;
+
+    // Aplicar filtro
+    switch (filter) {
+      case "excellent":
+        partsToShow = usedPartsMarket.getPartsByQuality("Excelente");
+        break;
+      case "good":
+        partsToShow = usedPartsMarket.getPartsByQuality("Bom");
+        break;
+      case "regular":
+        partsToShow = usedPartsMarket.getPartsByQuality("Regular");
+        break;
+      case "worn":
+        partsToShow = usedPartsMarket.getPartsByQuality("Desgastado");
+        break;
+      case "premium":
+        partsToShow = usedPartsMarket.getPremiumParts();
+        break;
     }
 
-    updateChallengesTimer() {
-        if (!dailyChallenges) return;
-        document.getElementById('challenges-timer').textContent = dailyChallenges.formatTimeLeft();
-    }
+    partsToShow.forEach((part) => {
+      const item = document.createElement("div");
+      item.className = `market-item ${part.isPremium ? "premium" : ""}`;
 
-    claimChallenge(challengeId) {
-        if (!dailyChallenges) return;
-        
-        const reward = dailyChallenges.claimReward(challengeId);
-        if (reward > 0) {
-            gameState.updateMoney(reward);
-            this.showNotification(`💰 Recompensa de R$ ${reward} resgatada!`, 'success');
-            this.updateChallengesDisplay();
-        }
-    }
+      let qualityClass = "";
+      switch (part.quality) {
+        case "Excelente":
+          qualityClass = "quality-excelente";
+          break;
+        case "Bom":
+          qualityClass = "quality-bom";
+          break;
+        case "Regular":
+          qualityClass = "quality-regular";
+          break;
+        case "Desgastado":
+          qualityClass = "quality-desgastado";
+          break;
+      }
 
-    // ===== MÉTODOS UTILITÁRIOS =====
+      item.innerHTML = `
+            ${part.isPremium ? '<div class="premium-badge">✨ PREMIUM</div>' : ""}
+            <div class="market-item-header">
+                <div class="market-item-icon">${part.icon}</div>
+                <div class="market-item-info">
+                    <div class="market-item-name">${part.displayName}</div>
+                    <div class="market-item-condition">Condição: <span>${part.condition}%</span></div>
+                    <span class="market-item-quality ${qualityClass}">${part.quality}</span>
+                </div>
+            </div>
+            <div class="market-item-details">
+                <div class="market-item-price">
+                    <span class="current-price">R$ ${part.price}</span>
+                    <span class="original-price">R$ ${part.originalPrice}</span>
+                </div>
+                <div class="discount-badge">-${part.discount}%</div>
+            </div>
+            <button class="market-item-buy" onclick="uiManager?.buyUsedPart('${part.id}')">
+                COMPRAR
+            </button>
+        `;
 
-    checkJobCompletion() {
-        if (!gameState.currentJob || !gameState.currentCar) return;
-        document.getElementById('deliver-car').disabled = !gameState.currentJob.checkCompletion(gameState.currentCar.parts);
-    }
+      grid.appendChild(item);
+    });
 
-    updateTimer() {
-        if (gameState.currentJob && !gameState.currentJob.isExpired()) {
-            this.updateJobInfo();
-            if (gameState.currentJob.isExpired()) {
-                this.showNotification('⏰ Tempo esgotado!', 'error');
-                if (scene3D?.currentCar) scene3D.scene.remove(scene3D.currentCar);
-                gameState.currentJob = null;
-                gameState.currentCar = null;
-                gameState.selectedPart = null;
-                gameState.updateReputation(-1);
-                document.getElementById('job-info').innerHTML = '<div style="color: #888; text-align: center;">Nenhum serviço ativo</div>';
-                document.getElementById('parts-list').innerHTML = '<div style="color: #888; text-align: center;">Nenhum carro no momento</div>';
-                document.getElementById('deliver-car').disabled = true;
-            }
-        }
+    if (grid.children.length === 0) {
+      grid.innerHTML =
+        '<div style="grid-column: span 2; text-align: center; padding: 40px; color: #888;">🔍 Nenhuma peça encontrada</div>';
     }
+  }
 
-    showNotification(message, type = 'info') {
-        const notification = document.getElementById('notification');
-        if (!notification) return;
-        
-        if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
-        
-        notification.classList.remove('show');
-        notification.style.transform = 'translateX(400px)';
-        void notification.offsetWidth;
-        
-        notification.textContent = message;
-        notification.style.backgroundColor = type === 'error' ? '#ff3333' : type === 'success' ? '#00aa00' : '#ff6b00';
-        
-        setTimeout(() => notification.classList.add('show'), 10);
-        
-        this.notificationTimeout = setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => notification.style.transform = 'translateX(400px)', 300);
-        }, 3000);
+  updateMarketTimer() {
+    if (!usedPartsMarket) return;
+    const stats = usedPartsMarket.getStats();
+    document.getElementById("market-timer").textContent = stats.refreshTime;
+  }
+
+  filterMarket(filter) {
+    this.updateMarketDisplay(filter);
+  }
+
+  refreshMarket() {
+    if (!usedPartsMarket) return;
+
+    const result = usedPartsMarket.forceRefresh();
+    if (result.success) {
+      this.updateMarketDisplay();
+      this.showNotification(result.message, "success");
+    } else {
+      this.showNotification(result.message, "error");
     }
+  }
+
+  showBestDeals() {
+    if (!usedPartsMarket) return;
+
+    const deals = usedPartsMarket.getBestDeals(4);
+    const grid = document.getElementById("market-grid");
+    grid.innerHTML = "";
+
+    deals.forEach((part) => {
+      const item = document.createElement("div");
+      item.className = `market-item ${part.isPremium ? "premium" : ""}`;
+
+      let qualityClass = "";
+      switch (part.quality) {
+        case "Excelente":
+          qualityClass = "quality-excelente";
+          break;
+        case "Bom":
+          qualityClass = "quality-bom";
+          break;
+        case "Regular":
+          qualityClass = "quality-regular";
+          break;
+        case "Desgastado":
+          qualityClass = "quality-desgastado";
+          break;
+      }
+
+      item.innerHTML = `
+            ${part.isPremium ? '<div class="premium-badge">✨ PREMIUM</div>' : ""}
+            <div class="market-item-header">
+                <div class="market-item-icon">${part.icon}</div>
+                <div class="market-item-info">
+                    <div class="market-item-name">${part.displayName}</div>
+                    <div class="market-item-condition">Condição: <span>${part.condition}%</span></div>
+                    <span class="market-item-quality ${qualityClass}">${part.quality}</span>
+                </div>
+            </div>
+            <div class="market-item-details">
+                <div class="market-item-price">
+                    <span class="current-price">R$ ${part.price}</span>
+                    <span class="original-price">R$ ${part.originalPrice}</span>
+                </div>
+                <div class="discount-badge" style="background: #ff6b00;">🔥 -${part.discount}%</div>
+            </div>
+            <button class="market-item-buy" onclick="uiManager?.buyUsedPart('${part.id}')">
+                COMPRAR
+            </button>
+        `;
+
+      grid.appendChild(item);
+    });
+  }
+
+  buyUsedPart(partId) {
+    if (!usedPartsMarket) return;
+
+    const result = usedPartsMarket.buyPart(partId);
+    if (result.success) {
+      this.updateMarketDisplay();
+      this.updateInventoryDisplay();
+      this.showNotification(result.message, "success");
+    } else {
+      this.showNotification(result.message, "error");
+    }
+  }
+
+  // ===== MÉTODOS UTILITÁRIOS =====
+
+  checkJobCompletion() {
+    if (!gameState.currentJob || !gameState.currentCar) return;
+    document.getElementById("deliver-car").disabled =
+      !gameState.currentJob.checkCompletion(gameState.currentCar.parts);
+  }
+
+  updateTimer() {
+    if (gameState.currentJob && !gameState.currentJob.isExpired()) {
+      this.updateJobInfo();
+      if (gameState.currentJob.isExpired()) {
+        this.showNotification("⏰ Tempo esgotado!", "error");
+        if (scene3D?.currentCar) scene3D.scene.remove(scene3D.currentCar);
+        gameState.currentJob = null;
+        gameState.currentCar = null;
+        gameState.selectedPart = null;
+        gameState.updateReputation(-1);
+        document.getElementById("job-info").innerHTML =
+          '<div style="color: #888; text-align: center;">Nenhum serviço ativo</div>';
+        document.getElementById("parts-list").innerHTML =
+          '<div style="color: #888; text-align: center;">Nenhum carro no momento</div>';
+        document.getElementById("deliver-car").disabled = true;
+      }
+    }
+  }
+
+  showNotification(message, type = "info") {
+    const notification = document.getElementById("notification");
+    if (!notification) return;
+
+    if (this.notificationTimeout) clearTimeout(this.notificationTimeout);
+
+    notification.classList.remove("show");
+    notification.style.transform = "translateX(400px)";
+    void notification.offsetWidth;
+
+    notification.textContent = message;
+    notification.style.backgroundColor =
+      type === "error" ? "#ff3333" : type === "success" ? "#00aa00" : "#ff6b00";
+
+    setTimeout(() => notification.classList.add("show"), 10);
+
+    this.notificationTimeout = setTimeout(() => {
+      notification.classList.remove("show");
+      setTimeout(
+        () => (notification.style.transform = "translateX(400px)"),
+        300,
+      );
+    }, 3000);
+  }
 }
