@@ -11,6 +11,7 @@ import {
   specializationSystem,
 } from "./game.js";
 import { TOOL_BASE_STATS, PART_TRANSLATIONS } from "./constants.js";
+import { GARAGE_UPGRADES } from "./garage.js";
 import { Job } from "./job.js";
 import { CustomerCar } from "./car.js";
 
@@ -845,65 +846,121 @@ export class UIManager {
   }
 
   updateGarageDisplay() {
-    if (!garageSystem) return;
+    console.log("🏢 Atualizando display da garagem...");
 
-    const stats = garageSystem.getStats();
-    const currentLevel = GARAGE_UPGRADES[`level${stats.currentLevel}`];
-
-    // Atualizar ícone e nome
-    document.getElementById("garage-level-icon").textContent =
-      currentLevel.image;
-    document.getElementById("garage-level-name").textContent =
-      currentLevel.name;
-    document.getElementById("garage-level-desc").textContent =
-      `Nível ${stats.currentLevel}/${stats.maxLevel}`;
-
-    // Atualizar estatísticas
-    document.getElementById("garage-slots").textContent =
-      `${stats.usedSlots}/${stats.carSlots}`;
-    document.getElementById("garage-tools").textContent = stats.toolRacks;
-    document.getElementById("garage-storage").textContent = stats.partsStorage;
-    document.getElementById("garage-diagnostic").textContent =
-      `+${stats.diagnosticBonus}%`;
-
-    // Atualizar lista de bônus
-    const bonusList = document.getElementById("garage-bonus-list");
-    bonusList.innerHTML = "";
-
-    if (stats.diagnosticBonus > 0) {
-      bonusList.innerHTML += `<div class="bonus-item">🔍 Diagnóstico +${stats.diagnosticBonus}%</div>`;
-    }
-    if (stats.partsDiscount > 0) {
-      bonusList.innerHTML += `<div class="bonus-item">💰 Desconto em peças ${stats.partsDiscount}%</div>`;
-    }
-    if (stats.currentLevel >= 3) {
-      bonusList.innerHTML += `<div class="bonus-item">⬆️ Estoque +5 capacidade</div>`;
-    }
-    if (stats.currentLevel >= 4) {
-      bonusList.innerHTML += `<div class="bonus-item">🎨 Serviços de pintura</div>`;
-    }
-    if (stats.currentLevel >= 5) {
-      bonusList.innerHTML += `<div class="bonus-item">⚡ Preparação de motor</div>`;
+    if (!garageSystem) {
+      console.error("❌ garageSystem não está definido");
+      return;
     }
 
-    // Atualizar próximo upgrade
-    const nextUpgrade = document.getElementById("garage-next-upgrade");
-    if (stats.nextUpgrade) {
-      document.getElementById("next-name").textContent = stats.nextUpgrade.name;
-      document.getElementById("next-desc").textContent =
-        `${stats.nextUpgrade.carSlots} vagas, estoque ${stats.nextUpgrade.partsStorage}`;
-      document.getElementById("next-price").innerHTML =
-        `💰 R$ ${stats.nextUpgrade.price}`;
-      document.getElementById("next-level").innerHTML =
-        `⭐ Nível ${stats.nextUpgrade.requiredLevel}`;
+    if (typeof GARAGE_UPGRADES === "undefined") {
+      console.error("❌ GARAGE_UPGRADES não está definido");
+      return;
+    }
 
-      // Verificar se pode comprar
-      const canBuy =
-        gameState.money >= stats.nextUpgrade.price &&
-        gameState.level >= stats.nextUpgrade.requiredLevel;
-      document.getElementById("upgrade-garage").disabled = !canBuy;
-    } else {
-      nextUpgrade.style.display = "none";
+    try {
+      const stats = garageSystem.getStats();
+      const currentLevel = GARAGE_UPGRADES[`level${stats.currentLevel}`];
+
+      if (!currentLevel) {
+        console.error(
+          `❌ Nível ${stats.currentLevel} não encontrado em GARAGE_UPGRADES`,
+        );
+        return;
+      }
+
+      // Atualizar ícone e nome
+      const levelIcon = document.getElementById("garage-level-icon");
+      const levelName = document.getElementById("garage-level-name");
+      const levelDesc = document.getElementById("garage-level-desc");
+
+      if (levelIcon) levelIcon.textContent = currentLevel.image || "🏚️";
+      if (levelName) levelName.textContent = currentLevel.name || "Garagem";
+      if (levelDesc)
+        levelDesc.textContent = `Nível ${stats.currentLevel}/${stats.maxLevel}`;
+
+      // Atualizar estatísticas
+      const slotsEl = document.getElementById("garage-slots");
+      const toolsEl = document.getElementById("garage-tools");
+      const storageEl = document.getElementById("garage-storage");
+      const diagnosticEl = document.getElementById("garage-diagnostic");
+
+      if (slotsEl)
+        slotsEl.textContent = `${stats.usedSlots || 0}/${stats.carSlots || 1}`;
+      if (toolsEl) toolsEl.textContent = stats.toolRacks || 1;
+      if (storageEl) storageEl.textContent = stats.partsStorage || 50;
+      if (diagnosticEl)
+        diagnosticEl.textContent = `+${stats.diagnosticBonus || 0}%`;
+
+      // Atualizar lista de bônus
+      const bonusList = document.getElementById("garage-bonus-list");
+      if (bonusList) {
+        bonusList.innerHTML = "";
+
+        if (stats.diagnosticBonus > 0) {
+          bonusList.innerHTML += `<div class="bonus-item">🔍 Diagnóstico +${stats.diagnosticBonus}%</div>`;
+        }
+        if (stats.partsDiscount > 0) {
+          bonusList.innerHTML += `<div class="bonus-item">💰 Desconto em peças ${stats.partsDiscount}%</div>`;
+        }
+        if (stats.currentLevel >= 3) {
+          bonusList.innerHTML += `<div class="bonus-item">⬆️ Estoque +5 capacidade</div>`;
+        }
+        if (stats.currentLevel >= 4) {
+          bonusList.innerHTML += `<div class="bonus-item">🎨 Serviços de pintura</div>`;
+        }
+        if (stats.currentLevel >= 5) {
+          bonusList.innerHTML += `<div class="bonus-item">⚡ Preparação de motor</div>`;
+        }
+
+        // Se não houver bônus, mostrar mensagem padrão
+        if (bonusList.children.length === 0) {
+          bonusList.innerHTML =
+            '<div class="bonus-item">🔧 Reparos mais rápidos</div>';
+        }
+      }
+
+      // Atualizar próximo upgrade
+      const nextUpgrade = document.getElementById("garage-next-upgrade");
+      if (nextUpgrade) {
+        if (stats.nextUpgrade) {
+          nextUpgrade.style.display = "block";
+
+          const nextName = document.getElementById("next-name");
+          const nextDesc = document.getElementById("next-desc");
+          const nextPrice = document.getElementById("next-price");
+          const nextLevel = document.getElementById("next-level");
+          const upgradeBtn = document.getElementById("upgrade-garage");
+
+          if (nextName)
+            nextName.textContent = stats.nextUpgrade.name || "Próximo nível";
+          if (nextDesc) {
+            const nextLevelData =
+              GARAGE_UPGRADES[`level${stats.currentLevel + 1}`];
+            if (nextLevelData) {
+              nextDesc.textContent = `${nextLevelData.carSlots} vagas, estoque ${nextLevelData.partsStorage}`;
+            }
+          }
+          if (nextPrice)
+            nextPrice.innerHTML = `💰 R$ ${stats.nextUpgrade.price}`;
+          if (nextLevel)
+            nextLevel.innerHTML = `⭐ Nível ${stats.nextUpgrade.requiredLevel}`;
+
+          // Verificar se pode comprar
+          if (upgradeBtn) {
+            const canBuy =
+              gameState.money >= stats.nextUpgrade.price &&
+              gameState.level >= stats.nextUpgrade.requiredLevel;
+            upgradeBtn.disabled = !canBuy;
+          }
+        } else {
+          nextUpgrade.style.display = "none";
+        }
+      }
+
+      console.log("✅ Display da garagem atualizado");
+    } catch (error) {
+      console.error("❌ Erro ao atualizar display da garagem:", error);
     }
   }
 
