@@ -1,4 +1,4 @@
-// scene3d.js - VERSÃO ATUALIZADA COM GARAGEM REALISTA
+// scene3d.js - VERSÃO COMPLETA COM GARAGEM REALISTA E MODELOS 3D
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -49,10 +49,16 @@ export class Scene3D {
         this.partLabels = [];
         this.partObjects = [];
         this.normalLabels = [];
+        this.highlightRing = null;
         
         this.setupLights();
         this.setupEnvironment();
         this.createRealisticGarage();
+        
+        // Raycaster para detecção de clique
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.renderer.domElement.addEventListener('click', (event) => this.onMouseClick(event));
         
         console.log('✅ Scene3D inicializada');
     }
@@ -79,28 +85,32 @@ export class Scene3D {
         this.scene.add(mainLight);
 
         // Luzes de teto (spots)
-        GARAGE_CONFIG.lights.ceiling.forEach(lightConfig => {
-            const light = new THREE.PointLight(0xffeedd, lightConfig.intensity);
-            light.position.set(lightConfig.position[0], lightConfig.position[1], lightConfig.position[2]);
-            light.castShadow = true;
-            light.shadow.mapSize.width = 1024;
-            light.shadow.mapSize.height = 1024;
-            this.scene.add(light);
+        if (GARAGE_CONFIG.lights && GARAGE_CONFIG.lights.ceiling) {
+            GARAGE_CONFIG.lights.ceiling.forEach(lightConfig => {
+                const light = new THREE.PointLight(0xffeedd, lightConfig.intensity);
+                light.position.set(lightConfig.position[0], lightConfig.position[1], lightConfig.position[2]);
+                light.castShadow = true;
+                light.shadow.mapSize.width = 1024;
+                light.shadow.mapSize.height = 1024;
+                this.scene.add(light);
 
-            // Adicionar emissor visível
-            const bulbMat = new THREE.MeshStandardMaterial({ color: 0xffeedd, emissive: 0x442200 });
-            const bulbGeo = new THREE.SphereGeometry(0.2, 16);
-            const bulb = new THREE.Mesh(bulbGeo, bulbMat);
-            bulb.position.copy(light.position);
-            this.scene.add(bulb);
-        });
+                // Adicionar emissor visível
+                const bulbMat = new THREE.MeshStandardMaterial({ color: 0xffeedd, emissive: 0x442200 });
+                const bulbGeo = new THREE.SphereGeometry(0.2, 16);
+                const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+                bulb.position.copy(light.position);
+                this.scene.add(bulb);
+            });
+        }
 
         // Luzes de parede
-        GARAGE_CONFIG.lights.wall.forEach(lightConfig => {
-            const light = new THREE.PointLight(0x88aaff, lightConfig.intensity);
-            light.position.set(lightConfig.position[0], lightConfig.position[1], lightConfig.position[2]);
-            this.scene.add(light);
-        });
+        if (GARAGE_CONFIG.lights && GARAGE_CONFIG.lights.wall) {
+            GARAGE_CONFIG.lights.wall.forEach(lightConfig => {
+                const light = new THREE.PointLight(0x88aaff, lightConfig.intensity);
+                light.position.set(lightConfig.position[0], lightConfig.position[1], lightConfig.position[2]);
+                this.scene.add(light);
+            });
+        }
     }
 
     setupEnvironment() {
@@ -128,7 +138,7 @@ export class Scene3D {
             });
             const mark = new THREE.Mesh(markGeo, markMat);
             mark.rotation.x = -Math.PI / 2;
-            mark.position.set(Math.random() * 10 - 5, 0.01, Math.random() * 10 - 5);
+            mark.position.set((Math.random() * 20) - 10, 0.01, (Math.random() * 20) - 10);
             mark.rotation.z = Math.random() * Math.PI;
             this.scene.add(mark);
         }
@@ -137,46 +147,31 @@ export class Scene3D {
         const lineMat = new THREE.LineBasicMaterial({ color: 0xff6b00 });
         
         // Vagas de estacionamento
-        GARAGE_CONFIG.lifts.forEach(lift => {
-            const points = [];
-            points.push(new THREE.Vector3(lift.position[0] - 1.5, 0.02, lift.position[2] - 2.5));
-            points.push(new THREE.Vector3(lift.position[0] - 1.5, 0.02, lift.position[2] + 2.5));
-            points.push(new THREE.Vector3(lift.position[0] + 1.5, 0.02, lift.position[2] + 2.5));
-            points.push(new THREE.Vector3(lift.position[0] + 1.5, 0.02, lift.position[2] - 2.5));
-            points.push(new THREE.Vector3(lift.position[0] - 1.5, 0.02, lift.position[2] - 2.5));
-            
-            const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
-            const line = new THREE.Line(lineGeo, lineMat);
-            this.scene.add(line);
-        });
+        if (GARAGE_CONFIG.lifts) {
+            GARAGE_CONFIG.lifts.forEach(lift => {
+                const points = [];
+                points.push(new THREE.Vector3(lift.position[0] - 1.5, 0.02, lift.position[2] - 2.5));
+                points.push(new THREE.Vector3(lift.position[0] - 1.5, 0.02, lift.position[2] + 2.5));
+                points.push(new THREE.Vector3(lift.position[0] + 1.5, 0.02, lift.position[2] + 2.5));
+                points.push(new THREE.Vector3(lift.position[0] + 1.5, 0.02, lift.position[2] - 2.5));
+                points.push(new THREE.Vector3(lift.position[0] - 1.5, 0.02, lift.position[2] - 2.5));
+                
+                const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+                const line = new THREE.Line(lineGeo, lineMat);
+                this.scene.add(line);
+            });
+        }
     }
 
     createRealisticGarage() {
-        // Paredes
         this.createWalls();
-        
-        // Pilares de sustentação
         this.createPillars();
-        
-        // Portas e janelas
         this.createDoors();
-        
-        // Elevadores
         this.createLifts();
-        
-        // Bancadas de trabalho
         this.createWorkbenches();
-        
-        // Prateleiras
         this.createShelves();
-        
-        // Armários de ferramentas
         this.createToolCabinets();
-        
-        // Máquinas especiais
         this.createMachines();
-        
-        // Decoração
         this.createDecorations();
     }
 
@@ -589,8 +584,14 @@ export class Scene3D {
     }
 
     createCar(carData, job) {
+        console.log('🚗 Criando carro com modelo 3D realista...');
+        
+        this.clearAllLabels();
+        this.clearHighlight();
+        
         if (this.currentCar) {
             this.scene.remove(this.currentCar);
+            this.currentCar = null;
         }
         
         // Determinar tipo de carro baseado no modelo
@@ -616,20 +617,479 @@ export class Scene3D {
         // Criar carro usando o modelo apropriado
         const carGroup = this.carModels.createCarByType(carType, carColor);
         
-        // Posicionar no elevador ativo
-        const activeLift = GARAGE_CONFIG.lifts.find(l => !l.occupied) || GARAGE_CONFIG.lifts[0];
-        carGroup.position.set(activeLift.position[0], 0.3, activeLift.position[2]);
-        carGroup.rotation.y = activeLift.rotation;
-        
-        activeLift.occupied = true;
+        // Posicionar no primeiro elevador disponível
+        if (GARAGE_CONFIG.lifts && GARAGE_CONFIG.lifts.length > 0) {
+            const activeLift = GARAGE_CONFIG.lifts.find(l => !l.occupied) || GARAGE_CONFIG.lifts[0];
+            carGroup.position.set(activeLift.position[0], 0.3, activeLift.position[2]);
+            carGroup.rotation.y = activeLift.rotation;
+            activeLift.occupied = true;
+        } else {
+            carGroup.position.set(0, 0.3, 0);
+        }
         
         this.currentCar = carGroup;
         this.scene.add(carGroup);
         
         this.updatePartLabels(carData, job);
         
+        console.log('✅ Carro criado com sucesso');
         return carGroup;
     }
 
-    // ... manter os outros métodos (updatePartLabels, selectPart, etc)
+    updatePartLabels(carData, job) {
+        console.log('🏷️ Atualizando labels...');
+        
+        this.clearAllLabels();
+
+        if (!this.currentCar || !carData || !job) {
+            console.log('❌ Sem dados para criar labels');
+            return;
+        }
+
+        this.partObjects = [];
+        this.normalLabels = [];
+
+        Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
+            if (carData.parts[partName]) {
+                const condition = Math.min(100, Math.round(carData.parts[partName].condition));
+                const targetCondition = Math.min(100, Math.round(job.targetConditions[partName]));
+                const displayName = PART_TRANSLATIONS[partName].display;
+                
+                // Determinar cor
+                let bgColor = '';
+                let borderColor = '#ff6b00';
+                let textColor = 'white';
+                
+                if (condition === 100) {
+                    bgColor = '#4CAF50';
+                    borderColor = 'gold';
+                } else if (condition >= targetCondition) {
+                    bgColor = '#00aa00';
+                } else if (condition >= targetCondition * 0.7) {
+                    bgColor = '#ffaa00';
+                    textColor = 'black';
+                } else {
+                    bgColor = '#ff0000';
+                }
+                
+                // Texto
+                let displayText = condition === 100 
+                    ? `${displayName}: 100% ✨` 
+                    : `${displayName}: ${condition}% / ${targetCondition}%`;
+                
+                // Label normal
+                const normalDiv = document.createElement('div');
+                normalDiv.className = 'part-label part-label-normal';
+                normalDiv.textContent = displayText;
+                normalDiv.style.backgroundColor = bgColor;
+                normalDiv.style.color = textColor;
+                normalDiv.style.border = `2px solid ${borderColor}`;
+                normalDiv.style.padding = '4px 8px';
+                normalDiv.style.borderRadius = '12px';
+                normalDiv.style.fontSize = '12px';
+                normalDiv.style.fontWeight = 'bold';
+                normalDiv.style.whiteSpace = 'nowrap';
+                normalDiv.style.cursor = 'pointer';
+                normalDiv.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+                normalDiv.style.pointerEvents = 'auto';
+                
+                normalDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.selectPart(partName);
+                });
+                
+                // Label selecionado
+                const selectedDiv = document.createElement('div');
+                selectedDiv.className = 'part-label part-label-selected';
+                selectedDiv.textContent = displayText;
+                selectedDiv.style.backgroundColor = bgColor;
+                selectedDiv.style.color = textColor;
+                selectedDiv.style.border = `4px solid white`;
+                selectedDiv.style.padding = '6px 10px';
+                selectedDiv.style.borderRadius = '14px';
+                selectedDiv.style.fontSize = '14px';
+                selectedDiv.style.fontWeight = 'bold';
+                selectedDiv.style.whiteSpace = 'nowrap';
+                selectedDiv.style.cursor = 'pointer';
+                selectedDiv.style.boxShadow = '0 0 30px currentColor, 0 0 60px currentColor';
+                selectedDiv.style.opacity = '0';
+                selectedDiv.style.pointerEvents = 'none';
+                selectedDiv.style.zIndex = '1000';
+                
+                try {
+                    if (typeof CSS2DObject === 'undefined') {
+                        throw new Error('CSS2DObject não está disponível');
+                    }
+                    
+                    const baseY = pos[1] + 0.5;
+                    
+                    const normalLabel = new CSS2DObject(normalDiv);
+                    normalLabel.position.set(pos[0], baseY, pos[2]);
+                    normalLabel.userData = { 
+                        partName, 
+                        type: 'normal',
+                        baseY,
+                        pos: { x: pos[0], y: baseY, z: pos[2] }
+                    };
+                    
+                    const selectedLabel = new CSS2DObject(selectedDiv);
+                    selectedLabel.position.set(pos[0], baseY, pos[2]);
+                    selectedLabel.userData = { 
+                        partName, 
+                        type: 'selected',
+                        baseY,
+                        pos: { x: pos[0], y: baseY, z: pos[2] }
+                    };
+                    
+                    this.currentCar.add(normalLabel);
+                    this.currentCar.add(selectedLabel);
+                    
+                    this.normalLabels.push({
+                        partName,
+                        normal: normalLabel,
+                        selected: selectedLabel,
+                        baseY
+                    });
+                    
+                    // Objeto 3D para highlight
+                    const partGeometry = new THREE.SphereGeometry(0.25, 8);
+                    const partMaterial = new THREE.MeshStandardMaterial({ 
+                        color: 0xffaa00,
+                        transparent: true,
+                        opacity: 0.0
+                    });
+                    const partObject = new THREE.Mesh(partGeometry, partMaterial);
+                    partObject.position.set(pos[0], baseY, pos[2]);
+                    partObject.userData = { partName };
+                    
+                    this.currentCar.add(partObject);
+                    this.partObjects.push(partObject);
+                    
+                } catch (error) {
+                    console.error(`❌ Erro ao criar label para ${partName}:`, error);
+                }
+            }
+        });
+        
+        // Restaurar seleção se houver
+        setTimeout(() => {
+            if (gameState?.selectedPart) {
+                this.selectPart(gameState.selectedPart);
+            }
+        }, 100);
+    }
+
+    selectPart(partName) {
+        if (!gameState || !this.normalLabels) return;
+        
+        console.log('🎯 Selecionando peça:', partName);
+        gameState.selectedPart = partName;
+        
+        // Resetar todos os labels
+        this.normalLabels.forEach(item => {
+            if (item.normal && item.normal.element) {
+                item.normal.element.style.opacity = '1';
+                item.normal.element.style.pointerEvents = 'auto';
+                item.normal.element.style.zIndex = 'auto';
+            }
+            if (item.selected && item.selected.element) {
+                item.selected.element.style.opacity = '0';
+                item.selected.element.style.pointerEvents = 'none';
+                item.selected.element.style.zIndex = 'auto';
+            }
+        });
+        
+        // Destacar o selecionado
+        const selectedItem = this.normalLabels.find(item => item.partName === partName);
+        
+        if (selectedItem) {
+            if (selectedItem.normal && selectedItem.normal.element) {
+                selectedItem.normal.element.style.opacity = '0';
+                selectedItem.normal.element.style.pointerEvents = 'none';
+            }
+            
+            if (selectedItem.selected && selectedItem.selected.element) {
+                selectedItem.selected.element.style.opacity = '1';
+                selectedItem.selected.element.style.pointerEvents = 'auto';
+                selectedItem.selected.element.style.zIndex = '1000';
+            }
+            
+            // Reordenar na cena
+            if (this.currentCar && selectedItem.selected) {
+                const pos = selectedItem.selected.position.clone();
+                this.currentCar.remove(selectedItem.selected);
+                this.currentCar.add(selectedItem.selected);
+                selectedItem.selected.position.copy(pos);
+            }
+            
+            // Destacar objeto 3D
+            this.partObjects.forEach(obj => {
+                if (obj.userData?.partName === partName) {
+                    obj.material.opacity = 0.3;
+                    obj.scale.set(1.8, 1.8, 1.8);
+                    
+                    if (this.currentCar) {
+                        const pos = obj.position.clone();
+                        this.currentCar.remove(obj);
+                        this.currentCar.add(obj);
+                        obj.position.copy(pos);
+                    }
+                } else {
+                    obj.material.opacity = 0.0;
+                    obj.scale.set(1, 1, 1);
+                }
+            });
+            
+            // Criar anel de destaque
+            this.createHighlightRing(partName);
+        }
+        
+        // Atualizar UI
+        if (gameState.currentCar && gameState.currentJob) {
+            const condition = gameState.currentCar.parts[partName]?.condition;
+            const target = gameState.currentJob.targetConditions[partName];
+            if (condition && target) {
+                const info = document.getElementById('interaction-info');
+                if (info) {
+                    info.textContent = `🔧 ${PART_TRANSLATIONS[partName].display}: ${Math.round(condition)}% / Meta: ${Math.round(target)}%`;
+                }
+            }
+        }
+    }
+
+    createHighlightRing(partName) {
+        const pos = PART_POSITIONS[partName];
+        if (!pos || !this.currentCar) return;
+        
+        this.clearHighlight();
+        
+        const ringGeometry = new THREE.TorusGeometry(0.4, 0.03, 16, 32);
+        const ringMaterial = new THREE.MeshStandardMaterial({ 
+            color: 0xffaa00,
+            emissive: 0x442200,
+            transparent: true,
+            opacity: 0.6
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        
+        ring.position.set(pos[0], pos[1] + 0.7, pos[2]);
+        ring.rotation.x = Math.PI / 2;
+        
+        this.currentCar.add(ring);
+        this.highlightRing = ring;
+        
+        this.animateRing(ring);
+    }
+
+    animateRing(ring) {
+        if (!ring) return;
+        
+        let time = 0;
+        const animate = () => {
+            if (!ring.parent || !this.highlightRing) return;
+            
+            time += 0.05;
+            ring.scale.setScalar(1 + Math.sin(time) * 0.1);
+            ring.material.opacity = 0.4 + Math.sin(time) * 0.2;
+            
+            requestAnimationFrame(animate);
+        };
+        
+        animate();
+    }
+
+    clearHighlight() {
+        if (this.highlightRing && this.currentCar) {
+            this.currentCar.remove(this.highlightRing);
+            this.highlightRing = null;
+        }
+    }
+
+    clearAllLabels() {
+        if (this.normalLabels) {
+            this.normalLabels.forEach(item => {
+                if (item.normal && item.normal.parent) {
+                    item.normal.parent.remove(item.normal);
+                }
+                if (item.selected && item.selected.parent) {
+                    item.selected.parent.remove(item.selected);
+                }
+            });
+            this.normalLabels = [];
+        }
+        
+        if (this.partObjects) {
+            this.partObjects.forEach(obj => {
+                if (obj.parent) {
+                    obj.parent.remove(obj);
+                }
+            });
+            this.partObjects = [];
+        }
+        
+        this.clearHighlight();
+    }
+
+    onMouseClick(event) {
+        const rect = this.renderer.domElement.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        if (!this.currentCar) return;
+        
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        
+        const intersects = this.raycaster.intersectObject(this.currentCar, true);
+        
+        if (intersects.length > 0) {
+            const clickPoint = intersects[0].point;
+            
+            let closestPart = null;
+            let minDistance = 0.8;
+            
+            Object.entries(PART_POSITIONS).forEach(([partName, pos]) => {
+                const partPos = new THREE.Vector3(pos[0], pos[1] + 0.5, pos[2]);
+                const distance = clickPoint.distanceTo(partPos);
+                
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    closestPart = partName;
+                }
+            });
+            
+            if (closestPart) {
+                this.selectPart(closestPart);
+                this.createClickEffect(clickPoint);
+            }
+        }
+    }
+
+    createClickEffect(position) {
+        const particleCount = 5;
+        
+        for (let i = 0; i < particleCount; i++) {
+            const geometry = new THREE.SphereGeometry(0.02, 4);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: 0xffff00,
+                emissive: 0x442200
+            });
+            const particle = new THREE.Mesh(geometry, material);
+            
+            particle.position.copy(position);
+            particle.position.x += (Math.random() - 0.5) * 0.2;
+            particle.position.y += (Math.random() - 0.5) * 0.2;
+            particle.position.z += (Math.random() - 0.5) * 0.2;
+            
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.05,
+                    Math.random() * 0.05,
+                    (Math.random() - 0.5) * 0.05
+                ),
+                life: 0.5
+            };
+            
+            this.scene.add(particle);
+            
+            const animate = () => {
+                particle.userData.life -= 0.02;
+                
+                if (particle.userData.life > 0) {
+                    particle.position.x += particle.userData.velocity.x;
+                    particle.position.y += particle.userData.velocity.y;
+                    particle.position.z += particle.userData.velocity.z;
+                    particle.scale.setScalar(particle.userData.life);
+                    
+                    requestAnimationFrame(animate);
+                } else {
+                    this.scene.remove(particle);
+                }
+            };
+            
+            animate();
+        }
+    }
+
+    createRepairEffect(position) {
+        if (!position) return;
+        
+        const particleCount = 15;
+        const particles = [];
+        const colors = [0xffaa00, 0xff6b00, 0xff4400];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const geometry = new THREE.SphereGeometry(0.03 + Math.random() * 0.04, 4);
+            const material = new THREE.MeshStandardMaterial({ 
+                color: colors[Math.floor(Math.random() * colors.length)],
+                emissive: 0x331100
+            });
+            const particle = new THREE.Mesh(geometry, material);
+            
+            particle.position.copy(position);
+            particle.position.x += (Math.random() - 0.5) * 0.3;
+            particle.position.y += (Math.random() - 0.5) * 0.3;
+            particle.position.z += (Math.random() - 0.5) * 0.3;
+            
+            particle.userData = {
+                velocity: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.08,
+                    Math.random() * 0.1,
+                    (Math.random() - 0.5) * 0.08
+                ),
+                life: 0.8 + Math.random() * 0.4
+            };
+            
+            this.scene.add(particle);
+            particles.push(particle);
+        }
+        
+        const animateParticles = () => {
+            let alive = false;
+            
+            particles.forEach(particle => {
+                particle.userData.life -= 0.015;
+                
+                if (particle.userData.life > 0) {
+                    alive = true;
+                    
+                    particle.position.x += particle.userData.velocity.x;
+                    particle.position.y += particle.userData.velocity.y;
+                    particle.position.z += particle.userData.velocity.z;
+                    
+                    particle.userData.velocity.x *= 0.98;
+                    particle.userData.velocity.y *= 0.98;
+                    particle.userData.velocity.z *= 0.98;
+                    
+                    particle.scale.setScalar(particle.userData.life);
+                    
+                    if (particle.material) {
+                        particle.material.opacity = particle.userData.life;
+                        particle.material.transparent = true;
+                    }
+                } else {
+                    if (particle.parent) {
+                        this.scene.remove(particle);
+                    }
+                }
+            });
+            
+            if (alive) {
+                requestAnimationFrame(animateParticles);
+            }
+        };
+        
+        animateParticles();
+    }
+
+    updateGarageAppearance(appearance) {
+        console.log('🏢 Atualizando aparência da garagem:', appearance);
+        // Implementar mudanças visuais baseadas no nível da garagem
+    }
+
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        this.controls.update();
+        this.renderer.render(this.scene, this.camera);
+        this.labelRenderer.render(this.scene, this.camera);
+    }
 }
