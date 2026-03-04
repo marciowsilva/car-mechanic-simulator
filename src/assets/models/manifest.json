@@ -1,0 +1,45 @@
+{
+  "generated": "2026-03-04T00:59:36.391Z",
+  "totalModels": 6,
+  "successful": 6,
+  "failed": 0,
+  "models": [
+    {
+      "id": "sedan",
+      "name": "Sedan",
+      "success": true,
+      "timestamp": "2026-03-04T00:59:36.352Z"
+    },
+    {
+      "id": "hatch",
+      "name": "Hatchback",
+      "success": true,
+      "timestamp": "2026-03-04T00:59:36.358Z"
+    },
+    {
+      "id": "suv",
+      "name": "SUV",
+      "success": true,
+      "timestamp": "2026-03-04T00:59:36.365Z"
+    },
+    {
+      "id": "pickup",
+      "name": "Pickup",
+      "success": true,
+      "timestamp": "2026-03-04T00:59:36.369Z"
+    },
+    {
+      "id": "sports",
+      "name": "Sports Car",
+      "success": true,
+      "timestamp": "2026-03-04T00:59:36.374Z"
+    },
+    {
+      "id": "classic",
+      "name": "Classic Car",
+      "success": true,
+      "timestamp": "2026-03-04T00:59:36.377Z"
+    }
+  ],
+  "directory": "C:\\Users\\Márcio Silva\\Documents\\Projetos_VSCode\\DeepSeek\\car-mechanic-simulator\\models\\cars"
+}

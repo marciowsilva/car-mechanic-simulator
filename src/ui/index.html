@@ -558,5 +558,19 @@
     </script>
 
     <script type="module" src="game.js"></script>
+
+    <!-- Adicione antes do fechamento do body para testes -->
+    <script type="module">
+      import { CarModelLoader } from "./car-model-loader.js";
+
+      // Expor para console
+      window.CarModelLoader = CarModelLoader;
+      window.modelLoader = new CarModelLoader();
+
+      console.log("🚗 Para testar modelos, use:");
+      console.log('  await modelLoader.loadModel("sedan")');
+      console.log("  await modelLoader.preloadAllModels()");
+      console.log("  modelLoader.getCacheStats()");
+    </script>
   </body>
 </html>

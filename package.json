@@ -1,0 +1,21 @@
+{
+  "name": "car-mechanic-simulator",
+  "version": "1.0.0",
+  "description": "Download de modelos 3D para o jogo",
+  "type": "module",
+  "scripts": {
+    "download-models": "node download-models.js",
+    "setup": "node download-models.js",
+    "setup-win": "powershell -ExecutionPolicy Bypass -File setup-models.ps1",
+    "setup-mac": "chmod +x setup-models.sh && ./setup-models.sh"
+  },
+  "keywords": ["3d", "models", "cars", "game"],
+  "author": "Seu Nome",
+  "license": "MIT",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

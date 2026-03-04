@@ -355,6 +355,11 @@ window.addEventListener("load", async () => {
   db.loadUpgrades();
   db.loadAchievements();
 
+  // Pré-carregar modelos
+  scene3D.preloadCarModels().then(() => {
+    console.log("🎮 Modelos prontos!");
+  });
+
   setInterval(() => {
     db.savePlayerData();
     db.saveUpgrades();

@@ -230,4 +230,3 @@ export class GarageSystem {
     return appearances[this.currentLevel] || appearances[1];
   }
 }
-export { GARAGE_UPGRADES };
