@@ -9,8 +9,8 @@ enviar_notificacao() {
     local titulo=$1
     local mensagem=$2
     
-    # Usamos o comando "PowerShell -Command" com aspas simples externas
-    # e garantimos que o ícone seja um padrão do sistema (Information)
+    # Adicionamos um tempo de espera (Start-Sleep) maior dentro do PowerShell 
+    # para o Windows processar a notificação antes do processo morrer.
     powershell.exe -NoProfile -Command "
         [reflection.assembly]::loadwithpartialname('System.Windows.Forms') | Out-Null;
         \$balao = New-Object System.Windows.Forms.NotifyIcon;
@@ -18,9 +18,8 @@ enviar_notificacao() {
         \$balao.BalloonTipTitle = \"$titulo\";
         \$balao.BalloonTipText = \"$mensagem\";
         \$balao.Visible = \$true;
-        \$balao.ShowBalloonTip(5000);
-        Start-Sleep -Seconds 1;
-        \$balao.Dispose();
+        \$balao.ShowBalloonTip(10000); # Solicita 10 segundos ao Windows
+        Start-Sleep -Seconds 2; # Segura o processo vivo por 2s para o Windows registrar
     "
 }
 
