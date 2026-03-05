@@ -92,3 +92,8 @@ export class AudioManager {
         return this.sfxEnabled;
     }
 }
+// Expor globalmente
+if (typeof window !== 'undefined') {
+    window.AudioManager = AudioManager;
+    console.log('🌐 AudioManager disponível globalmente');
+}

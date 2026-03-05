@@ -230,3 +230,9 @@ export class GarageSystem {
     return appearances[this.currentLevel] || appearances[1];
   }
 }
+
+// Expor globalmente
+if (typeof window !== 'undefined') {
+    window.GarageSystem = GarageSystem;
+    console.log('🌐 GarageSystem disponível globalmente');
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Rápido</title>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Teste de Import</h1>
+    <div id="status">Carregando...</div>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        
+        document.getElementById('status').innerHTML = '✅ THREE carregado!';
+        console.log('✅ THREE carregado no teste');
+        
+        // Tentar importar Game
+        try {
+            const game = await import('/src/core/Game.js');
+            document.getElementById('status').innerHTML += '<br>✅ Game importado!';
+            console.log('✅ Game importado no teste');
+        } catch (e) {
+            document.getElementById('status').innerHTML += `<br>❌ Erro: ${e.message}`;
+            console.log('❌ Erro no teste:', e);
+        }
+    </script>
+</body>
+</html>

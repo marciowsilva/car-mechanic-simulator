@@ -224,3 +224,8 @@ export class CustomerSystem {
         return Object.values(this.customers).reduce((acc, c) => acc + (c.totalSpent || 0), 0);
     }
 }
+// Expor globalmente
+if (typeof window !== 'undefined') {
+    window.CustomerSystem = CustomerSystem;
+    console.log('🌐 CustomerSystem disponível globalmente');
+}

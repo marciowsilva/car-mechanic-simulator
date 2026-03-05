@@ -1,6 +1,6 @@
 // used-parts-market.js - Sistema de mercado de peças usadas
 
-import { PART_TRANSLATIONS } from '/src/utils/constants.js';
+import { PART_TRANSLATIONS } from './constants.js';
 
 export class UsedPartsMarket {
     constructor() {
@@ -167,9 +167,4 @@ export class UsedPartsMarket {
     getBestDeals(limit = 3) {
         return [...this.availableParts].sort((a, b) => b.discount - a.discount).slice(0, limit);
     }
-}
-// Expor globalmente
-if (typeof window !== 'undefined') {
-    window.UsedPartsMarket = UsedPartsMarket;
-    console.log('🌐 UsedPartsMarket disponível globalmente');
 }

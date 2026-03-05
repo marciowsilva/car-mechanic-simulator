@@ -168,3 +168,9 @@ export class Database {
     return store.put(job);
   }
 }
+
+// Expor globalmente
+if (typeof window !== 'undefined') {
+    window.Database = Database;
+    console.log('🌐 Database disponível globalmente');
+}

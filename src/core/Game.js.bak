@@ -4,22 +4,22 @@ import {
   TOOL_BASE_STATS,
   PART_TRANSLATIONS,
   PART_POSITIONS,
-} from "/src/utils/constants.js";
-import { Database } from "/src/core/Database.js";
-import { UpgradeSystem } from "/src/systems/upgrade-system.js";
-import { AchievementSystem } from "/src/systems/achievements/AchievementSystem.js";
-import { AudioManager } from "/src/systems/audio.js";
-import { Inventory } from "/src/systems/Inventory.js";
-import { SpecializationSystem } from "/src/systems/specializations.js";
-import { GarageSystem } from "/src/garage/Garage.js";
-import { CustomerSystem } from "/src/systems/customers/CustomerSystem.js";
-import { DailyChallenges } from "/src/systems/challenges/DailyChallenges.js";
-import { Job } from "/src/cars/Job.js";
-import { CustomerCar } from "/src/cars/Car.js";
-import { Scene3D } from "/src/garage/Scene3D.js";
-import { UIManager } from "/src/ui/UIManager.js";
-import { UsedPartsMarket } from "/src/systems/market/used-parts-market.js";
-import { CareerMode } from "/src/systems/career-mode.js";
+} from "./constants.js";
+import { Database } from "./database.js";
+import { UpgradeSystem } from "./upgrade-system.js";
+import { AchievementSystem } from "./achievement-system.js";
+import { AudioManager } from "./audio.js";
+import { Inventory } from "./inventory.js";
+import { SpecializationSystem } from "./specializations.js";
+import { GarageSystem } from "./garage.js";
+import { CustomerSystem } from "./customers.js";
+import { DailyChallenges } from "./daily-challenges.js";
+import { Job } from "./job.js";
+import { CustomerCar } from "./car.js";
+import { Scene3D } from "./scene3d.js";
+import { UIManager } from "./ui.js";
+import { UsedPartsMarket } from "./used-parts-market.js";
+import { CareerMode } from "./career-mode.js";
 
 // ===== ESTADO GLOBAL DO JOGO =====
 class GameState {
@@ -91,6 +91,38 @@ let scene3D;
 let uiManager;
 const usedPartsMarket = new UsedPartsMarket();
 const careerMode = new CareerMode();
+
+// ===== EXPORTAÇÕES =====
+export {
+  gameState,
+  upgradeSystem,
+  achievementSystem,
+  db,
+  audioManager,
+  inventory,
+  specializationSystem,
+  garageSystem,
+  customerSystem,
+  dailyChallenges,
+  scene3D,
+  uiManager,
+  usedPartsMarket,
+  careerMode,
+};
+
+// ===== EXPORTAÇÕES GLOBAIS =====
+window.gameState = gameState;
+window.upgradeSystem = upgradeSystem;
+window.achievementSystem = achievementSystem;
+window.db = db;
+window.audioManager = audioManager;
+window.inventory = inventory;
+window.specializationSystem = specializationSystem;
+window.garageSystem = garageSystem;
+window.customerSystem = customerSystem;
+window.dailyChallenges = dailyChallenges;
+window.usedPartsMarket = usedPartsMarket;
+window.careerMode = careerMode;
 
 Object.defineProperty(window, "scene3D", {
   set: (value) => {
@@ -334,73 +366,3 @@ window.addEventListener("load", async () => {
     db.saveAchievements();
   }, 30000);
 });
-
-// ===== EXPORTAÇÕES =====
-// Exportar todas as instâncias de uma vez
-export {
-  gameState,
-  upgradeSystem,
-  achievementSystem,
-  db,
-  audioManager,
-  inventory,
-  specializationSystem,
-  garageSystem,
-  customerSystem,
-  dailyChallenges,
-  usedPartsMarket,
-  careerMode,
-  scene3D,
-  uiManager,
-};
-
-// ===== EXPORTAÇÕES GLOBAIS =====
-// Expor globalmente para acesso via onclick e outros arquivos
-window.gameState = gameState;
-window.upgradeSystem = upgradeSystem;
-window.achievementSystem = achievementSystem;
-window.db = db;
-window.audioManager = audioManager;
-window.inventory = inventory;
-window.specializationSystem = specializationSystem;
-window.garageSystem = garageSystem;
-window.customerSystem = customerSystem;
-window.dailyChallenges = dailyChallenges;
-window.usedPartsMarket = usedPartsMarket;
-window.careerMode = careerMode;
-
-// Também expor as classes construtoras
-window.GameState = GameState;
-window.Database = Database;
-window.UpgradeSystem = UpgradeSystem;
-window.AchievementSystem = AchievementSystem;
-window.AudioManager = AudioManager;
-window.Inventory = Inventory;
-window.SpecializationSystem = SpecializationSystem;
-window.GarageSystem = GarageSystem;
-window.CustomerSystem = CustomerSystem;
-window.DailyChallenges = DailyChallenges;
-window.UsedPartsMarket = UsedPartsMarket;
-window.CareerMode = CareerMode;
-window.Job = Job;
-window.CustomerCar = CustomerCar;
-window.Scene3D = Scene3D;
-window.UIManager = UIManager;
-
-console.log("✅ Todas as classes exportadas globalmente");
-
-// Expor GameState globalmente
-if (typeof window !== "undefined") {
-  window.GameState = GameState;
-  console.log("🌐 GameState disponível globalmente");
-}
-
-// Criar instância do GameState se não existir
-if (!window.gameState && GameState) {
-  try {
-    window.gameState = new GameState();
-    console.log("✅ gameState criado automaticamente");
-  } catch (err) {
-    console.log("❌ Erro ao criar gameState:", err);
-  }
-}

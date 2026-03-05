@@ -376,3 +376,8 @@ export class DailyChallenges {
         this.updateProgress('spendMoney', amount);
     }
 }
+// Expor globalmente
+if (typeof window !== 'undefined') {
+    window.DailyChallenges = DailyChallenges;
+    console.log('🌐 DailyChallenges disponível globalmente');
+}
