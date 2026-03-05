@@ -74,6 +74,48 @@ class GameState {
   canAfford(amount) {
     return this.money >= amount;
   }
+
+  repairPart(partName, amount) {
+    if (!this.currentCar || !this.currentCar.parts[partName]) return false;
+
+    const part = this.currentCar.parts[partName];
+    const oldCondition = part.condition;
+    part.condition = Math.min(100, part.condition + amount);
+
+    // Atualizar dinheiro (custo do reparo)
+    const repairCost = Math.round(amount * 10);
+    if (this.money >= repairCost) {
+      this.money -= repairCost;
+      this.addExperience(5);
+      this.updateMoney();
+      return true;
+    }
+    return false;
+  }
+
+  buyNewPart(partName) {
+    if (!this.currentCar || !this.currentCar.parts[partName]) return false;
+
+    const part = this.currentCar.parts[partName];
+    const partPrice = 500; // Preço fixo por enquanto
+
+    if (this.money >= partPrice) {
+      this.money -= partPrice;
+      part.condition = 100;
+      this.addExperience(20);
+      this.updateMoney();
+      return true;
+    }
+    return false;
+  }
+
+  checkAllPartsGood() {
+    if (!this.currentCar) return false;
+
+    return Object.values(this.currentCar.parts).every(
+      (part) => part.condition >= 90,
+    );
+  }
 }
 
 // ===== CRIAÇÃO DAS INSTÂNCIAS =====
@@ -111,141 +153,91 @@ Object.defineProperty(window, "uiManager", {
 // ===== FUNÇÕES GLOBAIS =====
 
 window.repairPart = (partName) => {
-  if (!gameState.currentCar || !gameState.currentJob) return;
-
-  const part = gameState.currentCar.parts[partName];
-  const targetCondition = gameState.currentJob.targetConditions[partName];
-  const toolStats = upgradeSystem.getToolStats(gameState.selectedTool);
-
-  if (gameState.selectedTool === "diagnostic") {
-    window.uiManager?.showNotification(
-      `🔍 Diagnóstico: ${PART_TRANSLATIONS[partName].display} está em ${Math.min(100, Math.round(part.condition))}%, necessário ${Math.min(100, Math.round(targetCondition))}%`,
-      "info",
-    );
-    audioManager?.playSound("click");
-    dailyChallenges?.onToolUsed("diagnostic");
+  if (!window.gameState || !window.gameState.currentCar) {
+    window.uiManager?.showNotification("❌ Nenhum carro na oficina", "error");
     return;
   }
 
-  if (part.condition >= targetCondition || part.condition >= 100) {
-    window.uiManager?.showNotification(
-      "✅ Peça já atende aos requisitos!",
-      "info",
-    );
-    audioManager?.playSound("error");
-    return;
-  }
+  const tool = window.gameState.selectedTool || "wrench";
+  const repairAmounts = {
+    wrench: 10,
+    screwdriver: 5,
+    hammer: 15,
+    welder: 25,
+    diagnostic: 0,
+  };
 
-  const baseEfficiency = upgradeSystem.calculateRepairEfficiency(
-    toolStats.repair,
-  );
-  const repairEfficiency = specializationSystem.calculateRepairEfficiency(
-    baseEfficiency,
-    partName,
-  );
-  const repairCost = upgradeSystem.calculateRepairCost(toolStats.cost);
+  const amount = repairAmounts[tool] || 10;
 
-  if (gameState.money < repairCost) {
-    window.uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
-    audioManager?.playSound("error");
-    return;
-  }
+  if (window.gameState.repairPart(partName, amount)) {
+    window.uiManager?.showNotification(`✅ ${partName} reparado!`, "success");
+    window.uiManager?.updatePartsList();
 
-  audioManager?.playSound(gameState.selectedTool);
-  dailyChallenges?.onToolUsed(gameState.selectedTool);
-  careerMode?.onPartUsed(partName);
+    // Criar efeito visual
+    window.createRepairEffect?.(partName);
 
-  if (window.scene3D) {
-    const pos = PART_POSITIONS[partName];
-    if (pos)
-      window.scene3D.createRepairEffect(
-        new THREE.Vector3(pos[0], pos[1] + 0.5, pos[2]),
+    // Verificar se todos os reparos foram feitos
+    if (window.gameState.checkAllPartsGood()) {
+      document.getElementById("deliver-car").disabled = false;
+      window.uiManager?.showNotification(
+        "🎉 Carro pronto para entrega!",
+        "success",
       );
+    }
+  } else {
+    window.uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
   }
-
-  const newCondition = Math.min(100, part.condition + repairEfficiency);
-  part.condition = newCondition;
-
-  gameState.updateMoney(-repairCost);
-  gameState.addExperience(50);
-
-  // Registrar nos desafios
-  dailyChallenges?.onRepair(partName);
-
-  window.scene3D?.updatePartLabels(gameState.currentCar, gameState.currentJob);
-  window.uiManager?.updatePartsList();
-  window.uiManager?.updateJobInfo();
-  window.uiManager?.checkJobCompletion();
-
-  window.uiManager?.showNotification(
-    `✅ Reparou ${PART_TRANSLATIONS[partName].display}!`,
-    "success",
-  );
-  db.savePlayerData();
 };
 
-window.buyNewPart = (partName) => {
-  if (!gameState.currentCar || !gameState.currentJob) return;
-
-  const part = gameState.currentCar.parts[partName];
-  const targetCondition = gameState.currentJob.targetConditions[partName];
-
-  if (part.condition >= targetCondition || part.condition >= 100) {
-    window.uiManager?.showNotification("✅ Peça já está ok!", "info");
-    audioManager?.playSound("error");
+window.buyPart = (partName) => {
+  if (!window.gameState || !window.gameState.currentCar) {
+    window.uiManager?.showNotification("❌ Nenhum carro na oficina", "error");
     return;
   }
 
-  // Tentar usar do estoque primeiro
-  if (inventory.hasPart(partName)) {
-    inventory.usePart(partName);
-    part.condition = 100;
-    gameState.addExperience(50);
+  if (window.gameState.buyNewPart(partName)) {
     window.uiManager?.showNotification(
-      `📦 Usou ${PART_TRANSLATIONS[partName].display} do estoque!`,
+      `🛒 ${partName} nova instalada!`,
       "success",
     );
-    dailyChallenges?.onInventoryUse();
+    window.uiManager?.updatePartsList();
+
+    // Criar efeito visual mais forte
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => window.createRepairEffect?.(partName), i * 200);
+    }
+
+    if (window.gameState.checkAllPartsGood()) {
+      document.getElementById("deliver-car").disabled = false;
+      window.uiManager?.showNotification(
+        "🎉 Carro pronto para entrega!",
+        "success",
+      );
+    }
   } else {
-    const partPrice = upgradeSystem.calculatePartPrice(part.price);
-    if (gameState.money < partPrice) {
-      window.uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
-      audioManager?.playSound("error");
-      return;
-    }
+    window.uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
+  }
+};
 
-    gameState.updateMoney(-partPrice);
-    part.condition = 100;
-    gameState.addExperience(100);
-    window.uiManager?.showNotification(
-      `🛒 Comprou ${PART_TRANSLATIONS[partName].display} nova!`,
-      "success",
+window.createRepairEffect = (partName) => {
+  if (!window.scene3D || !window.scene3D.createRepairEffect) return;
+
+  // Posições aproximadas das peças
+  const positions = {
+    motor: [0, 1.0, 1.0],
+    transmissao: [0, 0.8, 0],
+    freios: [0.5, 0.3, 1.5],
+    suspensao: [-0.5, 0.3, 1.0],
+    bateria: [0.3, 0.8, 1.2],
+    alternador: [-0.3, 0.8, 1.2],
+  };
+
+  const pos = positions[partName];
+  if (pos) {
+    window.scene3D.createRepairEffect(
+      new THREE.Vector3(pos[0], pos[1], pos[2]),
     );
-    dailyChallenges?.onInventoryBuy();
   }
-
-  audioManager?.playSound("money");
-  careerMode?.onMoneySpent(partPrice);
-
-  if (window.scene3D) {
-    const pos = PART_POSITIONS[partName];
-    if (pos) {
-      for (let i = 0; i < 3; i++) {
-        setTimeout(() => {
-          window.scene3D.createRepairEffect(
-            new THREE.Vector3(pos[0], pos[1] + 0.5, pos[2]),
-          );
-        }, i * 150);
-      }
-    }
-  }
-
-  window.scene3D?.updatePartLabels(gameState.currentCar, gameState.currentJob);
-  window.uiManager?.updatePartsList();
-  window.uiManager?.updateJobInfo();
-  window.uiManager?.checkJobCompletion();
-
-  db.savePlayerData();
 };
 
 window.upgradeTool = (toolId) => {
@@ -393,14 +385,4 @@ console.log("✅ Todas as classes exportadas globalmente");
 if (typeof window !== "undefined") {
   window.GameState = GameState;
   console.log("🌐 GameState disponível globalmente");
-}
-
-// Criar instância do GameState se não existir
-if (!window.gameState && GameState) {
-  try {
-    window.gameState = new GameState();
-    console.log("✅ gameState criado automaticamente");
-  } catch (err) {
-    console.log("❌ Erro ao criar gameState:", err);
-  }
 }

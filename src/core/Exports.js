@@ -1,4 +1,4 @@
-// src/core/Exports.js - Arquivo central de exportações
+// src/core/Exports.js - Versão final com múltiplas camadas de proteção
 
 console.log("📦 Carregando módulos e expondo globalmente...");
 
@@ -16,21 +16,23 @@ async function loadAndExpose(modulePath, exportName) {
   }
 }
 
-// Lista de todos os módulos que precisamos expor
+// Lista de módulos na ORDEM CORRETA de dependência
 const modules = [
-  // Core
-  { path: "/src/core/Game.js", name: "GameState" },
+  // 1. Utilitários (sem dependências)
+  { path: "/src/utils/constants.js", name: "CONSTANTS" },
+
+  // 2. Core classes (Database não depende de outros)
   { path: "/src/core/Database.js", name: "Database" },
 
-  // Garage
-  { path: "/src/garage/Scene3D.js", name: "Scene3D" },
-  { path: "/src/garage/Garage.js", name: "GarageSystem" },
-  { path: "/src/garage/GarageLayout.js", name: "GARAGE_CONFIG" },
+  // 3. Carros (precisam ser carregados antes de GameState)
+  { path: "/src/cars/Car.js", name: "Car" },
+  { path: "/src/cars/Job.js", name: "Job" },
+  { path: "/src/cars/CarModels.js", name: "CarModels" },
 
-  // UI
-  { path: "/src/ui/UIManager.js", name: "UIManager" },
+  // 4. GameState (depende de Car)
+  { path: "/src/core/Game.js", name: "GameState" },
 
-  // Systems
+  // 5. Sistemas que podem depender de GameState
   { path: "/src/systems/Inventory.js", name: "Inventory" },
   { path: "/src/systems/audio.js", name: "AudioManager" },
   { path: "/src/systems/upgrade-system.js", name: "UpgradeSystem" },
@@ -47,10 +49,12 @@ const modules = [
   { path: "/src/systems/market/used-parts-market.js", name: "UsedPartsMarket" },
   { path: "/src/systems/career-mode.js", name: "CareerMode" },
 
-  // Cars
-  { path: "/src/cars/Car.js", name: "CustomerCar" },
-  { path: "/src/cars/Job.js", name: "Job" },
-  { path: "/src/cars/CarModels.js", name: "CarModels" },
+  // 6. Garage e UI (dependem de outros)
+  { path: "/src/garage/SimpleScene3D.js", name: "SimpleScene3D" },
+  { path: "/src/garage/Scene3D.js", name: "Scene3D" },
+  { path: "/src/garage/Garage.js", name: "GarageSystem" },
+  { path: "/src/garage/GarageLayout.js", name: "GARAGE_CONFIG" },
+  { path: "/src/ui/UIManager.js", name: "UIManager" },
 ];
 
 // Carregar todos os módulos
@@ -76,7 +80,7 @@ async function loadAllModules() {
   }
 }
 
-// Função para inicializar o jogo
+// Função para inicializar o jogo com múltiplas camadas de proteção
 function initializeGame() {
   const container = document.getElementById("game-container");
   if (!container) {
@@ -84,16 +88,87 @@ function initializeGame() {
     return;
   }
 
-  // Criar instâncias
-  if (window.Scene3D && !window.scene3D) {
-    try {
-      window.scene3D = new window.Scene3D(container);
-      console.log("✅ Scene3D criado");
-    } catch (err) {
-      console.log("❌ Erro Scene3D:", err);
+  // === CAMADA 1: Criar gameState com fallback ===
+  if (!window.gameState) {
+    // Tentar usar a classe GameState primeiro
+    if (window.GameState) {
+      try {
+        window.gameState = new window.GameState();
+        console.log("✅ GameState criado a partir da classe");
+      } catch (err) {
+        console.log("❌ Erro ao criar GameState:", err);
+        // Fallback: objeto simples
+        window.gameState = {
+          money: 5000,
+          level: 1,
+          reputation: 3,
+          jobsCompleted: 0,
+          experience: 0,
+          updateMoney: function (amount) {
+            this.money += amount;
+            console.log("💰 Dinheiro atualizado (fallback):", this.money);
+          },
+          addExperience: function (amount) {
+            this.experience += amount;
+            console.log(
+              "✨ Experiência atualizada (fallback):",
+              this.experience,
+            );
+          },
+          updateReputation: function (change) {
+            this.reputation = Math.max(
+              1,
+              Math.min(5, this.reputation + change),
+            );
+            console.log("⭐ Reputação atualizada (fallback):", this.reputation);
+          },
+        };
+        console.log("⚠️ Fallback: gameState criado como objeto simples");
+      }
+    } else {
+      // GameState não disponível, criar objeto simples
+      window.gameState = {
+        money: 5000,
+        level: 1,
+        reputation: 3,
+        jobsCompleted: 0,
+        experience: 0,
+        updateMoney: function (amount) {
+          this.money += amount;
+          console.log("💰 Dinheiro atualizado (fallback):", this.money);
+        },
+        addExperience: function (amount) {
+          this.experience += amount;
+          console.log("✨ Experiência atualizada (fallback):", this.experience);
+        },
+        updateReputation: function (change) {
+          this.reputation = Math.max(1, Math.min(5, this.reputation + change));
+          console.log("⭐ Reputação atualizada (fallback):", this.reputation);
+        },
+      };
+      console.log("⚠️ Fallback: gameState criado sem classe");
     }
   }
 
+  // === CAMADA 2: Scene3D ===
+  if (!window.scene3D) {
+    try {
+      // Tentar usar a cena simples primeiro (mais leve para testes)
+      if (window.SimpleScene3D) {
+        window.scene3D = new window.SimpleScene3D(container);
+        console.log("✅ SimpleScene3D criado");
+      }
+      // Fallback para cena normal
+      else if (window.Scene3D) {
+        window.scene3D = new window.Scene3D(container);
+        console.log("✅ Scene3D normal criado");
+      }
+    } catch (err) {
+      console.log("❌ Erro ao criar Scene3D:", err);
+    }
+  }
+
+  // === CAMADA 3: UIManager ===
   if (window.UIManager && !window.uiManager) {
     try {
       window.uiManager = new window.UIManager();
@@ -103,24 +178,72 @@ function initializeGame() {
     }
   }
 
-  if (window.GameState && !window.gameState) {
-    try {
-      window.gameState = new window.GameState();
-      console.log("✅ GameState criado");
-    } catch (err) {
-      console.log("❌ Erro GameState:", err);
-    }
-  }
-
   console.log("\n📊 STATUS FINAL:");
   console.log("   gameState:", window.gameState ? "✅" : "❌");
   console.log("   scene3D:", window.scene3D ? "✅" : "❌");
   console.log("   uiManager:", window.uiManager ? "✅" : "❌");
+
+  if (window.gameState) {
+    console.log("   Dinheiro:", window.gameState.money);
+    console.log("   Nível:", window.gameState.level);
+    console.log("   Reputação:", window.gameState.reputation);
+    console.log("   Tipo:", window.gameState.constructor.name);
+  }
+
+  // Iniciar animação se tudo ok
+  if (window.scene3D && window.scene3D.animate) {
+    window.scene3D.animate();
+  }
 }
 
 // Iniciar carregamento
 loadAllModules();
 
-// Exportar função para uso posterior
+// === CAMADA 4: Correção tardia (fallback final) ===
+setTimeout(() => {
+  // Verificação 1: gameState existe mas GameState não
+  if (window.gameState && !window.GameState) {
+    console.log("⚠️ GameState não exposto, corrigindo...");
+    window.GameState = window.gameState.constructor;
+    console.log("✅ GameState restaurado a partir da instância existente");
+  }
+
+  // Verificação 2: GameState existe mas gameState não
+  if (window.GameState && !window.gameState) {
+    console.log("⚠️ gameState não criado, criando agora tardiamente...");
+    try {
+      window.gameState = new window.GameState();
+      console.log("✅ gameState criado tardiamente");
+    } catch (err) {
+      console.log("❌ Erro na criação tardia:", err);
+    }
+  }
+
+  // Verificação 3: Nem GameState nem gameState existem
+  if (!window.GameState && !window.gameState) {
+    console.log("⚠️ Nenhum estado encontrado, criando fallback de emergência");
+    window.gameState = {
+      money: 5000,
+      level: 1,
+      reputation: 3,
+      jobsCompleted: 0,
+      experience: 0,
+      updateMoney: function (amount) {
+        this.money += amount;
+        console.log("💰 Dinheiro atualizado (emergência):", this.money);
+      },
+    };
+    console.log("✅ gameState de emergência criado");
+  }
+
+  // Log final de verificação
+  console.log("\n🔍 VERIFICAÇÃO FINAL:");
+  console.log("   GameState (classe):", window.GameState ? "✅" : "❌");
+  console.log("   gameState (instância):", window.gameState ? "✅" : "❌");
+}, 500);
+
+// Exportar funções para uso externo
 window.loadAllModules = loadAllModules;
 window.initializeGame = initializeGame;
+
+console.log("✅ Exports.js carregado completamente");

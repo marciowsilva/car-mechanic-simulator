@@ -1,7 +1,7 @@
 // car.js
-import { PART_TRANSLATIONS } from '/src/utils/constants.js';
+import { PART_TRANSLATIONS } from "/src/utils/constants.js";
 
-export class CustomerCar {
+export class Car {
   constructor(job) {
     this.id = Date.now();
     this.model = job.carModel;
@@ -39,14 +39,12 @@ export class CustomerCar {
   }
 }
 
-// Expor globalmente
-if (typeof window !== 'undefined') {
-    window.Car = Car;
-    console.log('🌐 Car disponível globalmente');
-}
+// Exportar também como CustomerCar para compatibilidade
+export const CustomerCar = Car;
 
 // Expor globalmente
-if (typeof window !== 'undefined') {
-    window.CustomerCar = CustomerCar;
-    console.log('🌐 CustomerCar disponível globalmente');
+if (typeof window !== "undefined") {
+  window.Car = Car;
+  window.CustomerCar = Car;
+  console.log("🌐 Car e CustomerCar disponíveis globalmente");
 }
