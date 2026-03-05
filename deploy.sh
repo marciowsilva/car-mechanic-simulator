@@ -1,55 +1,57 @@
 #!/bin/bash
 
-# Configurações
 EXTENSAO=".meulog"
 DATA_ATUAL=$(date +"%d-%m-%Y_%H-%M-%S")
 NOME_ARQUIVO="${DATA_ATUAL}${EXTENSAO}"
 
-# Função de Notificação (Detecta OS)
+# Função de Notificação específica para Windows via Git Bash
 enviar_notificacao() {
     local titulo=$1
     local mensagem=$2
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        notify-send "$titulo" "$mensagem"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        osascript -e "display notification \"$mensagem\" with title \"$titulo\""
-    fi
+    
+    # Chama o PowerShell para exibir a notificação no Windows
+    powershell.exe -Command "& {
+        Add-Type -AssemblyName System.Windows.Forms;
+        \$balao = New-Object System.Windows.Forms.NotifyIcon;
+        \$balao.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon('powershell.exe');
+        \$balao.BalloonTipTitle = '$titulo';
+        \$balao.BalloonTipText = '$mensagem';
+        \$balao.Visible = \$true;
+        \$balao.ShowBalloonTip(5000);
+    }"
 }
 
-# Função de erro fatal
 abortar() {
     echo "❌ ERRO CRÍTICO: $1"
-    enviar_notificacao "Falha no Git!" "Ocorreu um erro durante: $1"
+    enviar_notificacao "Falha no Git!" "Erro em: $1"
     exit 1
 }
 
-echo "🧹 Removendo arquivos antigos *${EXTENSAO}..."
-rm -f *"$EXTENSAO" || abortar "Remoção de arquivo antigo"
+# --- Início do Processo ---
+
+echo "🧹 Removendo arquivos *$EXTENSAO..."
+rm -f *"$EXTENSAO"
 
 echo "📝 Criando log: $NOME_ARQUIVO"
-echo "Log gerado em: $DATA_ATUAL" > "$NOME_ARQUIVO"
+echo "Log: $DATA_ATUAL" > "$NOME_ARQUIVO"
 
-# Fluxo Git com verificações estritas
-echo "📦 Preparando commit..."
+echo "📦 Commitando..."
 git add .
-git commit -m "Auto-deploy: $DATA_ATUAL" --allow-empty # Permite rodar mesmo sem mudanças
+git commit -m "Auto-deploy: $DATA_ATUAL" --allow-empty
 
-echo "📤 Subindo para desenvolvimento..."
-git push || abortar "Push para desenvolvimento"
+echo "📤 Push Desenvolvimento..."
+git push || abortar "Push Desenvolvimento"
 
-echo "🔄 Trocando para Master e realizando Merge..."
-git checkout master || abortar "Checkout master"
-git merge desenvolvimento --no-edit || abortar "Merge com desenvolvimento"
+echo "🔄 Merge para Master..."
+git checkout master || abortar "Checkout Master"
+git merge desenvolvimento --no-edit || abortar "Merge"
 
-echo "🚀 Enviando Master para o GitHub..."
-git push origin master || abortar "Push origin master"
+echo "🚀 Push Master..."
+git push origin master || abortar "Push Master"
 
-echo "🌿 Retornando para Desenvolvimento..."
-git checkout desenvolvimento || abortar "Retorno para desenvolvimento"
+echo "🌿 Voltando para Desenvolvimento..."
+git checkout desenvolvimento || abortar "Retorno"
 
-echo "🔍 Diferença final entre branches:"
-git diff master..desenvolvimento
-
-# Notificação de Sucesso
-enviar_notificacao "Git Sync OK" "Tudo foi enviado com sucesso para o GitHub!"
-echo "✨ Processo finalizado com sucesso em $(date +%H:%M:%S)."
+# Notificação Final
+enviar_notificacao "Sucesso!" "O script terminou e tudo está no GitHub."
+echo "✨ Concluído!"
