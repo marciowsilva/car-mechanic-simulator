@@ -37,11 +37,13 @@ const modules = [
   { path: "/src/systems/audio.js", name: "AudioManager" },
   { path: "/src/systems/upgrade-system.js", name: "UpgradeSystem" },
   { path: "/src/systems/specializations.js", name: "SpecializationSystem" },
+  { path: "/src/systems/UpgradeManager.js", name: "UpgradeManager" },
   {
     path: "/src/systems/achievements/AchievementSystem.js",
     name: "AchievementSystem",
   },
   { path: "/src/systems/customers/CustomerSystem.js", name: "CustomerSystem" },
+  { path: "/src/systems/CustomerManager.js", name: "CustomerManager" },
   {
     path: "/src/systems/challenges/DailyChallenges.js",
     name: "DailyChallenges",

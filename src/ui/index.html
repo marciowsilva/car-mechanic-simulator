@@ -1,113 +1,121 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Car Mechanic Simulator 3D</title>
-    
+
     <!-- IMPORT MAP -->
     <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
-                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
-            }
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
         }
+      }
     </script>
-    
+
     <!-- CSS -->
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
     <!-- CONTAINER PRINCIPAL 3D -->
     <div id="game-container"></div>
-    
+
     <!-- UI OVERLAY -->
     <div id="ui-overlay">
-        <!-- Painel Superior -->
-        <div id="top-panel">
-            <div class="stat">
-                <span class="stat-label">Dinheiro</span>
-                <span class="stat-value" id="money">R$ 5.000</span>
-            </div>
-            <div class="stat">
-                <span class="stat-label">Nível</span>
-                <span class="stat-value" id="level">1</span>
-            </div>
-            <div class="stat">
-                <span class="stat-label">Reputação</span>
-                <span class="stat-value" id="reputation">★★★☆☆</span>
-            </div>
-            <div class="stat">
-                <span class="stat-label">Clientes</span>
-                <span class="stat-value" id="jobs-completed">0</span>
-            </div>
-            <div class="audio-controls">
-                <button class="audio-btn" id="toggle-music" title="Música">🎵</button>
-                <button class="audio-btn" id="toggle-sfx" title="Efeitos sonoros">🔊</button>
-            </div>
+      <!-- Painel Superior -->
+      <div id="top-panel">
+        <div class="stat">
+          <span class="stat-label">Dinheiro</span>
+          <span class="stat-value" id="money">R$ 5.000</span>
         </div>
+        <div class="stat">
+          <span class="stat-label">Nível</span>
+          <span class="stat-value" id="level">1</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Reputação</span>
+          <span class="stat-value" id="reputation">★★★☆☆</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Clientes</span>
+          <span class="stat-value" id="jobs-completed">0</span>
+        </div>
+        <div class="audio-controls">
+          <button class="audio-btn" id="toggle-music" title="Música">🎵</button>
+          <button class="audio-btn" id="toggle-sfx" title="Efeitos sonoros">
+            🔊
+          </button>
+        </div>
+      </div>
 
-        <!-- Painel de Ferramentas -->
-        <div id="tool-panel">
-            <h3>FERRAMENTAS</h3>
-            <div class="tool-item" data-tool="wrench">
-                <span class="tool-icon">🔧</span>
-                <div class="tool-info">
-                    <div class="tool-name">Chave Inglesa</div>
-                    <div class="tool-stats">Nv.1: +10% | R$ 50</div>
-                </div>
-            </div>
-            <div class="tool-item" data-tool="screwdriver">
-                <span class="tool-icon">🪛</span>
-                <div class="tool-info">
-                    <div class="tool-name">Chave de Fenda</div>
-                    <div class="tool-stats">Nv.1: +5% | R$ 25</div>
-                </div>
-            </div>
-            <div class="tool-item" data-tool="hammer">
-                <span class="tool-icon">🔨</span>
-                <div class="tool-info">
-                    <div class="tool-name">Martelo</div>
-                    <div class="tool-stats">Nv.1: +15% | R$ 75</div>
-                </div>
-            </div>
-            <div class="tool-item" data-tool="welder">
-                <span class="tool-icon">⚡</span>
-                <div class="tool-info">
-                    <div class="tool-name">Maçarico</div>
-                    <div class="tool-stats">Nv.1: +25% | R$ 150</div>
-                </div>
-            </div>
-            <div class="tool-item" data-tool="diagnostic">
-                <span class="tool-icon">📊</span>
-                <div class="tool-info">
-                    <div class="tool-name">Diagnóstico</div>
-                    <div class="tool-stats">Inspecionar</div>
-                </div>
-            </div>
+      <!-- Painel de Ferramentas -->
+      <div id="tool-panel">
+        <h3>FERRAMENTAS</h3>
+        <div class="tool-item" data-tool="wrench">
+          <span class="tool-icon">🔧</span>
+          <div class="tool-info">
+            <div class="tool-name">Chave Inglesa</div>
+            <div class="tool-stats">Nv.1: +10% | R$ 50</div>
+          </div>
         </div>
+        <div class="tool-item" data-tool="screwdriver">
+          <span class="tool-icon">🪛</span>
+          <div class="tool-info">
+            <div class="tool-name">Chave de Fenda</div>
+            <div class="tool-stats">Nv.1: +5% | R$ 25</div>
+          </div>
+        </div>
+        <div class="tool-item" data-tool="hammer">
+          <span class="tool-icon">🔨</span>
+          <div class="tool-info">
+            <div class="tool-name">Martelo</div>
+            <div class="tool-stats">Nv.1: +15% | R$ 75</div>
+          </div>
+        </div>
+        <div class="tool-item" data-tool="welder">
+          <span class="tool-icon">⚡</span>
+          <div class="tool-info">
+            <div class="tool-name">Maçarico</div>
+            <div class="tool-stats">Nv.1: +25% | R$ 150</div>
+          </div>
+        </div>
+        <div class="tool-item" data-tool="diagnostic">
+          <span class="tool-icon">📊</span>
+          <div class="tool-info">
+            <div class="tool-name">Diagnóstico</div>
+            <div class="tool-stats">Inspecionar</div>
+          </div>
+        </div>
+      </div>
 
-        <!-- Painel de Peças -->
-        <div id="car-parts-panel">
-            <h3>SERVIÇO ATUAL</h3>
-            <div id="job-info" class="job-info"></div>
-            <h3>PEÇAS DO CARRO</h3>
-            <div id="parts-list"></div>
-        </div>
+      <!-- Painel de Peças -->
+      <div id="car-parts-panel">
+        <h3>SERVIÇO ATUAL</h3>
+        <div id="job-info" class="job-info"></div>
+        <h3>PEÇAS DO CARRO</h3>
+        <div id="parts-list"></div>
+      </div>
 
-        <!-- Painel Inferior -->
-        <div id="bottom-panel">
-            <button class="action-btn" id="new-job">🚗 Novo Cliente</button>
-            <button class="action-btn secondary" id="upgrade-shop-btn">🛠️ Upgrades</button>
-            <button class="action-btn" id="inventory-btn">📦 Estoque</button>
-            <button class="action-btn success" id="deliver-car" disabled>✅ Entregar Carro</button>
-        </div>
+      <!-- Painel Inferior -->
+      <div id="bottom-panel">
+        <button class="action-btn" id="new-job">🚗 Novo Cliente</button>
+        <button class="action-btn secondary" id="upgrade-shop-btn">
+          🛠️ Upgrades
+        </button>
+        <button class="action-btn" id="inventory-btn">📦 Estoque</button>
+        <button class="action-btn" id="customers-btn">👥 Clientes</button>
+        <!-- NOVO BOTÃO -->
+        <button class="action-btn success" id="deliver-car" disabled>
+          ✅ Entregar Carro
+        </button>
+      </div>
 
-        <!-- Informação de Interação -->
-        <div id="interaction-info">
-            👆 Clique nas peças do carro para selecionar
-        </div>
+      <!-- Informação de Interação -->
+      <div id="interaction-info">
+        👆 Clique nas peças do carro para selecionar
+      </div>
     </div>
 
     <!-- NOTIFICAÇÕES -->
@@ -115,5 +123,5 @@
 
     <!-- CARREGADOR DE MÓDULOS -->
     <script type="module" src="/src/core/Exports.js"></script>
-</body>
+  </body>
 </html>

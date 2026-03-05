@@ -75,15 +75,14 @@ class GameState {
     return this.money >= amount;
   }
 
-  repairPart(partName, amount) {
+  repairPart(partName, amount, repairCost) {
     if (!this.currentCar || !this.currentCar.parts[partName]) return false;
 
     const part = this.currentCar.parts[partName];
     const oldCondition = part.condition;
     part.condition = Math.min(100, part.condition + amount);
 
-    // Atualizar dinheiro (custo do reparo)
-    const repairCost = Math.round(amount * 10);
+    // Usar o repairCost passado como parâmetro
     if (this.money >= repairCost) {
       this.money -= repairCost;
       this.addExperience(5);
@@ -159,24 +158,23 @@ window.repairPart = (partName) => {
   }
 
   const tool = window.gameState.selectedTool || "wrench";
-  const repairAmounts = {
-    wrench: 10,
-    screwdriver: 5,
-    hammer: 15,
-    welder: 25,
-    diagnostic: 0,
-  };
 
-  const amount = repairAmounts[tool] || 10;
+  // Usar UpgradeManager para obter eficiência
+  let amount = 10;
+  let repairCost = 30;
 
-  if (window.gameState.repairPart(partName, amount)) {
+  if (window.uiManager?.upgradeManager) {
+    const efficiency = window.uiManager.upgradeManager.getToolEfficiency(tool);
+    amount = efficiency.repairAmount;
+    repairCost = efficiency.cost;
+  }
+
+  if (window.gameState.repairPart(partName, amount, repairCost)) {
     window.uiManager?.showNotification(`✅ ${partName} reparado!`, "success");
     window.uiManager?.updatePartsList();
 
-    // Criar efeito visual
     window.createRepairEffect?.(partName);
 
-    // Verificar se todos os reparos foram feitos
     if (window.gameState.checkAllPartsGood()) {
       document.getElementById("deliver-car").disabled = false;
       window.uiManager?.showNotification(
@@ -276,6 +274,44 @@ window.upgradeSkill = (skillId) => {
     careerMode?.onToolUpgraded(toolId);
     careerMode?.onMoneySpent(price);
     db.saveUpgrades();
+  }
+};
+
+window.upgradeTool = (toolId) => {
+  if (!window.uiManager?.upgradeManager) {
+    console.log("❌ UpgradeManager não disponível");
+    return;
+  }
+
+  const result = window.uiManager.upgradeManager.upgradeTool(toolId);
+
+  if (result.success) {
+    window.uiManager.showNotification(result.message, "success");
+    window.uiManager.upgradePanel.update();
+    if (window.gameState) {
+      window.gameState.updateMoney();
+    }
+  } else {
+    window.uiManager.showNotification(result.message, "error");
+  }
+};
+
+window.upgradeGarage = (upgradeId) => {
+  if (!window.uiManager?.upgradeManager) {
+    console.log("❌ UpgradeManager não disponível");
+    return;
+  }
+
+  const result = window.uiManager.upgradeManager.upgradeGarage(upgradeId);
+
+  if (result.success) {
+    window.uiManager.showNotification(result.message, "success");
+    window.uiManager.upgradePanel.update();
+    if (window.gameState) {
+      window.gameState.updateMoney();
+    }
+  } else {
+    window.uiManager.showNotification(result.message, "error");
   }
 };
 

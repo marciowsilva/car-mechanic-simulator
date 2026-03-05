@@ -7,6 +7,36 @@ export class UIManager {
     this.parts = [];
     this.cacheElements();
     this.initEventListeners();
+
+    import("/src/systems/UpgradeManager.js").then((module) => {
+      const UpgradeManager = module.UpgradeManager || module.default;
+      this.upgradeManager = new UpgradeManager();
+
+      import("/src/ui/UpgradePanel.js").then((panelModule) => {
+        const UpgradePanel = panelModule.UpgradePanel || panelModule.default;
+        this.upgradePanel = new UpgradePanel(this.upgradeManager);
+
+        // Adicionar event listener para o botão de upgrades
+        const upgradeBtn = document.getElementById("upgrade-shop-btn");
+        if (upgradeBtn) {
+          upgradeBtn.addEventListener("click", () => {
+            this.upgradePanel.toggle();
+          });
+        }
+      });
+    });
+
+    // Import CustomerManager
+    import("/src/systems/CustomerManager.js")
+      .then((module) => {
+        const CustomerManager = module.CustomerManager || module.default;
+        this.customerManager = new CustomerManager();
+        console.log("✅ CustomerManager carregado");
+      })
+      .catch((err) => {
+        console.log("❌ Erro ao carregar CustomerManager:", err);
+      });
+
     this.updateAllDisplays();
 
     this.notificationTimeout = null;
@@ -51,6 +81,14 @@ export class UIManager {
       this.createNewJob();
     });
 
+    // Botão Clientes
+    const customersBtn = document.getElementById("customers-btn");
+    if (customersBtn) {
+      customersBtn.addEventListener("click", () => {
+        this.showCustomers();
+      });
+    }
+
     // Botão Entregar Carro
     this.getElement("deliver-car").addEventListener("click", () => {
       this.deliverCar();
@@ -72,25 +110,53 @@ export class UIManager {
   }
 
   createNewJob() {
-    if (!window.gameState) return;
+    if (!window.gameState) {
+      this.showNotification("❌ Jogo não inicializado", "error");
+      return;
+    }
 
-    // Criar job simples
-    const job = {
-      id: Date.now(),
-      customerName: this.generateCustomerName(),
-      carModel: this.generateCarModel(),
-      difficulty: "Fácil",
-      payment: Math.floor(1000 + Math.random() * 2000),
-      parts: this.generateParts(),
-    };
+    // Se já existe um job ativo, perguntar se quer substituir
+    if (window.gameState.currentJob) {
+      if (
+        !confirm(
+          "Já existe um serviço ativo. Deseja cancelá-lo e iniciar um novo?",
+        )
+      ) {
+        return;
+      }
+    }
 
-    window.gameState.currentJob = job;
-    window.gameState.currentCar = { parts: job.parts };
+    // Usar o CustomerManager se existir, senão gerar job simples
+    if (this.customerManager) {
+      const job = this.customerManager.generateJob();
+      window.gameState.currentJob = job;
+      window.gameState.currentCar = { parts: job.parts };
+
+      const customer = job.customer;
+      const vipIcon = customer.isVIP ? "👑 " : "";
+      this.showNotification(
+        `🚗 ${vipIcon}${customer.name} - R$ ${job.payment}`,
+        "success",
+      );
+    } else {
+      // Fallback para job simples (igual ao existente)
+      const job = {
+        id: Date.now(),
+        customerName: this.generateCustomerName(),
+        carModel: this.generateCarModel(),
+        difficulty: "Fácil",
+        payment: Math.floor(1000 + Math.random() * 2000),
+        parts: this.generateParts(),
+      };
+
+      window.gameState.currentJob = job;
+      window.gameState.currentCar = { parts: job.parts };
+      this.showNotification(`🚗 Novo cliente: ${job.customerName}`, "success");
+    }
 
     this.updateJobInfo();
     this.updatePartsList();
     this.getElement("deliver-car").disabled = false;
-    this.showNotification(`🚗 Novo cliente: ${job.customerName}`, "success");
   }
 
   generateCustomerName() {
@@ -132,9 +198,44 @@ export class UIManager {
       return;
     }
 
-    const payment = window.gameState.currentJob.payment;
-    window.gameState.money += payment;
-    window.gameState.jobsCompleted++;
+    // Se temos o CustomerManager, usar ele para processar
+    if (this.customerManager && this.customerManager.currentJob) {
+      // Calcular qualidade baseada nas condições das peças
+      const parts = window.gameState.currentCar.parts;
+      let totalCondition = 0;
+      let count = 0;
+
+      Object.values(parts).forEach((part) => {
+        totalCondition += part.condition;
+        count++;
+      });
+
+      const quality = totalCondition / count;
+      const result = this.customerManager.completeJob(quality);
+
+      if (result) {
+        window.gameState.money += result.payment;
+        window.gameState.jobsCompleted++;
+
+        const bonusText =
+          result.timeBonus > 0 ? ` (bônus R$ ${result.timeBonus})` : "";
+        this.showNotification(
+          `💰 Serviço concluído! R$ ${result.payment}${bonusText}`,
+          "success",
+        );
+
+        if (result.satisfaction >= 80) {
+          this.showNotification(`😊 Cliente satisfeito!`, "success");
+        }
+      }
+    } else {
+      // Fallback para o método simples existente
+      const payment = window.gameState.currentJob.payment || 1000;
+      window.gameState.money += payment;
+      window.gameState.jobsCompleted++;
+      this.showNotification(`💰 Serviço concluído! R$ ${payment}`, "success");
+    }
+
     window.gameState.currentJob = null;
     window.gameState.currentCar = null;
 
@@ -143,8 +244,6 @@ export class UIManager {
     this.updateJobInfo();
     this.updatePartsList();
     this.getElement("deliver-car").disabled = true;
-
-    this.showNotification(`💰 Serviço concluído! R$ ${payment}`, "success");
   }
 
   updateAllDisplays() {
@@ -304,6 +403,34 @@ export class UIManager {
     this.notificationTimeout = setTimeout(() => {
       notification.classList.remove("show");
     }, 3000);
+  }
+
+  showCustomers() {
+    if (!this.customerManager) {
+      this.showNotification("❌ Sistema de clientes não disponível", "error");
+      return;
+    }
+
+    const customers = this.customerManager.getCustomerList();
+    const stats = this.customerManager.getStats();
+
+    // Criar mensagem para mostrar
+    let message = `👥 CLIENTES (${stats.totalCustomers})\n`;
+    message += `VIPs: ${stats.vipCustomers} | Satisfação média: ${stats.avgSatisfaction}%\n\n`;
+
+    customers.slice(0, 5).forEach((c) => {
+      const vip = c.isVIP ? "👑 " : "";
+      const satisfactionEmoji =
+        c.satisfaction >= 80 ? "😊" : c.satisfaction >= 50 ? "😐" : "😞";
+      message += `${vip}${c.name}: ${c.visits} visitas | ${c.satisfaction}% ${satisfactionEmoji}\n`;
+      message += `   Carro: ${c.car} | Gasto: R$ ${c.totalSpent}\n`;
+    });
+
+    if (customers.length > 5) {
+      message += `\n... e mais ${customers.length - 5} clientes`;
+    }
+
+    alert(message);
   }
 }
 
