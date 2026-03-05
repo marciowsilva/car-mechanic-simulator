@@ -9,16 +9,19 @@ enviar_notificacao() {
     local titulo=$1
     local mensagem=$2
     
-    # Chama o PowerShell para exibir a notificação no Windows
-    powershell.exe -Command "& {
-        Add-Type -AssemblyName System.Windows.Forms;
+    # Usamos o comando "PowerShell -Command" com aspas simples externas
+    # e garantimos que o ícone seja um padrão do sistema (Information)
+    powershell.exe -NoProfile -Command "
+        [reflection.assembly]::loadwithpartialname('System.Windows.Forms') | Out-Null;
         \$balao = New-Object System.Windows.Forms.NotifyIcon;
-        \$balao.Icon = [System.Drawing.Icon]::ExtractAssociatedIcon('powershell.exe');
-        \$balao.BalloonTipTitle = '$titulo';
-        \$balao.BalloonTipText = '$mensagem';
+        \$balao.Icon = [System.Drawing.SystemIcons]::Information;
+        \$balao.BalloonTipTitle = \"$titulo\";
+        \$balao.BalloonTipText = \"$mensagem\";
         \$balao.Visible = \$true;
         \$balao.ShowBalloonTip(5000);
-    }"
+        Start-Sleep -Seconds 1;
+        \$balao.Dispose();
+    "
 }
 
 abortar() {
