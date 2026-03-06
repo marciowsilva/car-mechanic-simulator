@@ -231,6 +231,8 @@ Object.defineProperty(window, "uiManager", {
 
 // ===== FUNÇÕES GLOBAIS =====
 
+// ===== FUNÇÕES GLOBAIS PARA REPARO =====
+
 window.repairPart = (partName) => {
   if (!window.gameState) {
     window.uiManager?.showNotification("❌ Jogo não inicializado", "error");
