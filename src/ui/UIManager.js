@@ -27,7 +27,7 @@ export class UIManager {
     });
 
     // Import CustomerManager
-    import("/src/systems/customers/CustomerManager.js")
+    import("/src/systems/customers/CustomerSystem.js")
       .then((module) => {
         const CustomerManager = module.CustomerManager || module.default;
         this.customerManager = new CustomerManager();

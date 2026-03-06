@@ -140,6 +140,79 @@ export class SimpleScene3D {
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
+
+  createRepairEffect(partName) {
+    // Posições aproximadas das peças
+    const positions = {
+      motor: [0, 1.0, 1.0],
+      transmissao: [0, 0.8, 0],
+      freios: [0.5, 0.3, 1.5],
+      suspensao: [-0.5, 0.3, 1.0],
+      bateria: [0.3, 0.8, 1.2],
+      alternador: [-0.3, 0.8, 1.2],
+    };
+
+    const pos = positions[partName];
+    if (!pos || !this.car) return;
+
+    // Criar partículas
+    const particleCount = 10;
+    const particles = [];
+
+    for (let i = 0; i < particleCount; i++) {
+      const geometry = new THREE.SphereGeometry(0.05, 4);
+      const material = new THREE.MeshStandardMaterial({
+        color: 0xffaa00,
+        emissive: 0x442200,
+      });
+      const particle = new THREE.Mesh(geometry, material);
+
+      // Posição inicial no local da peça
+      particle.position.set(
+        pos[0] + (Math.random() - 0.5) * 0.5,
+        pos[1] + (Math.random() - 0.5) * 0.5,
+        pos[2] + (Math.random() - 0.5) * 0.5,
+      );
+
+      // Velocidade aleatória
+      particle.userData = {
+        velocity: new THREE.Vector3(
+          (Math.random() - 0.5) * 0.05,
+          Math.random() * 0.05,
+          (Math.random() - 0.5) * 0.05,
+        ),
+        life: 1.0,
+      };
+
+      this.scene.add(particle);
+      particles.push(particle);
+    }
+
+    // Animar partículas
+    const animateParticles = () => {
+      let alive = false;
+
+      particles.forEach((particle) => {
+        particle.userData.life -= 0.02;
+
+        if (particle.userData.life > 0) {
+          alive = true;
+          particle.position.x += particle.userData.velocity.x;
+          particle.position.y += particle.userData.velocity.y;
+          particle.position.z += particle.userData.velocity.z;
+          particle.scale.setScalar(particle.userData.life);
+        } else {
+          this.scene.remove(particle);
+        }
+      });
+
+      if (alive) {
+        requestAnimationFrame(animateParticles);
+      }
+    };
+
+    animateParticles();
+  }
 }
 
 // Expor globalmente

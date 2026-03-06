@@ -1,425 +1,471 @@
 /* src/ui/style.css - Versão completa com estilo profissional */
 
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Arial', sans-serif;
-    overflow: hidden;
-    background: #1a1a1a;
+  font-family: "Arial", sans-serif;
+  overflow: hidden;
+  background: #1a1a1a;
 }
 
 #game-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: 1;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
 }
 
 #ui-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 10;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 10;
 }
 
 /* ===== PAINEL SUPERIOR ===== */
 #top-panel {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(30, 30, 30, 0.95);
-    color: white;
-    padding: 15px 30px;
-    border-radius: 50px;
-    display: flex;
-    gap: 40px;
-    border: 2px solid #ff6b00;
-    box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
-    pointer-events: auto;
-    backdrop-filter: blur(5px);
-    z-index: 20;
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 30, 30, 0.95);
+  color: white;
+  padding: 15px 30px;
+  border-radius: 50px;
+  display: flex;
+  gap: 40px;
+  border: 2px solid #ff6b00;
+  box-shadow: 0 0 20px rgba(255, 107, 0, 0.3);
+  pointer-events: auto;
+  backdrop-filter: blur(5px);
+  z-index: 20;
 }
 
 .stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .stat-label {
-    font-size: 12px;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  font-size: 12px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .stat-value {
-    font-size: 24px;
-    font-weight: bold;
-    color: #ff6b00;
-    text-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
+  font-size: 24px;
+  font-weight: bold;
+  color: #ff6b00;
+  text-shadow: 0 0 10px rgba(255, 107, 0, 0.3);
 }
 
 /* ===== PAINEL DE FERRAMENTAS ===== */
 #tool-panel {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(30, 30, 30, 0.95);
-    padding: 20px;
-    border-radius: 15px;
-    border: 2px solid #ff6b00;
-    pointer-events: auto;
-    width: 240px;
-    backdrop-filter: blur(5px);
-    z-index: 20;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(30, 30, 30, 0.95);
+  padding: 20px;
+  border-radius: 15px;
+  border: 2px solid #ff6b00;
+  pointer-events: auto;
+  width: 240px;
+  backdrop-filter: blur(5px);
+  z-index: 20;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 #tool-panel h3 {
-    color: white;
-    text-align: center;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #ff6b00;
-    padding-bottom: 5px;
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #ff6b00;
+  padding-bottom: 5px;
 }
 
 .tool-item {
-    background: #3a3a3a;
-    color: white;
-    padding: 12px;
-    margin: 8px 0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  background: #3a3a3a;
+  color: white;
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .tool-item:hover {
-    background: #ff6b00;
-    transform: translateX(5px);
+  background: #ff6b00;
+  transform: translateX(5px);
 }
 
 .tool-item.selected {
-    background: #ff6b00;
-    border: 2px solid white;
+  background: #ff6b00;
+  border: 2px solid white;
 }
 
 .tool-icon {
-    font-size: 24px;
+  font-size: 24px;
 }
 
 .tool-info {
-    flex: 1;
+  flex: 1;
 }
 
 .tool-name {
-    font-weight: bold;
+  font-weight: bold;
 }
 
 .tool-stats {
-    font-size: 11px;
-    color: #ffd700;
+  font-size: 11px;
+  color: #ffd700;
 }
 
 /* ===== PAINEL DE PEÇAS ===== */
 #car-parts-panel {
-    position: absolute;
-    right: 20px;
-    top: 50%;
-    transform: translateY(-50%);
-    background: rgba(30, 30, 30, 0.95);
-    padding: 20px;
-    border-radius: 15px;
-    border: 2px solid #ff6b00;
-    pointer-events: auto;
-    width: 320px;
-    max-height: 600px;
-    overflow-y: auto;
-    backdrop-filter: blur(5px);
-    z-index: 20;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(30, 30, 30, 0.95);
+  padding: 20px;
+  border-radius: 15px;
+  border: 2px solid #ff6b00;
+  pointer-events: auto;
+  width: 320px;
+  max-height: 600px;
+  overflow-y: auto;
+  backdrop-filter: blur(5px);
+  z-index: 20;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 #car-parts-panel h3 {
-    color: white;
-    text-align: center;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #ff6b00;
-    padding-bottom: 5px;
+  color: white;
+  text-align: center;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #ff6b00;
+  padding-bottom: 5px;
 }
 
 /* Informações do Job */
 .job-info {
-    background: #2a2a2a;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 20px;
-    border-left: 4px solid #ff6b00;
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border-left: 4px solid #ff6b00;
 }
 
 .job-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 .job-customer {
-    font-size: 16px;
-    font-weight: bold;
-    color: #ff6b00;
+  font-size: 16px;
+  font-weight: bold;
+  color: #ff6b00;
 }
 
 .job-difficulty {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    background: #4CAF50;
-    color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: #4caf50;
+  color: white;
 }
 
 .job-payment {
-    font-size: 18px;
-    color: #4CAF50;
-    font-weight: bold;
-    text-align: right;
+  font-size: 18px;
+  color: #4caf50;
+  font-weight: bold;
+  text-align: right;
 }
 
 /* Lista de Peças */
 .parts-list {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .part-item {
-    background: #3a3a3a;
-    padding: 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s;
-    border: 2px solid transparent;
+  background: #3a3a3a;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: 2px solid transparent;
 }
 
 .part-item:hover {
-    background: #4a4a4a;
+  background: #4a4a4a;
 }
 
 .part-item.selected {
-    border-color: #ff6b00;
+  border-color: #ff6b00;
 }
 
 .part-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
 }
 
 .part-name {
-    font-weight: bold;
-    color: #ff6b00;
+  font-weight: bold;
+  color: #ff6b00;
 }
 
 .part-condition {
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
 }
 
 .condition-good {
-    background: #00aa00;
-    color: white;
+  background: #00aa00;
+  color: white;
 }
 
 .condition-medium {
-    background: #ffaa00;
-    color: black;
+  background: #ffaa00;
+  color: black;
 }
 
 .condition-bad {
-    background: #ff0000;
-    color: white;
+  background: #ff0000;
+  color: white;
 }
 
 .part-progress {
-    height: 4px;
-    background: #555;
-    border-radius: 2px;
-    overflow: hidden;
-    margin: 8px 0;
+  height: 4px;
+  background: #555;
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 8px 0;
 }
 
 .progress-bar {
-    height: 100%;
-    background: #ff6b00;
-    transition: width 0.3s;
+  height: 100%;
+  background: #ff6b00;
+  transition: width 0.3s;
 }
 
 .part-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .part-btn {
-    flex: 1;
-    padding: 6px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
+  flex: 1;
+  padding: 6px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
 }
 
 .repair-btn {
-    background: #ff6b00;
-    color: white;
+  background: #ff6b00;
+  color: white;
 }
 
 .buy-btn {
-    background: #4CAF50;
-    color: white;
+  background: #4caf50;
+  color: white;
 }
 
 .part-btn:disabled {
-    background: #666;
-    cursor: not-allowed;
-    opacity: 0.5;
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* ===== PAINEL INFERIOR ===== */
 #bottom-panel {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(30, 30, 30, 0.95);
-    padding: 15px 30px;
-    border-radius: 50px;
-    display: flex;
-    gap: 20px;
-    border: 2px solid #ff6b00;
-    pointer-events: auto;
-    backdrop-filter: blur(5px);
-    z-index: 20;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 30, 30, 0.95);
+  padding: 15px 30px;
+  border-radius: 50px;
+  display: flex;
+  gap: 20px;
+  border: 2px solid #ff6b00;
+  pointer-events: auto;
+  backdrop-filter: blur(5px);
+  z-index: 20;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 .action-btn {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 25px;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s;
-    font-size: 14px;
-    min-width: 140px;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s;
+  font-size: 14px;
+  min-width: 140px;
 }
 
 .action-btn.primary {
-    background: #ff6b00;
-    color: white;
+  background: #ff6b00;
+  color: white;
 }
 
 .action-btn.primary:hover {
-    background: #ff8c00;
-    transform: scale(1.05);
+  background: #ff8c00;
+  transform: scale(1.05);
 }
 
 .action-btn.secondary {
-    background: #2196F3;
-    color: white;
+  background: #2196f3;
+  color: white;
 }
 
 .action-btn.success {
-    background: #4CAF50;
-    color: white;
+  background: #4caf50;
+  color: white;
 }
 
 .action-btn:disabled {
-    background: #666;
-    cursor: not-allowed;
-    opacity: 0.5;
+  background: #666;
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 /* ===== INFORMAÇÃO DE INTERAÇÃO ===== */
 #interaction-info {
-    position: absolute;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 12px 24px;
-    border-radius: 25px;
-    border: 2px solid #ff6b00;
-    font-size: 14px;
-    pointer-events: none;
-    backdrop-filter: blur(5px);
-    z-index: 20;
-    box-shadow: 0 0 15px rgba(255, 107, 0, 0.3);
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.9);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 25px;
+  border: 2px solid #ff6b00;
+  font-size: 14px;
+  pointer-events: none;
+  backdrop-filter: blur(5px);
+  z-index: 20;
+  box-shadow: 0 0 15px rgba(255, 107, 0, 0.3);
 }
 
 /* ===== NOTIFICAÇÕES ===== */
 #notification {
-    position: absolute;
-    top: 100px;
-    right: 20px;
-    background: rgba(255, 107, 0, 0.95);
-    color: white;
-    padding: 15px 25px;
-    border-radius: 10px;
-    transform: translateX(400px);
-    transition: transform 0.3s ease;
-    border-left: 4px solid white;
-    min-width: 250px;
-    font-weight: bold;
-    backdrop-filter: blur(5px);
-    z-index: 100;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+  position: absolute;
+  top: 100px;
+  right: 20px;
+  background: rgba(255, 107, 0, 0.95);
+  color: white;
+  padding: 15px 25px;
+  border-radius: 10px;
+  transform: translateX(400px);
+  transition: transform 0.3s ease;
+  border-left: 4px solid white;
+  min-width: 250px;
+  font-weight: bold;
+  backdrop-filter: blur(5px);
+  z-index: 100;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
 }
 
 #notification.show {
-    transform: translateX(0);
+  transform: translateX(0);
 }
 
 /* ===== EMPTY STATES ===== */
 .empty-state {
-    color: #888;
-    text-align: center;
-    padding: 30px;
-    font-style: italic;
+  color: #888;
+  text-align: center;
+  padding: 30px;
+  font-style: italic;
 }
 
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {
-    width: 8px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: #3a3a3a;
-    border-radius: 4px;
+  background: #3a3a3a;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #ff6b00;
-    border-radius: 4px;
+  background: #ff6b00;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #ff8c00;
+  background: #ff8c00;
+}
+
+/* Status do carro */
+.car-status {
+  background: #2a2a2a;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  border: 1px solid #ff6b00;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #ffd700;
+  font-size: 14px;
+}
+
+.overall-progress {
+  height: 8px;
+  background: #444;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.overall-progress .progress-bar {
+  background: #4caf50;
+  height: 100%;
+  transition: width 0.3s;
+}
+
+/* Peça selecionada */
+.part-item.selected {
+  border: 2px solid #ff6b00;
+  background: #4a4a4a;
+  transform: scale(1.02);
+}
+
+.part-item {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.part-item:hover {
+  background: #4a4a4a;
 }

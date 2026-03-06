@@ -38,8 +38,10 @@ class GameState {
 
   updateMoney(amount) {
     this.money += amount;
-    document.getElementById("money").textContent =
-      `R$ ${this.money.toLocaleString()}`;
+    const moneyEl = document.getElementById("money");
+    if (moneyEl) {
+      moneyEl.textContent = `R$ ${this.money.toLocaleString()}`;
+    }
     window.achievementSystem?.checkAchievements();
   }
 
@@ -52,7 +54,10 @@ class GameState {
       this.levelUp();
     }
 
-    document.getElementById("level").textContent = this.level;
+    const levelEl = document.getElementById("level");
+    if (levelEl) {
+      levelEl.textContent = this.level;
+    }
   }
 
   levelUp() {
@@ -68,52 +73,127 @@ class GameState {
   updateReputation(change) {
     this.reputation = Math.max(1, Math.min(5, this.reputation + change));
     const stars = "★".repeat(this.reputation) + "☆".repeat(5 - this.reputation);
-    document.getElementById("reputation").textContent = stars;
+    const repEl = document.getElementById("reputation");
+    if (repEl) {
+      repEl.textContent = stars;
+    }
   }
 
   canAfford(amount) {
     return this.money >= amount;
   }
 
-  repairPart(partName, amount, repairCost) {
-    if (!this.currentCar || !this.currentCar.parts[partName]) return false;
+  // ===== NOVOS MÉTODOS PARA REPARO =====
+
+  getToolEfficiency(toolType) {
+    const tools = {
+      wrench: { repair: 10, cost: 5, name: "Chave Inglesa" },
+      screwdriver: { repair: 5, cost: 3, name: "Chave de Fenda" },
+      hammer: { repair: 15, cost: 8, name: "Martelo" },
+      welder: { repair: 25, cost: 12, name: "Maçarico" },
+      diagnostic: { repair: 0, cost: 0, name: "Diagnóstico" },
+    };
+    return tools[toolType] || tools.wrench;
+  }
+
+  checkCarReady() {
+    if (!this.currentCar || !this.currentCar.parts) {
+      return {
+        ready: false,
+        averageCondition: 0,
+        perfectCount: 0,
+        totalParts: 0,
+      };
+    }
+
+    const allParts = Object.values(this.currentCar.parts);
+    const totalParts = allParts.length;
+
+    if (totalParts === 0) {
+      return {
+        ready: false,
+        averageCondition: 0,
+        perfectCount: 0,
+        totalParts: 0,
+      };
+    }
+
+    let totalCondition = 0;
+    allParts.forEach((part) => {
+      totalCondition += part.condition || 0;
+    });
+
+    const averageCondition = totalCondition / totalParts;
+    const perfectCount = allParts.filter(
+      (p) => (p.condition || 0) >= 100,
+    ).length;
+
+    return {
+      ready: averageCondition >= 90,
+      averageCondition: Math.round(averageCondition),
+      perfectCount,
+      totalParts,
+    };
+  }
+
+  repairPart(partName) {
+    if (!this.currentCar || !this.currentCar.parts[partName]) {
+      return { success: false, message: "❌ Peça não encontrada" };
+    }
 
     const part = this.currentCar.parts[partName];
-    const oldCondition = part.condition;
-    part.condition = Math.min(100, part.condition + amount);
+    const tool = this.getToolEfficiency(this.selectedTool);
 
-    // Usar o repairCost passado como parâmetro
-    if (this.money >= repairCost) {
-      this.money -= repairCost;
-      this.addExperience(5);
-      this.updateMoney();
-      return true;
+    if (part.condition >= 100) {
+      return { success: false, message: "✅ Peça já está em perfeito estado" };
     }
-    return false;
+
+    if (this.money < tool.cost) {
+      return { success: false, message: "💰 Dinheiro insuficiente" };
+    }
+
+    const oldCondition = part.condition;
+    part.condition = Math.min(100, part.condition + tool.repair);
+    this.money -= tool.cost;
+    this.addExperience(5);
+
+    const repairedAmount = Math.round(part.condition - oldCondition);
+
+    this.updateMoney();
+
+    return {
+      success: true,
+      message: `🔧 Reparou ${repairedAmount}% com ${tool.name}`,
+      repairedAmount,
+      partName,
+      newCondition: part.condition,
+    };
   }
 
   buyNewPart(partName) {
-    if (!this.currentCar || !this.currentCar.parts[partName]) return false;
+    if (!this.currentCar || !this.currentCar.parts[partName]) {
+      return { success: false, message: "❌ Peça não encontrada" };
+    }
 
     const part = this.currentCar.parts[partName];
-    const partPrice = 500; // Preço fixo por enquanto
+    const partPrice = 500;
 
-    if (this.money >= partPrice) {
-      this.money -= partPrice;
-      part.condition = 100;
-      this.addExperience(20);
-      this.updateMoney();
-      return true;
+    if (this.money < partPrice) {
+      return { success: false, message: "💰 Dinheiro insuficiente" };
     }
-    return false;
-  }
 
-  checkAllPartsGood() {
-    if (!this.currentCar) return false;
+    part.condition = 100;
+    this.money -= partPrice;
+    this.addExperience(20);
 
-    return Object.values(this.currentCar.parts).every(
-      (part) => part.condition >= 90,
-    );
+    this.updateMoney();
+
+    return {
+      success: true,
+      message: `🛒 Peça nova instalada!`,
+      partName,
+      newCondition: 100,
+    };
   }
 }
 
@@ -152,30 +232,22 @@ Object.defineProperty(window, "uiManager", {
 // ===== FUNÇÕES GLOBAIS =====
 
 window.repairPart = (partName) => {
-  if (!window.gameState || !window.gameState.currentCar) {
-    window.uiManager?.showNotification("❌ Nenhum carro na oficina", "error");
+  if (!window.gameState) {
+    window.uiManager?.showNotification("❌ Jogo não inicializado", "error");
     return;
   }
 
-  const tool = window.gameState.selectedTool || "wrench";
+  const result = window.gameState.repairPart(partName);
 
-  // Usar UpgradeManager para obter eficiência
-  let amount = 10;
-  let repairCost = 30;
-
-  if (window.uiManager?.upgradeManager) {
-    const efficiency = window.uiManager.upgradeManager.getToolEfficiency(tool);
-    amount = efficiency.repairAmount;
-    repairCost = efficiency.cost;
-  }
-
-  if (window.gameState.repairPart(partName, amount, repairCost)) {
-    window.uiManager?.showNotification(`✅ ${partName} reparado!`, "success");
+  if (result.success) {
+    window.uiManager?.showNotification(result.message, "success");
     window.uiManager?.updatePartsList();
+    window.uiManager?.updateMoney();
 
     window.createRepairEffect?.(partName);
 
-    if (window.gameState.checkAllPartsGood()) {
+    const status = window.gameState.checkCarReady();
+    if (status.ready) {
       document.getElementById("deliver-car").disabled = false;
       window.uiManager?.showNotification(
         "🎉 Carro pronto para entrega!",
@@ -183,29 +255,29 @@ window.repairPart = (partName) => {
       );
     }
   } else {
-    window.uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
+    window.uiManager?.showNotification(result.message, "error");
   }
 };
 
-window.buyPart = (partName) => {
-  if (!window.gameState || !window.gameState.currentCar) {
-    window.uiManager?.showNotification("❌ Nenhum carro na oficina", "error");
+window.buyNewPart = (partName) => {
+  if (!window.gameState) {
+    window.uiManager?.showNotification("❌ Jogo não inicializado", "error");
     return;
   }
 
-  if (window.gameState.buyNewPart(partName)) {
-    window.uiManager?.showNotification(
-      `🛒 ${partName} nova instalada!`,
-      "success",
-    );
-    window.uiManager?.updatePartsList();
+  const result = window.gameState.buyNewPart(partName);
 
-    // Criar efeito visual mais forte
+  if (result.success) {
+    window.uiManager?.showNotification(result.message, "success");
+    window.uiManager?.updatePartsList();
+    window.uiManager?.updateMoney();
+
     for (let i = 0; i < 3; i++) {
       setTimeout(() => window.createRepairEffect?.(partName), i * 200);
     }
 
-    if (window.gameState.checkAllPartsGood()) {
+    const status = window.gameState.checkCarReady();
+    if (status.ready) {
       document.getElementById("deliver-car").disabled = false;
       window.uiManager?.showNotification(
         "🎉 Carro pronto para entrega!",
@@ -213,7 +285,18 @@ window.buyPart = (partName) => {
       );
     }
   } else {
-    window.uiManager?.showNotification("💰 Dinheiro insuficiente!", "error");
+    window.uiManager?.showNotification(result.message, "error");
+  }
+};
+
+window.selectPart = (partName) => {
+  if (window.gameState) {
+    window.gameState.selectedPart = partName;
+    window.uiManager?.updatePartsList();
+    window.uiManager?.showNotification(
+      `🔧 Peça selecionada: ${partName}`,
+      "info",
+    );
   }
 };
 
@@ -312,6 +395,15 @@ window.upgradeGarage = (upgradeId) => {
     }
   } else {
     window.uiManager.showNotification(result.message, "error");
+  }
+};
+
+window.createRepairEffect = (partName) => {
+  if (
+    window.scene3D &&
+    typeof window.scene3D.createRepairEffect === "function"
+  ) {
+    window.scene3D.createRepairEffect(partName);
   }
 };
 
