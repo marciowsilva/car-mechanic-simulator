@@ -43,7 +43,7 @@ const modules = [
     name: "AchievementSystem",
   },
   { path: "/src/systems/customers/CustomerSystem.js", name: "CustomerSystem" },
-  { path: "/src/systems/CustomerManager.js", name: "CustomerManager" },
+  { path: "/src/systems/customers/CustomerManager.js", name: "CustomerManager" },
   {
     path: "/src/systems/challenges/DailyChallenges.js",
     name: "DailyChallenges",
