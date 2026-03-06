@@ -1,4 +1,4 @@
-// game.js - ARQUIVO PRINCIPAL COMPLETO
+// src/core/Game.js - ARQUIVO PRINCIPAL COMPLETO COM PROTEÇÃO
 
 import {
   TOOL_BASE_STATS,
@@ -516,3 +516,32 @@ if (typeof window !== "undefined") {
   window.GameState = GameState;
   console.log("🌐 GameState disponível globalmente");
 }
+
+// ===== PROTEÇÃO FINAL =====
+// Garantir que gameState nunca seja substituído por um objeto simples
+if (window.gameState && !(window.gameState instanceof GameState)) {
+  console.warn("⚠️ gameState foi substituído! Recriando...");
+  const dinheiroAntigo = window.gameState.money;
+  const nivelAntigo = window.gameState.level;
+  
+  window.gameState = new GameState();
+  window.gameState.money = dinheiroAntigo;
+  window.gameState.level = nivelAntigo;
+  
+  console.log("✅ gameState restaurado como instância de GameState");
+}
+
+// Proteção adicional - verificar periodicamente
+setInterval(() => {
+  if (window.gameState && !(window.gameState instanceof GameState)) {
+    console.error("❌ gameState perdeu sua classe! Recuperando...");
+    const dinheiroAntigo = window.gameState.money;
+    const nivelAntigo = window.gameState.level;
+    
+    window.gameState = new GameState();
+    window.gameState.money = dinheiroAntigo;
+    window.gameState.level = nivelAntigo;
+    
+    console.log("✅ gameState recuperado automaticamente");
+  }
+}, 1000);
