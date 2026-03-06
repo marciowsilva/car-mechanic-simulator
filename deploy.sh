@@ -38,6 +38,9 @@ git commit -m "Auto-deploy: $DATA_ATUAL" --allow-empty
 echo "📤 Subindo Desenvolvimento..."
 git push || abortar "Push Desenvolvimento"
 
+echo "🚀 Enviando para o GitHub (Desenvolvimento)..."
+git push origin desenvolvimento || abortar "Push Desenvolvimento"
+
 echo "🔄 Fazendo Merge para Master..."
 git checkout master || abortar "Checkout Master"
 git merge desenvolvimento --no-edit || abortar "Merge"
