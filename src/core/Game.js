@@ -362,9 +362,14 @@ window.upgradeSkill = (skillId) => {
   }
 };
 
+// ===== FUNÇÕES DE UPGRADE =====
+
 window.upgradeTool = (toolId) => {
   if (!window.uiManager?.upgradeManager) {
-    console.log("❌ UpgradeManager não disponível");
+    window.uiManager?.showNotification(
+      "❌ Sistema de upgrades não disponível",
+      "error",
+    );
     return;
   }
 
@@ -383,7 +388,10 @@ window.upgradeTool = (toolId) => {
 
 window.upgradeGarage = (upgradeId) => {
   if (!window.uiManager?.upgradeManager) {
-    console.log("❌ UpgradeManager não disponível");
+    window.uiManager?.showNotification(
+      "❌ Sistema de upgrades não disponível",
+      "error",
+    );
     return;
   }
 
@@ -523,11 +531,11 @@ if (window.gameState && !(window.gameState instanceof GameState)) {
   console.warn("⚠️ gameState foi substituído! Recriando...");
   const dinheiroAntigo = window.gameState.money;
   const nivelAntigo = window.gameState.level;
-  
+
   window.gameState = new GameState();
   window.gameState.money = dinheiroAntigo;
   window.gameState.level = nivelAntigo;
-  
+
   console.log("✅ gameState restaurado como instância de GameState");
 }
 
@@ -537,11 +545,11 @@ setInterval(() => {
     console.error("❌ gameState perdeu sua classe! Recuperando...");
     const dinheiroAntigo = window.gameState.money;
     const nivelAntigo = window.gameState.level;
-    
+
     window.gameState = new GameState();
     window.gameState.money = dinheiroAntigo;
     window.gameState.level = nivelAntigo;
-    
+
     console.log("✅ gameState recuperado automaticamente");
   }
 }, 1000);
