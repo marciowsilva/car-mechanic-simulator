@@ -55,6 +55,8 @@ const modules = [
   { path: "/src/garage/Scene3D.js", name: "Scene3D" },
   { path: "/src/garage/Garage.js", name: "GarageSystem" },
   { path: "/src/garage/GarageLayout.js", name: "GARAGE_CONFIG" },
+  // { path: "/src/garage/RealisticGarage.js", name: "RealisticGarage" },
+  { path: "/src/garage/OptimizedGarage.js", name: "OptimizedGarage" },
   { path: "/src/ui/UIManager.js", name: "UIManager" },
 ];
 
@@ -154,18 +156,18 @@ function initializeGame() {
   // === CAMADA 2: Scene3D ===
   if (!window.scene3D) {
     try {
-      // Tentar usar a cena simples primeiro (mais leve para testes)
-      if (window.SimpleScene3D) {
-        window.scene3D = new window.SimpleScene3D(container);
-        console.log("✅ SimpleScene3D criado");
-      }
-      // Fallback para cena normal
-      else if (window.Scene3D) {
+      if (window.OptimizedGarage) {
+        window.scene3D = new window.OptimizedGarage(container);
+        console.log("✅ Garagem otimizada criada");
+      } else if (window.RealisticGarage) {
+        window.scene3D = new window.RealisticGarage(container);
+        console.log("✅ Garagem realista criada");
+      } else if (window.Scene3D) {
         window.scene3D = new window.Scene3D(container);
         console.log("✅ Scene3D normal criado");
       }
     } catch (err) {
-      console.log("❌ Erro ao criar Scene3D:", err);
+      console.log("❌ Erro ao criar cena 3D:", err);
     }
   }
 
