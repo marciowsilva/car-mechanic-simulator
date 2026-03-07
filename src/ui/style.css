@@ -646,3 +646,163 @@ body {
   font-size: 24px;
   transform: rotate(15deg);
 }
+
+/* ===== TOOLTIPS ===== */
+#game-tooltip {
+  font-family: Arial, sans-serif;
+  line-height: 1.4;
+  pointer-events: none;
+  user-select: none;
+}
+
+#game-tooltip .tooltip-title {
+  font-weight: bold;
+  color: #ff6b00;
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+#game-tooltip .tooltip-content {
+  color: #ddd;
+  font-size: 12px;
+}
+
+#game-tooltip .tooltip-value {
+  color: #ffd700;
+  font-weight: bold;
+}
+
+/* ===== NOTIFICAÇÕES ===== */
+#notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.notification {
+  pointer-events: auto;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.notification:hover {
+  transform: scale(1.02) translateX(-5px);
+  filter: brightness(1.1);
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.float-animation {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 5px #ff6b00;
+  }
+  50% {
+    box-shadow: 0 0 20px #ff6b00;
+  }
+  100% {
+    box-shadow: 0 0 5px #ff6b00;
+  }
+}
+
+.glow-animation {
+  animation: glow 2s ease-in-out infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-animation {
+  animation: spin 1s linear infinite;
+}
+
+/* ===== LOADING SCREEN MELHORADO ===== */
+#loading-screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #1a1a1a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  transition: opacity 0.5s;
+}
+
+.loader {
+  text-align: center;
+  color: white;
+}
+
+.loader h1 {
+  color: #ff6b00;
+  margin-bottom: 30px;
+  font-size: 36px;
+  text-shadow: 0 0 10px rgba(255, 107, 0, 0.5);
+  animation: glow 2s ease-in-out infinite;
+}
+
+.loader .spinner {
+  width: 60px;
+  height: 60px;
+  border: 6px solid #333;
+  border-top: 6px solid #ff6b00;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+
+.loader .progress-bar {
+  width: 300px;
+  height: 6px;
+  background: #333;
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 20px auto;
+}
+
+.loader .progress-fill {
+  height: 100%;
+  background: #ff6b00;
+  transition: width 0.3s;
+}
+
+.loader .progress-text {
+  color: #ffd700;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.loader .tips {
+  margin-top: 30px;
+  color: #888;
+  font-style: italic;
+  max-width: 400px;
+}

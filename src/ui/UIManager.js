@@ -3,10 +3,12 @@
 import { UpgradeManager } from "/src/systems/UpgradeManager.js";
 import { UpgradePanel } from "/src/ui/UpgradePanel.js";
 import { CustomersPanel } from "/src/ui/CustomersPanel.js";
-import { EconomySystem } from "/src/systems/EconomySystem.js";
-import { ShopPanel } from "/src/ui/ShopPanel.js";
-import { AchievementSystem } from "/src/systems/AchievementSystem.js";
-import { AchievementsPanel } from "/src/ui/AchievementsPanel.js";
+import { NotificationSystem } from "/src/ui/NotificationSystem.js";
+import { SoundSystem } from "/src/systems/SoundSystem.js";
+import { TooltipSystem } from "/src/ui/TooltipSystem.js";
+import { AnimationSystem } from "/src/systems/AnimationSystem.js";
+import { GarageExpansion } from "/src/garage/GarageExpansion.js";
+import { GaragePanel } from "/src/ui/GaragePanel.js";
 
 export class UIManager {
   constructor() {
@@ -22,6 +24,7 @@ export class UIManager {
     this.initEventListeners();
     this.loadSystems();
     this.updateAllDisplays();
+    this.initTooltips();
 
     setInterval(() => this.updateTimer(), 1000);
   }
@@ -56,6 +59,8 @@ export class UIManager {
       "upgrade-shop-btn",
       "inventory-btn",
       "customers-btn",
+      "shop-btn",
+      "achievements-btn",
 
       // Áudio
       "toggle-music",
@@ -67,6 +72,7 @@ export class UIManager {
       // Loading
       "loading-screen",
       "loading-progress",
+      "loading-tip",
     ];
 
     elementosIds.forEach((id) => {
@@ -107,11 +113,82 @@ export class UIManager {
     return this.elements[id] || this.createFallbackElement(id);
   }
 
+  // ===== SISTEMA DE TOOLTIPS =====
+  initTooltips() {
+    setTimeout(() => {
+      // Tooltips para botões de ação
+      const tooltips = [
+        {
+          selector: "#new-job",
+          content: "🚗 Iniciar um novo serviço com um cliente",
+        },
+        {
+          selector: "#deliver-car",
+          content:
+            "✅ Entregar o carro quando todos os reparos estiverem prontos",
+        },
+        {
+          selector: "#upgrade-shop-btn",
+          content: "🛠️ Melhorar suas ferramentas e garagem",
+        },
+        {
+          selector: "#inventory-btn",
+          content: "📦 Gerenciar seu estoque de peças",
+        },
+        {
+          selector: "#customers-btn",
+          content: "👥 Ver lista de clientes e estatísticas",
+        },
+        { selector: "#shop-btn", content: "🛒 Comprar peças novas e raras" },
+        {
+          selector: "#achievements-btn",
+          content: "🏆 Ver suas conquistas e progresso",
+        },
+        {
+          selector: "#garage-btn",
+          content: "🏢 Gerenciar sua garagem e expansões",
+        },
+      ];
+
+      tooltips.forEach(({ selector, content }) => {
+        const el = document.querySelector(selector);
+        if (el && this.tooltips) {
+          this.tooltips.attach(el, content, { delay: 500, position: "top" });
+        }
+      });
+
+      // Tooltips para ferramentas
+      document.querySelectorAll(".tool-item").forEach((tool) => {
+        const toolId = tool.dataset.tool;
+        const toolNames = {
+          wrench: "🔧 Chave Inglesa - Reparo básico",
+          screwdriver: "🪛 Chave de Fenda - Reparo preciso",
+          hammer: "🔨 Martelo - Reparo pesado",
+          welder: "⚡ Maçarico - Reparo avançado",
+          diagnostic: "📊 Diagnóstico - Inspecionar problemas",
+        };
+
+        if (this.tooltips) {
+          this.tooltips.attach(tool, toolNames[toolId] || "Ferramenta", {
+            delay: 300,
+          });
+        }
+      });
+    }, 2000);
+  }
+
   // ===== CARREGAMENTO DE SISTEMAS =====
   async loadSystems() {
     console.log("🔌 Carregando sistemas...");
 
     try {
+      // Carregar sistemas de UI primeiro
+      this.notifications = new NotificationSystem();
+      this.sounds = new SoundSystem();
+      this.tooltips = new TooltipSystem();
+      this.animations = new AnimationSystem();
+      console.log("✅ Sistemas de UI carregados");
+
       // Carregar UpgradeManager
       const upgradeModule = await import("/src/systems/UpgradeManager.js");
       const UpgradeManager =
@@ -133,6 +210,36 @@ export class UIManager {
       // Criar painel de clientes
       this.customersPanel = new CustomersPanel(this.customerSystem);
 
+      // Carregar EconomySystem
+      try {
+        const economyModule = await import("/src/systems/EconomySystem.js");
+        const EconomySystem =
+          economyModule.EconomySystem || economyModule.default;
+        this.economySystem = new EconomySystem();
+        console.log("✅ EconomySystem carregado");
+
+        const ShopPanel = (await import("/src/ui/ShopPanel.js")).ShopPanel;
+        this.shopPanel = new ShopPanel(this.economySystem);
+      } catch (err) {
+        console.log("⚠️ EconomySystem não disponível:", err);
+      }
+
+      // Carregar AchievementSystem
+      try {
+        const achievementModule =
+          await import("/src/systems/AchievementSystem.js");
+        const AchievementSystem =
+          achievementModule.AchievementSystem || achievementModule.default;
+        this.achievementSystem = new AchievementSystem();
+        console.log("✅ AchievementSystem carregado");
+
+        const AchievementsPanel = (await import("/src/ui/AchievementsPanel.js"))
+          .AchievementsPanel;
+        this.achievementsPanel = new AchievementsPanel(this.achievementSystem);
+      } catch (err) {
+        console.log("⚠️ AchievementSystem não disponível:", err);
+      }
+
       // Carregar Inventory se disponível
       try {
         const inventoryModule = await import("/src/systems/Inventory.js");
@@ -143,26 +250,19 @@ export class UIManager {
         console.log("⚠️ Inventory não disponível:", err);
       }
 
-      // Carregar Sistema de Economia e Painel da Loja
-      const economyModule = await import("/src/systems/EconomySystem.js");
-      const EconomySystem =
-        economyModule.EconomySystem || economyModule.default;
-      this.economySystem = new EconomySystem();
-      console.log("✅ EconomySystem carregado");
+      try {
+        const garageModule = await import("/src/garage/GarageExpansion.js");
+        const GarageExpansion =
+          garageModule.GarageExpansion || garageModule.default;
+        this.garageExpansion = new GarageExpansion();
+        console.log("✅ GarageExpansion carregado");
 
-      this.shopPanel = new ShopPanel(this.economySystem);
+        this.garagePanel = new GaragePanel(this.garageExpansion);
+      } catch (err) {
+        console.log("⚠️ GarageExpansion não disponível:", err);
+      }
 
-      // Carregar Sistema de Conquistas
-      const achievementModule =
-        await import("/src/systems/AchievementSystem.js");
-      const AchievementSystem =
-        achievementModule.AchievementSystem || achievementModule.default;
-      this.achievementSystem = new AchievementSystem();
-      console.log("✅ AchievementSystem carregado");
-
-      this.achievementsPanel = new AchievementsPanel(this.achievementSystem);
-
-      // Carregar sistemas adicionais
+      // Carregar sistemas adicionais em segundo plano
       this.loadAdditionalSystems();
     } catch (err) {
       console.error("❌ Erro ao carregar sistemas:", err);
@@ -170,13 +270,15 @@ export class UIManager {
   }
 
   async loadAdditionalSystems() {
-    // Carregar sistemas de forma assíncrona sem travar
     setTimeout(() => {
       import("/src/systems/achievements/AchievementSystem.js")
         .then((module) => {
-          const AchievementSystem = module.AchievementSystem || module.default;
-          this.achievementSystem = new AchievementSystem();
-          console.log("✅ AchievementSystem carregado");
+          if (!this.achievementSystem) {
+            const AchievementSystem =
+              module.AchievementSystem || module.default;
+            this.achievementSystem = new AchievementSystem();
+            console.log("✅ AchievementSystem carregado (tardio)");
+          }
         })
         .catch(() => {});
 
@@ -204,16 +306,19 @@ export class UIManager {
 
     // Botão Novo Cliente
     this.getElement("new-job").addEventListener("click", () => {
+      this.sounds?.play("click");
       this.createNewJob();
     });
 
     // Botão Entregar Carro
     this.getElement("deliver-car").addEventListener("click", () => {
+      this.sounds?.play("click");
       this.deliverCar();
     });
 
     // Botão Upgrades
     this.getElement("upgrade-shop-btn").addEventListener("click", () => {
+      this.sounds?.play("click");
       if (this.upgradePanel) {
         this.upgradePanel.toggle();
       } else {
@@ -225,6 +330,7 @@ export class UIManager {
     const customersBtn = this.getElement("customers-btn");
     if (customersBtn) {
       customersBtn.addEventListener("click", () => {
+        this.sounds?.play("click");
         if (this.customersPanel) {
           this.customersPanel.toggle();
         } else {
@@ -236,15 +342,11 @@ export class UIManager {
       });
     }
 
-    // Botão Estoque
-    this.getElement("inventory-btn").addEventListener("click", () => {
-      this.showNotification("📦 Sistema de estoque em desenvolvimento", "info");
-    });
-
     // Botão Loja
-    const shopBtn = document.getElementById("shop-btn");
+    const shopBtn = this.getElement("shop-btn");
     if (shopBtn) {
       shopBtn.addEventListener("click", () => {
+        this.sounds?.play("click");
         if (this.shopPanel) {
           this.shopPanel.toggle();
         } else {
@@ -254,14 +356,45 @@ export class UIManager {
     }
 
     // Botão Conquistas
-    const achievementsBtn = document.getElementById("achievements-btn");
+    const achievementsBtn = this.getElement("achievements-btn");
     if (achievementsBtn) {
       achievementsBtn.addEventListener("click", () => {
+        this.sounds?.play("click");
         if (this.achievementsPanel) {
           this.achievementsPanel.toggle();
         } else {
           this.showNotification(
             "❌ Sistema de conquistas não disponível",
+            "error",
+          );
+        }
+      });
+    }
+
+    // Botão Estoque
+    this.getElement("inventory-btn").addEventListener("click", () => {
+      this.sounds?.play("click");
+      if (this.inventory) {
+        // Implementar painel de inventário
+        this.showNotification(
+          "📦 Sistema de estoque em desenvolvimento",
+          "info",
+        );
+      } else {
+        this.showNotification("❌ Inventário não disponível", "error");
+      }
+    });
+
+    // Botão Garagem
+    const garageBtn = document.getElementById("garage-btn");
+    if (garageBtn) {
+      garageBtn.addEventListener("click", () => {
+        this.sounds?.play("click");
+        if (this.garagePanel) {
+          this.garagePanel.toggle();
+        } else {
+          this.showNotification(
+            "❌ Sistema de garagem não disponível",
             "error",
           );
         }
@@ -279,26 +412,68 @@ export class UIManager {
         if (window.gameState) {
           window.gameState.selectedTool = toolId;
         }
-        this.showNotification(`🔧 Ferramenta: ${toolId}`, "info");
+        this.showNotification(
+          `🔧 Ferramenta: ${this.getToolName(toolId)}`,
+          "info",
+        );
+        this.sounds?.play("click");
+
+        // Animação de pulsação
+        if (this.animations) {
+          this.animations.pulse(tool);
+        }
       });
     });
 
     // Controles de áudio
-    this.getElement("toggle-music").addEventListener("click", () => {
-      console.log("🎵 Música toggled");
-    });
-
-    this.getElement("toggle-sfx").addEventListener("click", () => {
-      console.log("🔊 SFX toggled");
-    });
+    this.initAudioControls();
 
     // Tecla ESC para fechar painéis
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         if (this.upgradePanel?.isVisible) this.upgradePanel.hide();
         if (this.customersPanel?.isVisible) this.customersPanel.hide();
+        if (this.shopPanel?.isVisible) this.shopPanel.hide();
+        if (this.achievementsPanel?.isVisible) this.achievementsPanel.hide();
+        this.showNotification("🔧 Painéis fechados", "info");
       }
     });
+  }
+
+  initAudioControls() {
+    const musicBtn = this.getElement("toggle-music");
+    const sfxBtn = this.getElement("toggle-sfx");
+
+    if (musicBtn && this.sounds) {
+      musicBtn.addEventListener("click", () => {
+        this.sounds.toggle();
+        musicBtn.textContent = this.sounds.enabled ? "🔊" : "🔇";
+        this.showNotification(
+          this.sounds.enabled ? "🔊 Som ativado" : "🔇 Som desativado",
+          "info",
+        );
+        this.sounds?.play("click");
+      });
+    }
+
+    if (sfxBtn && this.sounds) {
+      sfxBtn.addEventListener("click", () => {
+        // Efeitos específicos
+        this.sounds?.play("click");
+        this.showNotification("🔧 Efeitos sonoros", "info");
+      });
+    }
+  }
+
+  getToolName(toolId) {
+    const names = {
+      wrench: "Chave Inglesa",
+      screwdriver: "Chave de Fenda",
+      hammer: "Martelo",
+      welder: "Maçarico",
+      diagnostic: "Diagnóstico",
+    };
+    return names[toolId] || toolId;
   }
 
   // ===== GERENCIAMENTO DE JOBS =====
@@ -336,6 +511,12 @@ export class UIManager {
         `🚗 ${personalityIcon} ${customer.name} - R$ ${job.payment}`,
         "success",
       );
+      this.sounds?.play("success");
+
+      // Registrar no sistema de conquistas
+      if (this.achievementSystem) {
+        this.achievementSystem.checkAchievement("jobStarted");
+      }
     } else {
       // Fallback para job simples
       const job = {
@@ -350,11 +531,18 @@ export class UIManager {
       window.gameState.currentJob = job;
       window.gameState.currentCar = { parts: job.parts };
       this.showNotification(`🚗 Novo cliente: ${job.customerName}`, "success");
+      this.sounds?.play("success");
     }
 
     this.updateJobInfo();
     this.updatePartsList();
     this.getElement("deliver-car").disabled = false;
+
+    // Animar botão de entrega
+    const deliverBtn = this.getElement("deliver-car");
+    if (this.animations) {
+      this.animations.pulse(deliverBtn);
+    }
   }
 
   deliverCar() {
@@ -382,12 +570,34 @@ export class UIManager {
         window.gameState.money += result.payment;
         window.gameState.jobsCompleted++;
 
+        // Registrar conquistas
+        if (this.achievementSystem) {
+          this.achievementSystem.checkAchievement("jobCompleted");
+          this.achievementSystem.checkAchievement(
+            "moneyEarned",
+            result.payment,
+          );
+
+          if (quality >= 95) {
+            this.achievementSystem.checkAchievement("perfectJob");
+          }
+
+          if (result.timeBonus > 0) {
+            this.achievementSystem.checkAchievement("fastJob");
+          }
+
+          if (result.customer?.isVIP) {
+            this.achievementSystem.checkAchievement("vipCustomer");
+          }
+        }
+
         const bonusText =
           result.timeBonus > 0 ? ` (bônus R$ ${result.timeBonus})` : "";
         this.showNotification(
           `💰 Serviço concluído! R$ ${result.payment}${bonusText}`,
-          "success",
+          "money",
         );
+        this.sounds?.play("money");
 
         if (result.satisfaction >= 80) {
           this.showNotification(`😊 Cliente satisfeito!`, "success");
@@ -400,7 +610,8 @@ export class UIManager {
       const payment = window.gameState.currentJob.payment || 1000;
       window.gameState.money += payment;
       window.gameState.jobsCompleted++;
-      this.showNotification(`💰 Serviço concluído! R$ ${payment}`, "success");
+      this.showNotification(`💰 Serviço concluído! R$ ${payment}`, "money");
+      this.sounds?.play("money");
     }
 
     window.gameState.currentJob = null;
@@ -411,6 +622,15 @@ export class UIManager {
     this.updateJobInfo();
     this.updatePartsList();
     this.getElement("deliver-car").disabled = true;
+
+    // Animação de fade out do job info
+    const jobInfo = this.getElement("job-info");
+    if (this.animations) {
+      this.animations.fadeOut(jobInfo, 200, () => {
+        this.updateJobInfo();
+        this.animations.fadeIn(jobInfo, 200);
+      });
+    }
   }
 
   // ===== GERADORES (FALLBACK) =====
@@ -460,7 +680,15 @@ export class UIManager {
   updateMoney() {
     const moneyEl = this.getElement("money");
     if (window.gameState) {
-      moneyEl.textContent = `R$ ${window.gameState.money.toLocaleString()}`;
+      const oldValue = parseInt(moneyEl.textContent?.replace(/\D/g, "") || "0");
+      const newValue = window.gameState.money;
+
+      moneyEl.textContent = `R$ ${newValue.toLocaleString()}`;
+
+      // Animação se o valor mudou
+      if (oldValue !== newValue && this.animations) {
+        this.animations.pulse(moneyEl);
+      }
     }
   }
 
@@ -613,7 +841,7 @@ export class UIManager {
 
       html += `
                 <div class="part-item ${gameState.selectedPart === name ? "selected" : ""}" 
-                     onclick="window.selectPart && window.selectPart('${name}')">
+                     data-part="${name}">
                     <div class="part-header">
                         <span class="part-name">${this.getPartDisplayName(name)}</span>
                         <span class="part-condition ${conditionClass}">${condition}% - ${conditionText}</span>
@@ -622,14 +850,10 @@ export class UIManager {
                         <div class="progress-bar" style="width: ${condition}%"></div>
                     </div>
                     <div class="part-actions">
-                        <button class="part-btn repair-btn" 
-                                onclick="event.stopPropagation(); window.repairPart('${name}')"
-                                ${!canRepair ? "disabled" : ""}>
+                        <button class="part-btn repair-btn" data-part="${name}">
                             🔧 Reparar (R$ ${repairCost})
                         </button>
-                        <button class="part-btn buy-btn" 
-                                onclick="event.stopPropagation(); window.buyNewPart('${name}')"
-                                ${gameState.money < 500 ? "disabled" : ""}>
+                        <button class="part-btn buy-btn" data-part="${name}">
                             🛒 Nova (R$ 500)
                         </button>
                     </div>
@@ -639,6 +863,38 @@ export class UIManager {
 
     html += "</div>";
     el.innerHTML = html;
+
+    // Adicionar event listeners aos botões
+    el.querySelectorAll(".repair-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const partName = btn.dataset.part;
+        if (window.repairPart) {
+          window.repairPart(partName);
+        }
+      });
+    });
+
+    el.querySelectorAll(".buy-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const partName = btn.dataset.part;
+        if (window.buyNewPart) {
+          window.buyNewPart(partName);
+        }
+      });
+    });
+
+    el.querySelectorAll(".part-item").forEach((item) => {
+      item.addEventListener("click", (e) => {
+        if (!e.target.classList.contains("part-btn")) {
+          const partName = item.dataset.part;
+          if (window.selectPart) {
+            window.selectPart(partName);
+          }
+        }
+      });
+    });
   }
 
   getPartDisplayName(partName) {
@@ -676,38 +932,66 @@ export class UIManager {
 
         if (customer) {
           this.showNotification(`⏰ ${customer.name} foi embora!`, "error");
+          this.sounds?.play("error");
         } else {
           this.showNotification("⏰ Tempo esgotado!", "error");
+          this.sounds?.play("error");
         }
       }
     }
   }
 
   // ===== NOTIFICAÇÕES =====
-  showNotification(message, type = "info") {
-    const notification = this.getElement("notification");
+  showNotification(message, type = "info", duration = 3000) {
+    if (this.notifications) {
+      this.notifications.show(message, type, duration);
 
-    if (this.notificationTimeout) {
-      clearTimeout(this.notificationTimeout);
+      // Tocar som correspondente
+      switch (type) {
+        case "success":
+          this.sounds?.play("success");
+          break;
+        case "error":
+          this.sounds?.play("error");
+          break;
+        case "achievement":
+          this.sounds?.play("unlock");
+          break;
+        case "money":
+          this.sounds?.play("money");
+          break;
+        default:
+          this.sounds?.play("click");
+      }
+    } else {
+      // Fallback para o sistema antigo
+      const notification = this.getElement("notification");
+
+      if (this.notificationTimeout) {
+        clearTimeout(this.notificationTimeout);
+      }
+
+      notification.textContent = message;
+      notification.style.backgroundColor =
+        type === "error"
+          ? "#ff3333"
+          : type === "success"
+            ? "#00aa00"
+            : "#ff6b00";
+
+      notification.classList.add("show");
+
+      this.notificationTimeout = setTimeout(() => {
+        notification.classList.remove("show");
+      }, duration);
     }
-
-    notification.textContent = message;
-    notification.style.backgroundColor =
-      type === "error" ? "#ff3333" : type === "success" ? "#00aa00" : "#ff6b00";
-
-    notification.classList.add("show");
-
-    this.notificationTimeout = setTimeout(() => {
-      notification.classList.remove("show");
-    }, 3000);
   }
 
-  // Método para mostrar notificação de conquista
   showAchievementNotification(achievement) {
     if (this.achievementsPanel) {
       this.achievementsPanel.showUnlockedNotification(achievement);
     } else {
-      this.showNotification(`🏆 ${achievement.name}`, "success");
+      this.showNotification(`🏆 ${achievement.name}`, "achievement", 5000);
     }
   }
 
@@ -721,6 +1005,18 @@ export class UIManager {
   updateCustomersPanel() {
     if (this.customersPanel) {
       this.customersPanel.update();
+    }
+  }
+
+  updateShopPanel() {
+    if (this.shopPanel) {
+      this.shopPanel.update();
+    }
+  }
+
+  updateAchievementsPanel() {
+    if (this.achievementsPanel) {
+      this.achievementsPanel.update();
     }
   }
 }
@@ -737,6 +1033,116 @@ window.selectPart = (partName) => {
       );
     }
   }
+};
+
+window.repairPart = (partName) => {
+  if (!window.gameState) {
+    window.uiManager?.showNotification("❌ Jogo não inicializado", "error");
+    return;
+  }
+
+  const result = window.gameState.repairPart(partName);
+
+  if (result.success) {
+    window.uiManager?.showNotification(result.message, "success");
+    window.uiManager?.updatePartsList();
+    window.uiManager?.updateMoney();
+
+    window.createRepairEffect?.(partName);
+
+    const status = window.gameState.checkCarReady();
+    if (status.ready) {
+      document.getElementById("deliver-car").disabled = false;
+      window.uiManager?.showNotification(
+        "🎉 Carro pronto para entrega!",
+        "success",
+      );
+    }
+  } else {
+    window.uiManager?.showNotification(result.message, "error");
+  }
+};
+
+window.buyNewPart = (partName) => {
+  if (!window.gameState) {
+    window.uiManager?.showNotification("❌ Jogo não inicializado", "error");
+    return;
+  }
+
+  const result = window.gameState.buyNewPart(partName);
+
+  if (result.success) {
+    window.uiManager?.showNotification(result.message, "success");
+    window.uiManager?.updatePartsList();
+    window.uiManager?.updateMoney();
+
+    for (let i = 0; i < 3; i++) {
+      setTimeout(() => window.createRepairEffect?.(partName), i * 200);
+    }
+
+    const status = window.gameState.checkCarReady();
+    if (status.ready) {
+      document.getElementById("deliver-car").disabled = false;
+      window.uiManager?.showNotification(
+        "🎉 Carro pronto para entrega!",
+        "success",
+      );
+    }
+  } else {
+    window.uiManager?.showNotification(result.message, "error");
+  }
+};
+
+// Funções da loja
+window.buyPart = (partType, quantity = 1, rarity = "comum") => {
+  if (!window.uiManager?.economySystem) {
+    window.uiManager?.showNotification(
+      "❌ Sistema econômico não disponível",
+      "error",
+    );
+    return;
+  }
+
+  const result = window.uiManager.economySystem.buyPart(
+    partType,
+    quantity,
+    rarity,
+  );
+
+  if (result.success) {
+    window.uiManager.showNotification(result.message, "money");
+    window.uiManager.updateMoney();
+    if (window.uiManager.shopPanel) {
+      window.uiManager.shopPanel.update();
+    }
+  } else {
+    window.uiManager.showNotification(result.message, "error");
+  }
+};
+
+window.sellPart = (partType) => {
+  if (!window.uiManager?.economySystem || !window.inventory) {
+    window.uiManager?.showNotification("❌ Sistema não disponível", "error");
+    return;
+  }
+
+  const result = window.uiManager.economySystem.sellPart(partType, 50);
+
+  if (result.success) {
+    window.inventory.usePart(partType);
+    window.uiManager.showNotification(result.message, "money");
+    window.uiManager.updateMoney();
+    if (window.uiManager.shopPanel) {
+      window.uiManager.shopPanel.update();
+    }
+  }
+};
+
+window.buySpecial = (specialId) => {
+  window.uiManager?.showNotification(
+    "🔧 Funcionalidade em desenvolvimento",
+    "info",
+  );
 };
 
 // Expor globalmente
