@@ -5,6 +5,8 @@ import { UpgradePanel } from "/src/ui/UpgradePanel.js";
 import { CustomersPanel } from "/src/ui/CustomersPanel.js";
 import { EconomySystem } from "/src/systems/EconomySystem.js";
 import { ShopPanel } from "/src/ui/ShopPanel.js";
+import { AchievementSystem } from "/src/systems/AchievementSystem.js";
+import { AchievementsPanel } from "/src/ui/AchievementsPanel.js";
 
 export class UIManager {
   constructor() {
@@ -150,6 +152,16 @@ export class UIManager {
 
       this.shopPanel = new ShopPanel(this.economySystem);
 
+      // Carregar Sistema de Conquistas
+      const achievementModule =
+        await import("/src/systems/AchievementSystem.js");
+      const AchievementSystem =
+        achievementModule.AchievementSystem || achievementModule.default;
+      this.achievementSystem = new AchievementSystem();
+      console.log("✅ AchievementSystem carregado");
+
+      this.achievementsPanel = new AchievementsPanel(this.achievementSystem);
+
       // Carregar sistemas adicionais
       this.loadAdditionalSystems();
     } catch (err) {
@@ -237,6 +249,21 @@ export class UIManager {
           this.shopPanel.toggle();
         } else {
           this.showNotification("❌ Loja não disponível", "error");
+        }
+      });
+    }
+
+    // Botão Conquistas
+    const achievementsBtn = document.getElementById("achievements-btn");
+    if (achievementsBtn) {
+      achievementsBtn.addEventListener("click", () => {
+        if (this.achievementsPanel) {
+          this.achievementsPanel.toggle();
+        } else {
+          this.showNotification(
+            "❌ Sistema de conquistas não disponível",
+            "error",
+          );
         }
       });
     }
@@ -673,6 +700,15 @@ export class UIManager {
     this.notificationTimeout = setTimeout(() => {
       notification.classList.remove("show");
     }, 3000);
+  }
+
+  // Método para mostrar notificação de conquista
+  showAchievementNotification(achievement) {
+    if (this.achievementsPanel) {
+      this.achievementsPanel.showUnlockedNotification(achievement);
+    } else {
+      this.showNotification(`🏆 ${achievement.name}`, "success");
+    }
   }
 
   // ===== MÉTODOS DE ATUALIZAÇÃO DE PAINÉIS =====
