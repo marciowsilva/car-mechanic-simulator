@@ -417,6 +417,61 @@ window.createRepairEffect = (partName) => {
   }
 };
 
+// ===== FUNÇÕES DA LOJA =====
+
+window.buyPart = (partType, quantity = 1, rarity = "comum") => {
+  if (!window.uiManager?.economySystem) {
+    window.uiManager?.showNotification(
+      "❌ Sistema econômico não disponível",
+      "error",
+    );
+    return;
+  }
+
+  const result = window.uiManager.economySystem.buyPart(
+    partType,
+    quantity,
+    rarity,
+  );
+
+  if (result.success) {
+    window.uiManager.showNotification(result.message, "success");
+    window.uiManager.updateMoney();
+    if (window.uiManager.shopPanel) {
+      window.uiManager.shopPanel.update();
+    }
+  } else {
+    window.uiManager.showNotification(result.message, "error");
+  }
+};
+
+window.sellPart = (partType) => {
+  if (!window.uiManager?.economySystem || !window.inventory) {
+    window.uiManager?.showNotification("❌ Sistema não disponível", "error");
+    return;
+  }
+
+  // Pegar a peça com pior condição do inventário (simplificado)
+  const result = window.uiManager.economySystem.sellPart(partType, 50); // 50% de condição
+
+  if (result.success) {
+    window.inventory.usePart(partType);
+    window.uiManager.showNotification(result.message, "success");
+    window.uiManager.updateMoney();
+    if (window.uiManager.shopPanel) {
+      window.uiManager.shopPanel.update();
+    }
+  }
+};
+
+window.buySpecial = (specialId) => {
+  // Implementar compra de oferta especial
+  window.uiManager?.showNotification(
+    "🔧 Funcionalidade em desenvolvimento",
+    "info",
+  );
+};
+
 // ===== INICIALIZAÇÃO =====
 window.addEventListener("load", async () => {
   let progress = 0;
