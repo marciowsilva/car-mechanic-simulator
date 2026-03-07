@@ -26,6 +26,7 @@ const modules = [
 
   // 3. Carros (precisam ser carregados antes de GameState)
   { path: "/src/cars/Car.js", name: "Car" },
+  { path: "/src/cars/CarCatalog.js", name: "CarCatalog" },
   { path: "/src/cars/Job.js", name: "Job" },
   { path: "/src/cars/CarModels.js", name: "CarModels" },
 
