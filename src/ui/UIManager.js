@@ -11,6 +11,8 @@ import { GarageExpansion } from "/src/garage/GarageExpansion.js";
 import { GaragePanel } from "/src/ui/GaragePanel.js";
 import { EquipmentInteractionSystem } from "/src/systems/EquipmentInteractionSystem.js";
 import { EquipmentPanel } from "/src/ui/EquipmentPanel.js";
+import { EventSystem } from "/src/events/EventSystem.js";
+import { EventsPanel } from "/src/ui/EventsPanel.js";
 
 export class UIManager {
   constructor() {
@@ -154,6 +156,10 @@ export class UIManager {
           selector: "#equipment-btn",
           content: "🔧 Gerenciar equipamentos da garagem",
         },
+        {
+          selector: "#events-btn",
+          content: "📅 Eventos especiais e multiplicadores",
+        },
       ];
 
       tooltips.forEach(({ selector, content }) => {
@@ -282,6 +288,17 @@ export class UIManager {
         );
       } catch (err) {
         console.log("⚠️ EquipmentSystem não disponível:", err);
+      }
+
+      try {
+        const eventModule = await import("/src/events/EventSystem.js");
+        const EventSystem = eventModule.EventSystem || eventModule.default;
+        this.eventSystem = new EventSystem();
+        console.log("✅ EventSystem carregado");
+
+        this.eventsPanel = new EventsPanel(this.eventSystem);
+      } catch (err) {
+        console.log("⚠️ EventSystem não disponível:", err);
       }
 
       // Carregar sistemas adicionais em segundo plano
@@ -475,6 +492,21 @@ export class UIManager {
         }
       });
     }
+
+    const eventsBtn = document.getElementById("events-btn");
+    if (eventsBtn) {
+      eventsBtn.addEventListener("click", () => {
+        this.sounds?.play("click");
+        if (this.eventsPanel) {
+          this.eventsPanel.toggle();
+        } else {
+          this.showNotification(
+            "❌ Sistema de eventos não disponível",
+            "error",
+          );
+        }
+      });
+    }
   }
 
   initAudioControls() {
@@ -586,6 +618,15 @@ export class UIManager {
     if (!window.gameState?.currentJob) {
       this.showNotification("❌ Nenhum serviço ativo", "error");
       return;
+    }
+
+    // Aplicar multiplicadores de eventos
+    if (this.eventSystem) {
+      result.payment = this.eventSystem.applyEventBonus(
+        result.payment,
+        "money",
+      );
+      // Outros multiplicadores...
     }
 
     // Usar CustomerSystem se disponível

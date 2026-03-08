@@ -56,7 +56,8 @@ const modules = [
   { path: "/src/garage/Scene3D.js", name: "Scene3D" },
   { path: "/src/garage/Garage.js", name: "GarageSystem" },
   { path: "/src/garage/GarageLayout.js", name: "GARAGE_CONFIG" },
-  // { path: "/src/garage/RealisticGarage.js", name: "RealisticGarage" },
+  { path: "/src/garage/RealisticGarage.js", name: "RealisticGarage" },
+  { path: "/src/garage/UltraRealisticGarage.js", name: "UltraRealisticGarage" },
   { path: "/src/garage/OptimizedGarage.js", name: "OptimizedGarage" },
   { path: "/src/ui/UIManager.js", name: "UIManager" },
 ];
@@ -157,7 +158,10 @@ function initializeGame() {
   // === CAMADA 2: Scene3D ===
   if (!window.scene3D) {
     try {
-      if (window.OptimizedGarage) {
+      if (window.UltraRealisticGarage) {
+        window.scene3D = new window.UltraRealisticGarage(container);
+        console.log("✅ Garagem ULTRA REALISTA criada");
+      } else if (window.OptimizedGarage) {
         window.scene3D = new window.OptimizedGarage(container);
         console.log("✅ Garagem otimizada criada");
       } else if (window.RealisticGarage) {

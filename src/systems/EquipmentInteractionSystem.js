@@ -1,241 +1,255 @@
 // src/systems/EquipmentInteractionSystem.js - Sistema de interação com equipamentos
 
-import { GarageEquipment, OperatingCosts, getUnlockedEquipment } from '/src/garage/GarageEquipment.js';
+import {
+  GarageEquipment,
+  OperatingCosts,
+  getUnlockedEquipment,
+} from "/src/garage/GarageEquipment.js";
+import { MinigameManager } from "/src/minigames/MinigameManager.js";
 
 export class EquipmentInteractionSystem {
-    constructor(garageExpansion) {
-        this.garage = garageExpansion;
-        this.activeEquipment = null;
-        this.minigameActive = false;
-        this.listeners = new Map();
-        console.log('🔧 Sistema de interação com equipamentos inicializado');
+  constructor(garageExpansion) {
+    this.garage = garageExpansion;
+    this.activeEquipment = null;
+    this.minigameActive = false;
+    this.minigameManager = new MinigameManager();
+    this.listeners = new Map();
+    console.log("🔧 Sistema de interação com equipamentos inicializado");
+  }
+
+  // Interagir com equipamento
+  interactWithEquipment(equipmentId) {
+    const equipment = GarageEquipment[equipmentId];
+    if (!equipment) {
+      return { success: false, message: "❌ Equipamento não encontrado" };
     }
 
-    // Interagir com equipamento
-    interactWithEquipment(equipmentId) {
-        const equipment = GarageEquipment[equipmentId];
-        if (!equipment) {
-            return { success: false, message: '❌ Equipamento não encontrado' };
-        }
-
-        // Verificar nível da garagem
-        if (this.garage.level < equipment.unlockLevel) {
-            return { 
-                success: false, 
-                message: `🔒 Necessário nível ${equipment.unlockLevel} da garagem`,
-                requiredLevel: equipment.unlockLevel
-            };
-        }
-
-        // Verificar se tem minigame
-        if (equipment.minigame) {
-            this.startMinigame(equipment);
-        }
-
-        this.activeEquipment = equipment;
-        
-        // Disparar evento
-        this.emit('equipmentUsed', equipment);
-
-        return {
-            success: true,
-            message: `🔧 Usando ${equipment.name}`,
-            equipment: equipment
-        };
+    // Verificar nível da garagem
+    if (this.garage.level < equipment.unlockLevel) {
+      return {
+        success: false,
+        message: `🔒 Necessário nível ${equipment.unlockLevel} da garagem`,
+        requiredLevel: equipment.unlockLevel,
+      };
     }
 
-    // Iniciar minigame
-    startMinigame(equipment) {
-        this.minigameActive = true;
-        
-        const minigameData = {
-            id: equipment.id,
-            name: equipment.name,
-            difficulty: this.calculateDifficulty(equipment),
-            timeLimit: 30, // segundos
-            startedAt: Date.now()
-        };
-
-        this.emit('minigameStarted', minigameData);
-        
-        // Em desenvolvimento - por enquanto só simula
-        console.log(`🎮 Minigame iniciado: ${equipment.name}`);
-        
-        // Simular conclusão após 2 segundos
-        setTimeout(() => {
-            this.completeMinigame(equipment, 0.85); // 85% de sucesso
-        }, 2000);
+    // Verificar se tem minigame
+    if (equipment.minigame) {
+      this.startMinigame(equipment);
     }
 
-    // Completar minigame
-    completeMinigame(equipment, successRate) {
-        if (!this.minigameActive) return;
+    this.activeEquipment = equipment;
 
-        this.minigameActive = false;
-        
-        const success = Math.random() < successRate;
-        const timeBonus = success ? Math.floor(Math.random() * 200) : 0;
+    // Disparar evento
+    this.emit("equipmentUsed", equipment);
 
-        const result = {
-            success: success,
-            equipmentId: equipment.id,
-            equipmentName: equipment.name,
-            timeBonus: timeBonus,
-            experienceGained: success ? 50 + timeBonus : 10,
-            moneyGained: success ? 100 + timeBonus : 0
-        };
+    return {
+      success: true,
+      message: `🔧 Usando ${equipment.name}`,
+      equipment: equipment,
+    };
+  }
 
-        // Aplicar recompensas
-        if (result.success && window.gameState) {
-            window.gameState.money += result.moneyGained;
-            window.gameState.addExperience(result.experienceGained);
-        }
+  // Iniciar minigame
+  startMinigame(equipment) {
+    this.minigameActive = true;
 
-        this.emit('minigameCompleted', result);
-        
-        return result;
+    let gameType = null;
+    let difficulty = this.calculateDifficulty(equipment);
+
+    switch (equipment.id) {
+      case "wheelBalancer":
+        gameType = "wheelBalancer";
+        break;
+      case "oilDrain":
+        gameType = "oilDrain";
+        break;
+      // Adicionar outros minigames aqui
     }
 
-    // Calcular dificuldade baseada no nível do jogador
-    calculateDifficulty(equipment) {
-        const playerLevel = window.gameState?.level || 1;
-        const baseDifficulty = equipment.unlockLevel * 0.5;
-        return Math.max(0.1, Math.min(0.9, baseDifficulty / playerLevel));
+    if (gameType) {
+      this.minigameManager.startGame(gameType, difficulty);
     }
 
-    // Usar dreno de óleo (com chance de multa)
-    useOilDrain() {
-        const equipment = GarageEquipment.oilDrain;
-        
-        // Verificar nível
-        if (this.garage.level < equipment.unlockLevel) {
-            return { success: false, message: '🔒 Dreno não disponível' };
-        }
+    this.emit("minigameStarted", { equipment, difficulty });
+  }
 
-        // Chance de derramar óleo (20% se nível baixo, 5% se alto)
-        const spillChance = Math.max(0.05, 0.2 - (this.garage.level * 0.03));
-        const spilled = Math.random() < spillChance;
+  // Completar minigame
+  completeMinigame(equipment, successRate) {
+    if (!this.minigameActive) return;
 
-        const cost = spilled ? OperatingCosts.oilDrain.spillPenalty : OperatingCosts.oilDrain.disposalCost;
+    this.minigameActive = false;
 
-        if (window.gameState && window.gameState.money >= cost) {
-            window.gameState.money -= cost;
-            
-            this.emit('oilDrainUsed', { spilled, cost });
+    const success = Math.random() < successRate;
+    const timeBonus = success ? Math.floor(Math.random() * 200) : 0;
 
-            return {
-                success: true,
-                message: spilled ? '⚠️ Você derramou óleo! Multa de R$ 100' : '✅ Óleo descartado corretamente',
-                cost: cost,
-                spilled: spilled
-            };
-        }
+    const result = {
+      success: success,
+      equipmentId: equipment.id,
+      equipmentName: equipment.name,
+      timeBonus: timeBonus,
+      experienceGained: success ? 50 + timeBonus : 10,
+      moneyGained: success ? 100 + timeBonus : 0,
+    };
 
-        return { success: false, message: '💰 Dinheiro insuficiente' };
+    // Aplicar recompensas
+    if (result.success && window.gameState) {
+      window.gameState.money += result.moneyGained;
+      window.gameState.addExperience(result.experienceGained);
     }
 
-    // Usar pista de teste
-    useTestPath(carParts) {
-        const equipment = GarageEquipment.testPath;
-        
-        if (this.garage.level < equipment.unlockLevel) {
-            return { success: false, message: '🔒 Pista de teste não disponível' };
-        }
+    this.emit("minigameCompleted", result);
 
-        // Análise dos resultados do teste
-        const results = {
-            suspension: this.analyzeSuspension(carParts),
-            brakes: this.analyzeBrakes(carParts),
-            alignment: this.analyzeAlignment(carParts),
-            overall: 0
-        };
+    return result;
+  }
 
-        results.overall = Math.floor(
-            (results.suspension + results.brakes + results.alignment) / 3
-        );
+  // Calcular dificuldade baseada no nível do jogador
+  calculateDifficulty(equipment) {
+    const playerLevel = window.gameState?.level || 1;
+    const baseDifficulty = equipment.unlockLevel * 0.5;
+    return Math.max(0.1, Math.min(0.9, baseDifficulty / playerLevel));
+  }
 
-        // Custo do teste
-        const cost = OperatingCosts.testPath.usageCost;
-        if (window.gameState) {
-            window.gameState.money -= cost;
-        }
+  // Usar dreno de óleo (com chance de multa)
+  useOilDrain() {
+    const equipment = GarageEquipment.oilDrain;
 
-        this.emit('testCompleted', results);
-
-        return {
-            success: true,
-            message: `🏁 Teste concluído: ${results.overall}% de aprovação`,
-            results: results,
-            cost: cost
-        };
+    // Verificar nível
+    if (this.garage.level < equipment.unlockLevel) {
+      return { success: false, message: "🔒 Dreno não disponível" };
     }
 
-    analyzeSuspension(parts) {
-        if (!parts.suspensao) return 50;
-        return Math.min(100, parts.suspensao.condition + 10);
+    // Chance de derramar óleo (20% se nível baixo, 5% se alto)
+    const spillChance = Math.max(0.05, 0.2 - this.garage.level * 0.03);
+    const spilled = Math.random() < spillChance;
+
+    const cost = spilled
+      ? OperatingCosts.oilDrain.spillPenalty
+      : OperatingCosts.oilDrain.disposalCost;
+
+    if (window.gameState && window.gameState.money >= cost) {
+      window.gameState.money -= cost;
+
+      this.emit("oilDrainUsed", { spilled, cost });
+
+      return {
+        success: true,
+        message: spilled
+          ? "⚠️ Você derramou óleo! Multa de R$ 100"
+          : "✅ Óleo descartado corretamente",
+        cost: cost,
+        spilled: spilled,
+      };
     }
 
-    analyzeBrakes(parts) {
-        if (!parts.freios) return 50;
-        return Math.min(100, parts.freios.condition + 10);
+    return { success: false, message: "💰 Dinheiro insuficiente" };
+  }
+
+  // Usar pista de teste
+  useTestPath(carParts) {
+    const equipment = GarageEquipment.testPath;
+
+    if (this.garage.level < equipment.unlockLevel) {
+      return { success: false, message: "🔒 Pista de teste não disponível" };
     }
 
-    analyzeAlignment(parts) {
-        // Simulação simples
-        return Math.floor(60 + Math.random() * 30);
+    // Análise dos resultados do teste
+    const results = {
+      suspension: this.analyzeSuspension(carParts),
+      brakes: this.analyzeBrakes(carParts),
+      alignment: this.analyzeAlignment(carParts),
+      overall: 0,
+    };
+
+    results.overall = Math.floor(
+      (results.suspension + results.brakes + results.alignment) / 3,
+    );
+
+    // Custo do teste
+    const cost = OperatingCosts.testPath.usageCost;
+    if (window.gameState) {
+      window.gameState.money -= cost;
     }
 
-    // Usar oficina de pintura
-    usePaintShop(currentColor, newColor) {
-        const equipment = GarageEquipment.paintShop;
-        
-        if (this.garage.level < equipment.unlockLevel) {
-            return { success: false, message: '🔒 Oficina de pintura não disponível' };
-        }
+    this.emit("testCompleted", results);
 
-        if (!equipment.paintJobs.includes(newColor)) {
-            return { success: false, message: '❌ Cor não disponível' };
-        }
+    return {
+      success: true,
+      message: `🏁 Teste concluído: ${results.overall}% de aprovação`,
+      results: results,
+      cost: cost,
+    };
+  }
 
-        const cost = OperatingCosts.paintShop.baseCost;
+  analyzeSuspension(parts) {
+    if (!parts.suspensao) return 50;
+    return Math.min(100, parts.suspensao.condition + 10);
+  }
 
-        if (window.gameState && window.gameState.money >= cost) {
-            window.gameState.money -= cost;
+  analyzeBrakes(parts) {
+    if (!parts.freios) return 50;
+    return Math.min(100, parts.freios.condition + 10);
+  }
 
-            this.emit('paintJobDone', { oldColor: currentColor, newColor, cost });
+  analyzeAlignment(parts) {
+    // Simulação simples
+    return Math.floor(60 + Math.random() * 30);
+  }
 
-            return {
-                success: true,
-                message: `🎨 Carro pintado de ${newColor}!`,
-                newColor: newColor,
-                cost: cost
-            };
-        }
+  // Usar oficina de pintura
+  usePaintShop(currentColor, newColor) {
+    const equipment = GarageEquipment.paintShop;
 
-        return { success: false, message: '💰 Dinheiro insuficiente' };
+    if (this.garage.level < equipment.unlockLevel) {
+      return {
+        success: false,
+        message: "🔒 Oficina de pintura não disponível",
+      };
     }
 
-    // Sistema de eventos
-    on(event, callback) {
-        if (!this.listeners.has(event)) {
-            this.listeners.set(event, []);
-        }
-        this.listeners.get(event).push(callback);
+    if (!equipment.paintJobs.includes(newColor)) {
+      return { success: false, message: "❌ Cor não disponível" };
     }
 
-    emit(event, data) {
-        if (this.listeners.has(event)) {
-            this.listeners.get(event).forEach(callback => callback(data));
-        }
+    const cost = OperatingCosts.paintShop.baseCost;
+
+    if (window.gameState && window.gameState.money >= cost) {
+      window.gameState.money -= cost;
+
+      this.emit("paintJobDone", { oldColor: currentColor, newColor, cost });
+
+      return {
+        success: true,
+        message: `🎨 Carro pintado de ${newColor}!`,
+        newColor: newColor,
+        cost: cost,
+      };
     }
 
-    // Obter estatísticas de uso
-    getUsageStats() {
-        return {
-            activeEquipment: this.activeEquipment?.name || null,
-            minigameActive: this.minigameActive,
-            unlockedCount: getUnlockedEquipment(this.garage.level).length,
-            totalEquipment: Object.keys(GarageEquipment).length
-        };
+    return { success: false, message: "💰 Dinheiro insuficiente" };
+  }
+
+  // Sistema de eventos
+  on(event, callback) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, []);
     }
+    this.listeners.get(event).push(callback);
+  }
+
+  emit(event, data) {
+    if (this.listeners.has(event)) {
+      this.listeners.get(event).forEach((callback) => callback(data));
+    }
+  }
+
+  // Obter estatísticas de uso
+  getUsageStats() {
+    return {
+      activeEquipment: this.activeEquipment?.name || null,
+      minigameActive: this.minigameActive,
+      unlockedCount: getUnlockedEquipment(this.garage.level).length,
+      totalEquipment: Object.keys(GarageEquipment).length,
+    };
+  }
 }
