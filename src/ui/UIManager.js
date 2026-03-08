@@ -9,6 +9,8 @@ import { TooltipSystem } from "/src/ui/TooltipSystem.js";
 import { AnimationSystem } from "/src/systems/AnimationSystem.js";
 import { GarageExpansion } from "/src/garage/GarageExpansion.js";
 import { GaragePanel } from "/src/ui/GaragePanel.js";
+import { EquipmentInteractionSystem } from "/src/systems/EquipmentInteractionSystem.js";
+import { EquipmentPanel } from "/src/ui/EquipmentPanel.js";
 
 export class UIManager {
   constructor() {
@@ -148,6 +150,10 @@ export class UIManager {
           selector: "#garage-btn",
           content: "🏢 Gerenciar sua garagem e expansões",
         },
+        {
+          selector: "#equipment-btn",
+          content: "🔧 Gerenciar equipamentos da garagem",
+        },
       ];
 
       tooltips.forEach(({ selector, content }) => {
@@ -260,6 +266,22 @@ export class UIManager {
         this.garagePanel = new GaragePanel(this.garageExpansion);
       } catch (err) {
         console.log("⚠️ GarageExpansion não disponível:", err);
+      }
+
+      try {
+        const equipmentModule =
+          await import("/src/systems/EquipmentInteractionSystem.js");
+        const EquipmentSystem =
+          equipmentModule.EquipmentInteractionSystem || equipmentModule.default;
+        this.equipmentSystem = new EquipmentSystem(this.garageExpansion);
+        console.log("✅ EquipmentSystem carregado");
+
+        this.equipmentPanel = new EquipmentPanel(
+          this.equipmentSystem,
+          this.garageExpansion,
+        );
+      } catch (err) {
+        console.log("⚠️ EquipmentSystem não disponível:", err);
       }
 
       // Carregar sistemas adicionais em segundo plano
@@ -438,6 +460,21 @@ export class UIManager {
         this.showNotification("🔧 Painéis fechados", "info");
       }
     });
+
+    const equipmentBtn = document.getElementById("equipment-btn");
+    if (equipmentBtn) {
+      equipmentBtn.addEventListener("click", () => {
+        this.sounds?.play("click");
+        if (this.equipmentPanel) {
+          this.equipmentPanel.toggle();
+        } else {
+          this.showNotification(
+            "❌ Sistema de equipamentos não disponível",
+            "error",
+          );
+        }
+      });
+    }
   }
 
   initAudioControls() {
