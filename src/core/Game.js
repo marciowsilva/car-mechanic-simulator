@@ -24,7 +24,7 @@ import { CareerMode } from "/src/systems/career-mode.js";
 // ===== ESTADO GLOBAL DO JOGO =====
 class GameState {
   constructor() {
-    this.money = 5000;
+    this.money = 5000; // Valor inicial
     this.level = 1;
     this.experience = 0;
     this.experienceToNextLevel = 1000;
@@ -34,20 +34,49 @@ class GameState {
     this.currentCar = null;
     this.selectedTool = "wrench";
     this.selectedPart = null;
+    this.startTime = Date.now();
+    this.isUpdatingFromAchievement = false; // FLAG PARA EVITAR LOOP
   }
 
   updateMoney(amount) {
-    this.money += amount;
+    const validAmount = Number(amount) || 0;
+    this.money += validAmount;
+
+    if (isNaN(this.money)) {
+      console.warn("⚠️ Dinheiro tornou-se NaN, resetando para 5000");
+      this.money = 5000;
+    }
+
     const moneyEl = document.getElementById("money");
     if (moneyEl) {
       moneyEl.textContent = `R$ ${this.money.toLocaleString()}`;
     }
-    window.achievementSystem?.checkAchievements();
+
+    // SÓ CHAMAR ACHIEVEMENT SE NÃO ESTIVER EM UM LOOP
+    if (!this.isUpdatingFromAchievement && window.achievementSystem) {
+      this.isUpdatingFromAchievement = true;
+      try {
+        window.achievementSystem.checkAchievements?.(); // NOTA: é checkAchievements, não checkAchievement
+      } catch (e) {
+        console.log("⚠️ Erro ao verificar conquistas:", e);
+      } finally {
+        this.isUpdatingFromAchievement = false;
+      }
+    }
   }
 
   addExperience(amount) {
-    const bonusAmount =
-      window.upgradeSystem?.calculateExperience(amount) || amount;
+    const validAmount = Number(amount) || 0;
+
+    // Usar upgradeSystem se disponível
+    let bonusAmount = validAmount;
+    if (
+      window.upgradeSystem &&
+      typeof window.upgradeSystem.calculateExperience === "function"
+    ) {
+      bonusAmount = window.upgradeSystem.calculateExperience(validAmount);
+    }
+
     this.experience += bonusAmount;
 
     while (this.experience >= this.experienceToNextLevel) {
@@ -71,7 +100,8 @@ class GameState {
   }
 
   updateReputation(change) {
-    this.reputation = Math.max(1, Math.min(5, this.reputation + change));
+    const validChange = Number(change) || 0;
+    this.reputation = Math.max(1, Math.min(5, this.reputation + validChange));
     const stars = "★".repeat(this.reputation) + "☆".repeat(5 - this.reputation);
     const repEl = document.getElementById("reputation");
     if (repEl) {
@@ -80,10 +110,11 @@ class GameState {
   }
 
   canAfford(amount) {
-    return this.money >= amount;
+    const validAmount = Number(amount) || 0;
+    return this.money >= validAmount;
   }
 
-  // ===== NOVOS MÉTODOS PARA REPARO =====
+  // ===== MÉTODOS PARA REPARO =====
 
   getToolEfficiency(toolType) {
     const tools = {
@@ -159,7 +190,7 @@ class GameState {
 
     const repairedAmount = Math.round(part.condition - oldCondition);
 
-    this.updateMoney();
+    this.updateMoney(0); // Atualiza display sem mudar valor
 
     return {
       success: true,
@@ -186,7 +217,7 @@ class GameState {
     this.money -= partPrice;
     this.addExperience(20);
 
-    this.updateMoney();
+    this.updateMoney(0);
 
     return {
       success: true,
@@ -194,6 +225,11 @@ class GameState {
       partName,
       newCondition: 100,
     };
+  }
+
+  // Método para inicializar o dinheiro no display
+  initializeDisplay() {
+    this.updateMoney(0);
   }
 }
 
@@ -608,3 +644,52 @@ setInterval(() => {
     console.log("✅ gameState recuperado automaticamente");
   }
 }, 1000);
+
+// ===== INICIALIZAÇÃO =====
+window.addEventListener("load", async () => {
+  let progress = 0;
+  const progressInterval = setInterval(() => {
+    progress += 10;
+    document.getElementById("loading-progress").textContent = progress + "%";
+    if (progress >= 100) clearInterval(progressInterval);
+  }, 200);
+
+  await db.init();
+
+  setTimeout(() => {
+    document.getElementById("loading-screen").style.opacity = "0";
+    setTimeout(() => {
+      document.getElementById("loading-screen").style.display = "none";
+    }, 500);
+  }, 2000);
+
+  const container = document.getElementById("game-container");
+
+  const newScene3D = new Scene3D(container);
+  const newUIManager = new UIManager();
+
+  scene3D = newScene3D;
+  uiManager = newUIManager;
+
+  window.scene3D = newScene3D;
+  window.uiManager = newUIManager;
+
+  // INICIALIZAR DISPLAY DO DINHEIRO
+  gameState.initializeDisplay();
+
+  newScene3D.animate();
+  db.loadPlayerData();
+  db.loadUpgrades();
+  db.loadAchievements();
+
+  // Pré-carregar modelos
+  scene3D.preloadCarModels().then(() => {
+    console.log("🎮 Modelos prontos!");
+  });
+
+  setInterval(() => {
+    db.savePlayerData();
+    db.saveUpgrades();
+    db.saveAchievements();
+  }, 30000);
+});
