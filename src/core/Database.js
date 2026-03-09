@@ -62,6 +62,13 @@ export class Database {
         gameState.experience = data.experience || 0;
         gameState.reputation = data.reputation || 3;
         gameState.jobsCompleted = data.jobsCompleted || 0;
+        gameState.garageLevel = data.garageLevel || 1;
+
+        // Sincronizar UI da garagem se disponível
+        if (window.uiManager && window.uiManager.garageManager) {
+          window.uiManager.garageManager.level = gameState.garageLevel;
+          window.uiManager.garageManager.initializeGarage();
+        }
 
         document.getElementById("money").textContent =
           `R$ ${gameState.money.toLocaleString()}`;
@@ -89,6 +96,7 @@ export class Database {
       experience: gameState.experience,
       reputation: gameState.reputation,
       jobsCompleted: gameState.jobsCompleted,
+      garageLevel: gameState.garageLevel || 1,
     });
   }
 
@@ -169,6 +177,6 @@ export class Database {
 }
 
 // Expor globalmente
-if (typeof window !== 'undefined') {
-    window.Database = Database;
+if (typeof window !== "undefined") {
+  window.Database = Database;
 }

@@ -30,6 +30,7 @@ class GameState {
     this.experienceToNextLevel = 1000;
     this.reputation = 3;
     this.jobsCompleted = 0;
+    this.garageLevel = 1;
     this.currentJob = null;
     this.currentCar = null;
     this.selectedTool = "wrench";

@@ -121,10 +121,13 @@ export class OptimizedGarage {
     this.scene.add(gridHelper);
 
     // ===== PAREDES (simplificadas) =====
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a });
+    this.wallMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a });
 
     // Parede dos fundos
-    const backWall = new THREE.Mesh(new THREE.BoxGeometry(25, 5, 0.3), wallMat);
+    const backWall = new THREE.Mesh(
+      new THREE.BoxGeometry(25, 5, 0.3),
+      this.wallMat,
+    );
     backWall.position.set(0, 2.5, -12);
     backWall.receiveShadow = true;
     backWall.castShadow = true;
@@ -133,118 +136,213 @@ export class OptimizedGarage {
     // Paredes laterais
     const sideWallGeo = new THREE.BoxGeometry(0.3, 5, 25);
 
-    const leftWall = new THREE.Mesh(sideWallGeo, wallMat);
+    const leftWall = new THREE.Mesh(sideWallGeo, this.wallMat);
     leftWall.position.set(-12.5, 2.5, 0);
     leftWall.receiveShadow = true;
     leftWall.castShadow = true;
     this.scene.add(leftWall);
 
-    const rightWall = new THREE.Mesh(sideWallGeo, wallMat);
+    const rightWall = new THREE.Mesh(sideWallGeo, this.wallMat);
     rightWall.position.set(12.5, 2.5, 0);
     rightWall.receiveShadow = true;
     rightWall.castShadow = true;
     this.scene.add(rightWall);
 
-    // ===== ELEVADORES (simplificados) =====
-    const liftPositions = [
-      [-5, 0, -4],
-      [5, 0, -4],
-      [-5, 0, 4],
-      [5, 0, 4],
-    ];
+    // Grupos para níveis
+    this.levelGroups = {
+      1: new THREE.Group(),
+      2: new THREE.Group(),
+      3: new THREE.Group(),
+      4: new THREE.Group(),
+      5: new THREE.Group(),
+    };
 
-    liftPositions.forEach((pos) => {
-      // Base
-      const base = new THREE.Mesh(
-        new THREE.BoxGeometry(2.2, 0.2, 4.2),
-        new THREE.MeshStandardMaterial({ color: 0xcccccc }),
+    Object.values(this.levelGroups).forEach((group) => this.scene.add(group));
+
+    this.setupLevelContent();
+    this.updateVisibility(1);
+  }
+
+  setupLevelContent() {
+    // --- NÍVEL 1: Itens básicos ---
+    this.addLift([-5, 0, -4], this.levelGroups[1]);
+    this.addWorkbench([-9, 0, -9], this.levelGroups[1]);
+    this.addCabinet(-10, 0xcc3333, this.levelGroups[1]);
+
+    // --- NÍVEL 2: Expansão básica ---
+    this.addLift([5, 0, -4], this.levelGroups[2]);
+    this.addTireMachine([-7, 0, 8], this.levelGroups[2]);
+    this.addPoster(-9, 0xffaa00, this.levelGroups[2]);
+
+    // --- NÍVEL 3: Profissionalizante ---
+    this.addLift([-5, 0, 4], this.levelGroups[3]);
+    this.addWorkbench([9, 0, -9], this.levelGroups[3]);
+    this.addComputerTable([10, 0, -11], this.levelGroups[3]);
+    this.addCabinet(10, 0x3333cc, this.levelGroups[3]);
+
+    // --- NÍVEL 4: Oficina Completa ---
+    this.addLift([5, 0, 4], this.levelGroups[4]);
+    this.addWorkbench([-9, 0, 9], this.levelGroups[4]);
+    this.addShelf([-11, 0, 0], this.levelGroups[4]);
+
+    // --- NÍVEL 5: Ultra Master ---
+    this.addWorkbench([9, 0, 9], this.levelGroups[5]);
+    this.addPaintArea(this.levelGroups[5]);
+    this.addPoster(9, 0x00ffaa, this.levelGroups[5]);
+    this.addExtraTires(this.levelGroups[5]);
+  }
+
+  addLift(pos, group) {
+    const liftGroup = new THREE.Group();
+    // Base
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.2, 4.2),
+      new THREE.MeshStandardMaterial({ color: 0xcccccc }),
+    );
+    base.position.set(0, 0.1, 0);
+    base.receiveShadow = true;
+    base.castShadow = true;
+    liftGroup.add(base);
+
+    // Colunas
+    const columnGeo = new THREE.BoxGeometry(0.25, 2.5, 0.25);
+    const columnMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+
+    const column1 = new THREE.Mesh(columnGeo, columnMat);
+    column1.position.set(-1.0, 1.3, -1.8);
+    column1.castShadow = true;
+    liftGroup.add(column1);
+
+    const column2 = new THREE.Mesh(columnGeo, columnMat);
+    column2.position.set(1.0, 1.3, -1.8);
+    column2.castShadow = true;
+    liftGroup.add(column2);
+
+    liftGroup.position.set(pos[0], pos[1], pos[2]);
+    group.add(liftGroup);
+  }
+
+  addWorkbench(pos, group) {
+    const benchGroup = new THREE.Group();
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
+    const base = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 1), benchMat);
+    base.position.set(0, 0.4, 0);
+    base.castShadow = true;
+    base.receiveShadow = true;
+    benchGroup.add(base);
+
+    const top = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.1, 1.1),
+      new THREE.MeshStandardMaterial({ color: 0x2a2a2a }),
+    );
+    top.position.set(0, 0.85, 0);
+    top.castShadow = true;
+    benchGroup.add(top);
+
+    benchGroup.position.set(pos[0], pos[1], pos[2]);
+    group.add(benchGroup);
+  }
+
+  addCabinet(x, color, group) {
+    const cabinet = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 2, 0.8),
+      new THREE.MeshStandardMaterial({ color: color }),
+    );
+    cabinet.position.set(x, 1, -11);
+    cabinet.castShadow = true;
+    cabinet.receiveShadow = true;
+    group.add(cabinet);
+  }
+
+  addPoster(x, color, group) {
+    const poster = new THREE.Mesh(
+      new THREE.BoxGeometry(1.5, 1, 0.1),
+      new THREE.MeshStandardMaterial({ color: color }),
+    );
+    poster.position.set(x, 2.5, -11.5);
+    group.add(poster);
+  }
+
+  addTireMachine(pos, group) {
+    const machine = new THREE.Group();
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({ color: 0x444444 }),
+    );
+    base.position.y = 0.5;
+    machine.add(base);
+    const arm = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 1.5, 0.2),
+      new THREE.MeshStandardMaterial({ color: 0x666666 }),
+    );
+    arm.position.set(0.4, 1, 0);
+    machine.add(arm);
+    machine.position.set(pos[0], pos[1], pos[2]);
+    group.add(machine);
+  }
+
+  addComputerTable(pos, group) {
+    const table = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 0.8, 1),
+      new THREE.MeshStandardMaterial({ color: 0x333333 }),
+    );
+    table.position.set(pos[0], 0.4, pos[2]);
+    group.add(table);
+    const screen = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 0.6, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0x000000 }),
+    );
+    screen.position.set(pos[0], 1.2, pos[2] - 0.4);
+    group.add(screen);
+  }
+
+  addShelf(pos, group) {
+    const shelf = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const p = new THREE.Mesh(
+        new THREE.BoxGeometry(3, 0.1, 1),
+        new THREE.MeshStandardMaterial({ color: 0x555555 }),
       );
-      base.position.set(pos[0], 0.1, pos[2]);
-      base.receiveShadow = true;
-      base.castShadow = true;
-      this.scene.add(base);
+      p.position.y = 0.5 + i * 1;
+      shelf.add(p);
+    }
+    shelf.position.set(pos[0], pos[1], pos[2]);
+    shelf.rotation.y = Math.PI / 2;
+    group.add(shelf);
+  }
 
-      // Colunas (apenas 2 por elevador)
-      const columnGeo = new THREE.BoxGeometry(0.25, 2.5, 0.25);
-      const columnMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+  addPaintArea(group) {
+    const area = new THREE.Mesh(
+      new THREE.BoxGeometry(8, 0.05, 8),
+      new THREE.MeshStandardMaterial({
+        color: 0x44ff44,
+        transparent: true,
+        opacity: 0.3,
+      }),
+    );
+    area.position.set(8, 0.03, 8);
+    group.add(area);
+  }
 
-      const column1 = new THREE.Mesh(columnGeo, columnMat);
-      column1.position.set(pos[0] - 1.0, 1.3, pos[2] - 1.8);
-      column1.castShadow = true;
-      column1.receiveShadow = true;
-      this.scene.add(column1);
-
-      const column2 = new THREE.Mesh(columnGeo, columnMat);
-      column2.position.set(pos[0] + 1.0, 1.3, pos[2] - 1.8);
-      column2.castShadow = true;
-      column2.receiveShadow = true;
-      this.scene.add(column2);
-    });
-
-    // ===== BANCADAS (simplificadas) =====
-    const benchPositions = [
-      [-9, 0, -9],
-      [9, 0, -9],
-      [-9, 0, 9],
-      [9, 0, 9],
-    ];
-
-    benchPositions.forEach((pos) => {
-      const benchMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-
-      // Base
-      const base = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 1), benchMat);
-      base.position.set(pos[0], 0.4, pos[2]);
-      base.castShadow = true;
-      base.receiveShadow = true;
-      this.scene.add(base);
-
-      // Tampo
-      const top = new THREE.Mesh(
-        new THREE.BoxGeometry(2.2, 0.1, 1.1),
-        new THREE.MeshStandardMaterial({ color: 0x2a2a2a }),
-      );
-      top.position.set(pos[0], 0.85, pos[2]);
-      top.castShadow = true;
-      this.scene.add(top);
-    });
-
-    // ===== ARMÁRIOS (poucos) =====
-    const cabinetColors = [0xcc3333, 0x3333cc];
-    [-10, 10].forEach((x, i) => {
-      const cabinet = new THREE.Mesh(
-        new THREE.BoxGeometry(1.5, 2, 0.8),
-        new THREE.MeshStandardMaterial({ color: cabinetColors[i] }),
-      );
-      cabinet.position.set(x, 1, -11);
-      cabinet.castShadow = true;
-      cabinet.receiveShadow = true;
-      this.scene.add(cabinet);
-    });
-
-    // ===== DECORAÇÃO MÍNIMA =====
-    // Posteres
-    const posterMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
-    [-9, 9].forEach((x) => {
-      const poster = new THREE.Mesh(
-        new THREE.BoxGeometry(1.5, 1, 0.1),
-        posterMat,
-      );
-      poster.position.set(x, 2.5, -11.5);
-      this.scene.add(poster);
-    });
-
-    // Pneus (apenas 2)
+  addExtraTires(group) {
     const tireMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    for (let i = 0; i < 2; i++) {
+    for (let i = 0; i < 4; i++) {
       const tire = new THREE.Mesh(
         new THREE.TorusGeometry(0.4, 0.1, 8, 16),
         tireMat,
       );
       tire.rotation.x = Math.PI / 2;
-      tire.position.set(-7 + i * 14, 0.3, 8);
-      tire.castShadow = true;
-      this.scene.add(tire);
+      tire.position.set(5 + (i % 2) * 1.5, 0.3, 8 + (i > 1 ? 1 : 0));
+      group.add(tire);
+    }
+  }
+
+  updateVisibility(level) {
+    this.currentLevel = level;
+    for (let i = 1; i <= 5; i++) {
+      if (this.levelGroups[i]) {
+        this.levelGroups[i].visible = i <= level;
+      }
     }
   }
 
@@ -293,7 +391,7 @@ export class OptimizedGarage {
       carGroup.add(wheel);
     });
 
-    // Posicionar
+    // Posicionar no elevador 1 (sempre disponível)
     carGroup.position.set(-5, 0.3, -4);
 
     this.currentCar = carGroup;
@@ -346,12 +444,21 @@ export class OptimizedGarage {
   }
 
   upgradeToLevel(level) {
-    console.log("Garage upgrading to level " + level + " (OptimizedGarage)");
+    console.log("Garage upgrading visually to level " + level);
+    this.updateVisibility(level);
   }
-  upgradeToLevel2() {}
-  upgradeToLevel3() {}
-  upgradeToLevel4() {}
-  upgradeToLevel5() {}
+  upgradeToLevel2() {
+    this.updateVisibility(2);
+  }
+  upgradeToLevel3() {
+    this.updateVisibility(3);
+  }
+  upgradeToLevel4() {
+    this.updateVisibility(4);
+  }
+  upgradeToLevel5() {
+    this.updateVisibility(5);
+  }
 
   animate() {
     requestAnimationFrame(() => this.animate());

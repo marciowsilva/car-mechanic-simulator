@@ -82,14 +82,40 @@ export class GarageManager {
       },
     };
 
+    this.loadLevel();
     this.initializeGarage();
+  }
+
+  saveLevel() {
+    if (window.gameState) {
+      window.gameState.garageLevel = this.level;
+    }
+    // Tenta salvar no DB global se existir
+    if (window.db && window.db.savePlayerData) {
+      window.db.savePlayerData();
+    }
+  }
+
+  loadLevel() {
+    // Primeiro tenta pelo global
+    if (window.gameState && window.gameState.garageLevel) {
+      this.level = window.gameState.garageLevel;
+      return;
+    }
+    const saved = localStorage.getItem("garage_manager_level");
+    if (saved) {
+      this.level = parseInt(saved);
+    }
   }
 
   initializeGarage() {
     // Agora tenta usar a cena global instanciada no Exports.js
     this.currentGarage = window.scene3D || null;
     if (this.currentGarage) {
-      this.currentGarage.level = 1;
+      this.currentGarage.level = this.level;
+      if (this.currentGarage.upgradeToLevel) {
+        this.currentGarage.upgradeToLevel(this.level);
+      }
     }
   }
 
@@ -141,6 +167,7 @@ export class GarageManager {
     }
 
     this.level = nextLevel;
+    this.saveLevel();
 
     // Registrar conquista
     if (
