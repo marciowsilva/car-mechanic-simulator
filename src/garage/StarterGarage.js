@@ -151,7 +151,10 @@ export class StarterGarage {
     // Espaço reservado para futuros equipamentos
   }
 
+  // ===== MÉTODOS DE CRIAÇÃO =====
+
   createLift(position) {
+    console.log("🏗️ Criando elevador em:", position);
     const group = new THREE.Group();
 
     // Base
@@ -199,13 +202,12 @@ export class StarterGarage {
     });
 
     group.position.set(position[0], position[1], position[2]);
-    this.scene.add(group);
-
-    // Guardar referência
-    this.lift1 = group;
+    this.scene.add(group); // GARANTIR QUE ESTÁ SENDO ADICIONADO À CENA
+    console.log("✅ Elevador adicionado à cena");
   }
 
   createWorkbench(position) {
+    console.log("🔧 Criando bancada em:", position);
     const group = new THREE.Group();
 
     // Base
@@ -225,13 +227,23 @@ export class StarterGarage {
     top.castShadow = true;
     group.add(top);
 
+    // Gavetas
+    for (let i = 0; i < 3; i++) {
+      const drawerGeo = new THREE.BoxGeometry(1.8, 0.2, 0.8);
+      const drawerMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
+      const drawer = new THREE.Mesh(drawerGeo, drawerMat);
+      drawer.position.set(0, 0.2 + i * 0.2, 0);
+      drawer.castShadow = true;
+      group.add(drawer);
+    }
+
     group.position.set(position[0], position[1], position[2]);
     this.scene.add(group);
-
-    this.workbench1 = group;
+    console.log("✅ Bancada adicionada à cena");
   }
 
   createCabinet(position, color) {
+    console.log("📦 Criando armário em:", position, "cor:", color);
     const group = new THREE.Group();
 
     // Corpo
@@ -255,84 +267,11 @@ export class StarterGarage {
 
     group.position.set(position[0], position[1], position[2]);
     this.scene.add(group);
-
-    this.cabinet1 = group;
+    console.log("✅ Armário adicionado à cena");
   }
 
-  // ===== MÉTODOS PARA UPGRADE =====
-
-  upgradeToLevel2() {
-    console.log("⬆️ Garagem expandida para Nível 2!");
-
-    // Adicionar segundo elevador
-    this.createLift([4, 0, 0]);
-
-    // Adicionar segunda bancada
-    this.createWorkbench([4, 0, 4]);
-
-    // Adicionar máquina de pneus
-    this.createTireMachine([-4, 0, 3]);
-
-    this.level = 2;
-    this.equipment.lifts = 2;
-    this.equipment.workbenches = 2;
-    this.equipment.tireMachine = true;
-  }
-
-  upgradeToLevel3() {
-    console.log("⬆️ Garagem expandida para Nível 3!");
-
-    // Adicionar terceiro elevador
-    this.createLift([-4, 0, 3]);
-
-    // Adicionar computador
-    this.createComputer([5, 0, 3]);
-
-    // Adicionar armário extra
-    this.createCabinet([-5, 0, -3], 0x33cc33);
-
-    this.level = 3;
-    this.equipment.lifts = 3;
-    this.equipment.computer = true;
-    this.equipment.cabinets = 2;
-  }
-
-  upgradeToLevel4() {
-    console.log("⬆️ Garagem expandida para Nível 4!");
-
-    // Adicionar quarto elevador
-    this.createLift([0, 0, 4]);
-
-    // Adicionar estante de peças
-    this.createStorageRack([-2, 0, -5]);
-
-    // Adicionar área de teste
-    this.createTestArea([6, 0, 0]);
-
-    this.level = 4;
-    this.equipment.lifts = 4;
-    this.equipment.storage = true;
-  }
-
-  upgradeToLevel5() {
-    console.log("⬆️ Garagem expandida para Nível Máximo!");
-
-    // Oficina de pintura
-    this.createPaintBooth([-6, 0, 4]);
-
-    // Guincho de motor
-    this.createEngineCrane([0, 0, -5]);
-
-    // Decorações
-    this.createDecorations();
-
-    this.level = 5;
-    this.equipment.paintBooth = true;
-    this.equipment.engineCrane = true;
-  }
-
-  // Métodos para criar equipamentos avançados
   createTireMachine(position) {
+    console.log("⚙️ Criando máquina de pneus em:", position);
     const group = new THREE.Group();
 
     const baseGeo = new THREE.CylinderGeometry(0.6, 0.6, 0.2, 8);
@@ -359,9 +298,11 @@ export class StarterGarage {
 
     group.position.set(position[0], position[1], position[2]);
     this.scene.add(group);
+    console.log("✅ Máquina de pneus adicionada à cena");
   }
 
   createComputer(position) {
+    console.log("💻 Criando computador em:", position);
     const group = new THREE.Group();
 
     const deskGeo = new THREE.BoxGeometry(1.0, 0.1, 0.6);
@@ -390,9 +331,11 @@ export class StarterGarage {
 
     group.position.set(position[0], position[1], position[2]);
     this.scene.add(group);
+    console.log("✅ Computador adicionado à cena");
   }
 
   createStorageRack(position) {
+    console.log("📚 Criando estante em:", position);
     const rackMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
 
     for (let level = 0; level < 3; level++) {
@@ -407,7 +350,6 @@ export class StarterGarage {
       shelf.receiveShadow = true;
       this.scene.add(shelf);
 
-      // Caixas
       if (Math.random() > 0.5) {
         const boxGeo = new THREE.BoxGeometry(0.3, 0.3, 0.3);
         const boxMat = new THREE.MeshStandardMaterial({
@@ -423,9 +365,11 @@ export class StarterGarage {
         this.scene.add(box);
       }
     }
+    console.log("✅ Estante adicionada à cena");
   }
 
   createTestArea(position) {
+    console.log("🏁 Criando área de teste em:", position);
     const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
     const points = [
       new THREE.Vector3(position[0] - 2, 0.02, position[2]),
@@ -434,9 +378,11 @@ export class StarterGarage {
     const geo = new THREE.BufferGeometry().setFromPoints(points);
     const line = new THREE.Line(geo, mat);
     this.scene.add(line);
+    console.log("✅ Área de teste adicionada à cena");
   }
 
   createPaintBooth(position) {
+    console.log("🎨 Criando oficina de pintura em:", position);
     const group = new THREE.Group();
 
     const boothGeo = new THREE.BoxGeometry(2.5, 2.0, 2.5);
@@ -453,9 +399,11 @@ export class StarterGarage {
 
     group.position.set(position[0], position[1], position[2]);
     this.scene.add(group);
+    console.log("✅ Oficina de pintura adicionada à cena");
   }
 
   createEngineCrane(position) {
+    console.log("🏗️ Criando guincho em:", position);
     const group = new THREE.Group();
 
     const baseGeo = new THREE.BoxGeometry(1.2, 0.2, 1.5);
@@ -480,11 +428,13 @@ export class StarterGarage {
 
     group.position.set(position[0], position[1], position[2]);
     this.scene.add(group);
+    console.log("✅ Guincho adicionado à cena");
   }
 
   createDecorations() {
-    // Posteres
+    console.log("🎨 Criando decorações");
     const posterMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+
     const poster1 = new THREE.Mesh(
       new THREE.BoxGeometry(1.2, 0.8, 0.1),
       posterMat,
@@ -498,6 +448,8 @@ export class StarterGarage {
     );
     poster2.position.set(5, 2.0, -5.8);
     this.scene.add(poster2);
+
+    console.log("✅ Decorações adicionadas à cena");
   }
 
   createCar(carData, job) {
@@ -638,5 +590,21 @@ export class StarterGarage {
     this.equipment.engineCrane = true;
 
     this.level = 5;
+  }
+
+  listSceneObjects() {
+    console.log("📋 Objetos na cena:", this.scene.children.length);
+    this.scene.children.forEach((child, index) => {
+      if (child.isMesh) {
+        console.log(`   ${index}: Mesh - pos:`, child.position);
+      } else if (child.isGroup) {
+        console.log(
+          `   ${index}: Group - pos:`,
+          child.position,
+          "filhos:",
+          child.children.length,
+        );
+      }
+    });
   }
 }

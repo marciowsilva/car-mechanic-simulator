@@ -1,6 +1,6 @@
 // src/garage/GarageManager.js - Gerencia a evolução da garagem
 
-import { StarterGarage } from "./StarterGarage.js";
+import { SimpleGarage } from "./SimpleGarage.js";
 
 export class GarageManager {
   constructor(container) {
@@ -90,7 +90,7 @@ export class GarageManager {
   }
 
   initializeGarage() {
-    this.currentGarage = new StarterGarage(this.container);
+    this.currentGarage = new SimpleGarage(container);
     this.currentGarage.level = 1;
   }
 
