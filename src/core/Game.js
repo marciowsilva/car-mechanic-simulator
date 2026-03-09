@@ -16,7 +16,7 @@ import { CustomerSystem } from "/src/systems/customers/CustomerSystem.js";
 import { DailyChallenges } from "/src/systems/challenges/DailyChallenges.js";
 import { Job } from "/src/cars/Job.js";
 import { CustomerCar } from "/src/cars/Car.js";
-import { Scene3D } from "/src/garage/Scene3D.js";
+import { OptimizedGarage as Scene3D } from "/src/garage/OptimizedGarage.js";
 import { UIManager } from "/src/ui/UIManager.js";
 import { UsedPartsMarket } from "/src/systems/market/used-parts-market.js";
 import { CareerMode } from "/src/systems/career-mode.js";
@@ -544,8 +544,7 @@ window.addEventListener("load", async () => {
   db.loadAchievements();
 
   // Pré-carregar modelos
-  scene3D.preloadCarModels().then(() => {
-  });
+  scene3D.preloadCarModels().then(() => {});
 
   setInterval(() => {
     db.savePlayerData();
@@ -606,7 +605,6 @@ window.CustomerCar = CustomerCar;
 window.Scene3D = Scene3D;
 window.UIManager = UIManager;
 
-
 // Expor GameState globalmente
 if (typeof window !== "undefined") {
   window.GameState = GameState;
@@ -622,7 +620,6 @@ if (window.gameState && !(window.gameState instanceof GameState)) {
   window.gameState = new GameState();
   window.gameState.money = dinheiroAntigo;
   window.gameState.level = nivelAntigo;
-
 }
 
 // Proteção adicional - verificar periodicamente
@@ -635,7 +632,6 @@ setInterval(() => {
     window.gameState = new GameState();
     window.gameState.money = dinheiroAntigo;
     window.gameState.level = nivelAntigo;
-
   }
 }, 1000);
 
@@ -677,8 +673,7 @@ window.addEventListener("load", async () => {
   db.loadAchievements();
 
   // Pré-carregar modelos
-  scene3D.preloadCarModels().then(() => {
-  });
+  scene3D.preloadCarModels().then(() => {});
 
   setInterval(() => {
     db.savePlayerData();

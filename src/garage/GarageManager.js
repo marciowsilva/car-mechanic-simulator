@@ -1,10 +1,7 @@
 // src/garage/GarageManager.js - Gerencia a evolução da garagem
 
-import { SimpleGarage } from "./SimpleGarage.js";
-
 export class GarageManager {
   constructor(container) {
-
     this.container = container;
     this.currentGarage = null;
     this.level = 1;
@@ -89,8 +86,11 @@ export class GarageManager {
   }
 
   initializeGarage() {
-    this.currentGarage = new SimpleGarage(container);
-    this.currentGarage.level = 1;
+    // Agora tenta usar a cena global instanciada no Exports.js
+    this.currentGarage = window.scene3D || null;
+    if (this.currentGarage) {
+      this.currentGarage.level = 1;
+    }
   }
 
   // Verificar se pode fazer upgrade
@@ -116,19 +116,28 @@ export class GarageManager {
     window.gameState.money -= price;
 
     // Aplicar upgrade na garagem
-    switch (nextLevel) {
-      case 2:
-        this.currentGarage.upgradeToLevel2();
-        break;
-      case 3:
-        this.currentGarage.upgradeToLevel3();
-        break;
-      case 4:
-        this.currentGarage.upgradeToLevel4();
-        break;
-      case 5:
-        this.currentGarage.upgradeToLevel5();
-        break;
+    if (this.currentGarage) {
+      switch (nextLevel) {
+        case 2:
+          if (this.currentGarage.upgradeToLevel2)
+            this.currentGarage.upgradeToLevel2();
+          break;
+        case 3:
+          if (this.currentGarage.upgradeToLevel3)
+            this.currentGarage.upgradeToLevel3();
+          break;
+        case 4:
+          if (this.currentGarage.upgradeToLevel4)
+            this.currentGarage.upgradeToLevel4();
+          break;
+        case 5:
+          if (this.currentGarage.upgradeToLevel5)
+            this.currentGarage.upgradeToLevel5();
+          break;
+      }
+      if (this.currentGarage.upgradeToLevel) {
+        this.currentGarage.upgradeToLevel(nextLevel);
+      }
     }
 
     this.level = nextLevel;
@@ -143,8 +152,7 @@ export class GarageManager {
         window.achievementSystem.checkAchievement(`garageLevel${nextLevel}`);
         // OU usar o método checkAchievement com tipo
         // window.achievementSystem.checkAchievement('garageUpgraded', nextLevel);
-      } catch (e) {
-      }
+      } catch (e) {}
     }
 
     return {

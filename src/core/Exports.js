@@ -1,6 +1,5 @@
 // src/core/Exports.js - Versão final com múltiplas camadas de proteção
 
-
 // Função para carregar e expor módulos
 async function loadAndExpose(modulePath, exportName) {
   try {
@@ -49,27 +48,19 @@ const modules = [
   { path: "/src/systems/career-mode.js", name: "CareerMode" },
 
   // 6. Garage e UI (dependem de outros)
-  { path: "/src/garage/SimpleScene3D.js", name: "SimpleScene3D" },
-  { path: "/src/garage/Scene3D.js", name: "Scene3D" },
   { path: "/src/garage/Garage.js", name: "GarageSystem" },
   { path: "/src/garage/GarageLayout.js", name: "GARAGE_CONFIG" },
-  { path: "/src/garage/RealisticGarage.js", name: "RealisticGarage" },
-  { path: "/src/garage/UltraRealisticGarage.js", name: "UltraRealisticGarage" },
   { path: "/src/garage/OptimizedGarage.js", name: "OptimizedGarage" },
-  { path: "/src/garage/ProfessionalGarage.js", name: "ProfessionalGarage" },
-  { path: "/src/garage/StarterGarage.js", name: "StarterGarage" },
   { path: "/src/ui/UIManager.js", name: "UIManager" },
 ];
 
 // Carregar todos os módulos
 async function loadAllModules() {
-
   let success = 0;
   for (const mod of modules) {
     const result = await loadAndExpose(mod.path, mod.name);
     if (result) success++;
   }
-
 
   // Tentar inicializar o jogo
   if (success > 0) {
@@ -136,31 +127,18 @@ function initializeGame() {
   // === CAMADA 2: Scene3D ===
   if (!window.scene3D) {
     try {
-      if (window.StarterGarage) {
-        window.scene3D = new window.StarterGarage(container);
-      } else if (window.ProfessionalGarage) {
-        window.scene3D = new window.ProfessionalGarage(container);
-      } else if (window.UltraRealisticGarage) {
-        window.scene3D = new window.UltraRealisticGarage(container);
-      } else if (window.OptimizedGarage) {
+      if (window.OptimizedGarage) {
         window.scene3D = new window.OptimizedGarage(container);
-      } else if (window.RealisticGarage) {
-        window.scene3D = new window.RealisticGarage(container);
-      } else if (window.Scene3D) {
-        window.scene3D = new window.Scene3D(container);
       }
-    } catch (err) {
-    }
+    } catch (err) {}
   }
 
   // === CAMADA 3: UIManager ===
   if (window.UIManager && !window.uiManager) {
     try {
       window.uiManager = new window.UIManager();
-    } catch (err) {
-    }
+    } catch (err) {}
   }
-
 
   if (window.gameState) {
   }
@@ -185,8 +163,7 @@ setTimeout(() => {
   if (window.GameState && !window.gameState) {
     try {
       window.gameState = new window.GameState();
-    } catch (err) {
-    }
+    } catch (err) {}
   }
 
   // Verificação 3: Nem GameState nem gameState existem
@@ -209,4 +186,3 @@ setTimeout(() => {
 // Exportar funções para uso externo
 window.loadAllModules = loadAllModules;
 window.initializeGame = initializeGame;
-

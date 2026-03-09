@@ -9,7 +9,6 @@ THREE.Cache.enabled = true; // Ativa cache de texturas
 
 export class OptimizedGarage {
   constructor(container) {
-
     this.container = container;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x111122);
@@ -346,6 +345,14 @@ export class OptimizedGarage {
     }
   }
 
+  upgradeToLevel(level) {
+    console.log("Garage upgrading to level " + level + " (OptimizedGarage)");
+  }
+  upgradeToLevel2() {}
+  upgradeToLevel3() {}
+  upgradeToLevel4() {}
+  upgradeToLevel5() {}
+
   animate() {
     requestAnimationFrame(() => this.animate());
 
@@ -375,7 +382,7 @@ export class OptimizedGarage {
     //this.fpsCounter++;
     //const now = performance.now();
     //if (now - this.lastFpsUpdate > 1000) {
-    //  
+    //
     //  this.fpsCounter = 0;
     //  this.lastFpsUpdate = now;
     //}
