@@ -4,7 +4,6 @@ import { SimpleGarage } from "./SimpleGarage.js";
 
 export class GarageManager {
   constructor(container) {
-    console.log("🏢 Inicializando Gerenciador da Garagem...");
 
     this.container = container;
     this.currentGarage = null;
@@ -145,7 +144,6 @@ export class GarageManager {
         // OU usar o método checkAchievement com tipo
         // window.achievementSystem.checkAchievement('garageUpgraded', nextLevel);
       } catch (e) {
-        console.log("⚠️ Erro ao registrar conquista:", e);
       }
     }
 

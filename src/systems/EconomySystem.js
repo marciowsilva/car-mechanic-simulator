@@ -2,7 +2,6 @@
 
 export class EconomySystem {
     constructor() {
-        console.log('💰 Inicializando EconomySystem...');
         
         // Preços base das peças
         this.basePrices = {

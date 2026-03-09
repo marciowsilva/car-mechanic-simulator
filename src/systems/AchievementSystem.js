@@ -257,7 +257,6 @@ export const ACHIEVEMENTS = {
 
 export class AchievementSystem {
   constructor() {
-    console.log("🏆 Inicializando AchievementSystem...");
     this.achievements = JSON.parse(JSON.stringify(ACHIEVEMENTS));
     this.unlockedAchievements = [];
     this.stats = {
@@ -281,7 +280,6 @@ export class AchievementSystem {
         const data = JSON.parse(saved);
         this.unlockedAchievements = data.unlockedAchievements || [];
         this.stats = data.stats || this.stats;
-        console.log("✅ Progresso de conquistas carregado");
       } catch (e) {
         console.error("❌ Erro ao carregar conquistas:", e);
       }
@@ -298,7 +296,6 @@ export class AchievementSystem {
 
   // ===== MÉTODO PRINCIPAL PARA VERIFICAR CONQUISTAS =====
   checkAchievement(achievementId, value = 1) {
-    console.log(`🏆 Verificando conquista: ${achievementId}`, value);
 
     // Verificar por ID específico
     if (achievementId && this.achievements[achievementId]) {
@@ -545,7 +542,6 @@ export class AchievementSystem {
       }
     }
 
-    console.log(`🏆 Conquista desbloqueada: ${achievement.name}`);
 
     // Mostrar notificação - SEM CHECAR CONQUISTAS NOVAMENTE
     if (window.uiManager) {
@@ -616,7 +612,6 @@ export class AchievementSystem {
       garageLevel: 1,
     };
     localStorage.removeItem("achievementProgress");
-    console.log("🔄 Conquistas resetadas");
   }
 }
 
@@ -624,7 +619,6 @@ export class AchievementSystem {
 if (typeof window !== "undefined") {
   window.AchievementSystem = AchievementSystem;
   window.ACHIEVEMENTS = ACHIEVEMENTS;
-  console.log("🌐 AchievementSystem disponível globalmente");
 }
 
 // Garantir que o método checkAchievement existe (caso algo sobrescreva)
@@ -634,7 +628,6 @@ if (AchievementSystem.prototype.checkAchievement === undefined) {
     achievementId,
     value = 1,
   ) {
-    console.log(`🏆 Verificando conquista: ${achievementId}`);
 
     // Verificar por ID específico
     if (achievementId && this.achievements[achievementId]) {

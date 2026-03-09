@@ -9,7 +9,6 @@ THREE.Cache.enabled = true; // Ativa cache de texturas
 
 export class OptimizedGarage {
   constructor(container) {
-    console.log("🏢 Inicializando garagem otimizada...");
 
     this.container = container;
     this.scene = new THREE.Scene();
@@ -376,7 +375,7 @@ export class OptimizedGarage {
     //this.fpsCounter++;
     //const now = performance.now();
     //if (now - this.lastFpsUpdate > 1000) {
-    //  console.log(`🎮 FPS: ${this.fpsCounter}`);
+    //  
     //  this.fpsCounter = 0;
     //  this.lastFpsUpdate = now;
     //}

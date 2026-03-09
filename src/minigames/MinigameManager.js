@@ -221,6 +221,5 @@ export class MinigameManager {
     }
 
     showResults() {
-        console.log('📊 Resultado do minigame:', this.rewards);
     }
 }

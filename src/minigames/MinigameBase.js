@@ -18,7 +18,6 @@ export class MinigameBase {
         this.startTime = Date.now();
         this.score = 0;
         this.mistakes = 0;
-        console.log(`🎮 Minigame iniciado: ${this.equipmentId}`);
         this.onStart();
     }
 

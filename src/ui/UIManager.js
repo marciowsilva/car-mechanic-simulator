@@ -12,7 +12,6 @@ import { GarageUpgradePanel } from "/src/ui/GarageUpgradePanel.js";
 
 export class UIManager {
   constructor() {
-    console.log("🖥️ UIManager profissional inicializando");
     this.elements = {};
     this.notificationTimeout = null;
     this.parts = [];
@@ -31,7 +30,6 @@ export class UIManager {
 
   // ===== SISTEMA DE CACHE DE ELEMENTOS =====
   cacheElements() {
-    console.log("📦 Cacheando elementos da UI...");
 
     const elementosIds = [
       // Painéis principais
@@ -80,16 +78,11 @@ export class UIManager {
       const el = document.getElementById(id);
       if (el) {
         this.elements[id] = el;
-        console.log(`   ✅ #${id} cacheado`);
       } else {
-        console.log(`   ⚠️ #${id} não encontrado (usando fallback)`);
         this.elements[id] = this.createFallbackElement(id);
       }
     });
 
-    console.log(
-      `📊 Total de elementos cacheados: ${Object.keys(this.elements).length}`,
-    );
   }
 
   createFallbackElement(id) {
@@ -178,7 +171,6 @@ export class UIManager {
 
   // ===== CARREGAMENTO DE SISTEMAS =====
   async loadSystems() {
-    console.log("🔌 Carregando sistemas...");
 
     try {
       // 1. Sistemas de UI (sempre primeiros)
@@ -186,7 +178,6 @@ export class UIManager {
       this.sounds = new SoundSystem();
       this.tooltips = new TooltipSystem();
       this.animations = new AnimationSystem();
-      console.log("✅ Sistemas de UI carregados");
 
       // 2. ACHIEVEMENT SYSTEM (CARREGAR PRIMEIRO)
       try {
@@ -195,7 +186,6 @@ export class UIManager {
         const AchievementSystem =
           achievementModule.AchievementSystem || achievementModule.default;
         this.achievementSystem = new AchievementSystem();
-        console.log("✅ AchievementSystem carregado");
 
         // EXPOR GLOBALMENTE IMEDIATAMENTE
         window.achievementSystem = this.achievementSystem;
@@ -204,7 +194,6 @@ export class UIManager {
           .AchievementsPanel;
         this.achievementsPanel = new AchievementsPanel(this.achievementSystem);
       } catch (err) {
-        console.log("⚠️ AchievementSystem não disponível:", err);
       }
 
       // 3. UpgradeManager
@@ -212,7 +201,6 @@ export class UIManager {
       const UpgradeManager =
         upgradeModule.UpgradeManager || upgradeModule.default;
       this.upgradeManager = new UpgradeManager();
-      console.log("✅ UpgradeManager carregado");
       this.upgradePanel = new UpgradePanel(this.upgradeManager);
 
       // 4. CustomerSystem
@@ -221,7 +209,6 @@ export class UIManager {
       const CustomerSystem =
         customerModule.CustomerSystem || customerModule.default;
       this.customerSystem = new CustomerSystem();
-      console.log("✅ CustomerSystem carregado");
       this.customersPanel = new CustomersPanel(this.customerSystem);
 
       // 5. EconomySystem
@@ -230,12 +217,10 @@ export class UIManager {
         const EconomySystem =
           economyModule.EconomySystem || economyModule.default;
         this.economySystem = new EconomySystem();
-        console.log("✅ EconomySystem carregado");
 
         const ShopPanel = (await import("/src/ui/ShopPanel.js")).ShopPanel;
         this.shopPanel = new ShopPanel(this.economySystem);
       } catch (err) {
-        console.log("⚠️ EconomySystem não disponível:", err);
       }
 
       // 6. Inventory
@@ -243,9 +228,7 @@ export class UIManager {
         const inventoryModule = await import("/src/systems/Inventory.js");
         const Inventory = inventoryModule.Inventory || inventoryModule.default;
         this.inventory = new Inventory();
-        console.log("✅ Inventory carregado");
       } catch (err) {
-        console.log("⚠️ Inventory não disponível:", err);
       }
 
       // 7. GARAGE MANAGER (CARREGAR DEPOIS DO ACHIEVEMENT)
@@ -256,11 +239,9 @@ export class UIManager {
         this.garageManager = new GarageManager(
           this.getElement("game-container"),
         );
-        console.log("✅ GarageManager carregado");
 
         this.garageUpgradePanel = new GarageUpgradePanel(this.garageManager);
       } catch (err) {
-        console.log("⚠️ GarageManager não disponível:", err);
       }
 
       // 8. Sistemas adicionais
@@ -278,7 +259,6 @@ export class UIManager {
             const AchievementSystem =
               module.AchievementSystem || module.default;
             this.achievementSystem = new AchievementSystem();
-            console.log("✅ AchievementSystem carregado (tardio)");
           }
         })
         .catch(() => {});
@@ -287,7 +267,6 @@ export class UIManager {
         .then((module) => {
           const DailyChallenges = module.DailyChallenges || module.default;
           this.dailyChallenges = new DailyChallenges();
-          console.log("✅ DailyChallenges carregado");
         })
         .catch(() => {});
 
@@ -295,7 +274,6 @@ export class UIManager {
         .then((module) => {
           const UsedPartsMarket = module.UsedPartsMarket || module.default;
           this.usedPartsMarket = new UsedPartsMarket();
-          console.log("✅ UsedPartsMarket carregado");
         })
         .catch(() => {});
     }, 1000);
@@ -303,7 +281,6 @@ export class UIManager {
 
   // ===== INICIALIZAÇÃO DE EVENTOS =====
   initEventListeners() {
-    console.log("🔌 Inicializando event listeners...");
 
     // Botão Novo Cliente
     this.getElement("new-job").addEventListener("click", () => {
@@ -1197,5 +1174,4 @@ window.createRepairEffect = (partName) => {
 // Expor globalmente
 if (typeof window !== "undefined") {
   window.UIManager = UIManager;
-  console.log("🌐 UIManager disponível globalmente");
 }

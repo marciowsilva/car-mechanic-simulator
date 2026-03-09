@@ -2,7 +2,6 @@
 
 export class Scene3D {
   constructor(container) {
-    console.log("🎮 Scene3D inicializando com container:", container);
 
     if (!container) {
       console.error("❌ Container não fornecido");
@@ -25,11 +24,9 @@ export class Scene3D {
 
     container.appendChild(div);
 
-    console.log("✅ Scene3D (mínimo) inicializado com sucesso");
   }
 
   createCar(carData, job) {
-    console.log("🚗 createCar chamado com:", carData, job);
     return null;
   }
 
@@ -41,5 +38,4 @@ export class Scene3D {
 // Expor globalmente
 if (typeof window !== "undefined") {
   window.Scene3D = Scene3D;
-  console.log("🌐 Scene3D disponível globalmente");
 }

@@ -234,5 +234,4 @@ export class GarageSystem {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.GarageSystem = GarageSystem;
-    console.log('🌐 GarageSystem disponível globalmente');
 }

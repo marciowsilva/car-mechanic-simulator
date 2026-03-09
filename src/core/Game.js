@@ -58,7 +58,6 @@ class GameState {
       try {
         window.achievementSystem.checkAchievements?.(); // NOTA: é checkAchievements, não checkAchievement
       } catch (e) {
-        console.log("⚠️ Erro ao verificar conquistas:", e);
       } finally {
         this.isUpdatingFromAchievement = false;
       }
@@ -546,7 +545,6 @@ window.addEventListener("load", async () => {
 
   // Pré-carregar modelos
   scene3D.preloadCarModels().then(() => {
-    console.log("🎮 Modelos prontos!");
   });
 
   setInterval(() => {
@@ -608,12 +606,10 @@ window.CustomerCar = CustomerCar;
 window.Scene3D = Scene3D;
 window.UIManager = UIManager;
 
-console.log("✅ Todas as classes exportadas globalmente");
 
 // Expor GameState globalmente
 if (typeof window !== "undefined") {
   window.GameState = GameState;
-  console.log("🌐 GameState disponível globalmente");
 }
 
 // ===== PROTEÇÃO FINAL =====
@@ -627,7 +623,6 @@ if (window.gameState && !(window.gameState instanceof GameState)) {
   window.gameState.money = dinheiroAntigo;
   window.gameState.level = nivelAntigo;
 
-  console.log("✅ gameState restaurado como instância de GameState");
 }
 
 // Proteção adicional - verificar periodicamente
@@ -641,7 +636,6 @@ setInterval(() => {
     window.gameState.money = dinheiroAntigo;
     window.gameState.level = nivelAntigo;
 
-    console.log("✅ gameState recuperado automaticamente");
   }
 }, 1000);
 
@@ -684,7 +678,6 @@ window.addEventListener("load", async () => {
 
   // Pré-carregar modelos
   scene3D.preloadCarModels().then(() => {
-    console.log("🎮 Modelos prontos!");
   });
 
   setInterval(() => {

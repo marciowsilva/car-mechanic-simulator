@@ -145,5 +145,4 @@ export class SpecializationSystem {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.SpecializationSystem = SpecializationSystem;
-    console.log('🌐 SpecializationSystem disponível globalmente');
 }

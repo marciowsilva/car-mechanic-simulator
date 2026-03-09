@@ -2,7 +2,6 @@
 
 export class UpgradeSystem {
   constructor() {
-    console.log("🔧 Inicializando UpgradeSystem...");
 
     // Níveis das ferramentas
     this.toolLevels = {

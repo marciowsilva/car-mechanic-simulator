@@ -5,7 +5,6 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 export class SimpleGarage {
   constructor(container) {
-    console.log("🏢 Inicializando SimpleGarage...");
 
     this.container = container;
     this.scene = new THREE.Scene();
@@ -124,7 +123,6 @@ export class SimpleGarage {
 
   // ===== NÍVEL 1 =====
   createLevel1() {
-    console.log("📦 Criando nível 1");
 
     // 1 elevador no centro
     this.createLift(0, 0, 0);
@@ -135,15 +133,10 @@ export class SimpleGarage {
     // 1 armário
     this.createCabinet(5, 0, -4, 0xcc3333);
 
-    console.log(
-      "✅ Nível 1 completo. Total de objetos:",
-      this.scene.children.length,
-    );
   }
 
   // ===== NÍVEL 2 =====
   createLevel2() {
-    console.log("📦 Criando nível 2");
 
     // Segundo elevador
     this.createLift(4, 0, 2);
@@ -157,7 +150,6 @@ export class SimpleGarage {
 
   // ===== NÍVEL 3 =====
   createLevel3() {
-    console.log("📦 Criando nível 3");
 
     // Terceiro elevador
     this.createLift(-3, 0, 3);
@@ -171,7 +163,6 @@ export class SimpleGarage {
 
   // ===== NÍVEL 4 =====
   createLevel4() {
-    console.log("📦 Criando nível 4");
 
     // Quarto elevador
     this.createLift(3, 0, -2);
@@ -185,7 +176,6 @@ export class SimpleGarage {
 
   // ===== NÍVEL 5 =====
   createLevel5() {
-    console.log("📦 Criando nível 5");
 
     // Oficina de pintura
     this.createPaintBooth(-6, 0, 4);
@@ -200,7 +190,6 @@ export class SimpleGarage {
   // ===== MÉTODOS DE CRIAÇÃO DE OBJETOS =====
 
   createLift(x, y, z) {
-    console.log(`🔨 Criando elevador em (${x}, ${y}, ${z})`);
 
     const group = new THREE.Group();
 
@@ -250,11 +239,9 @@ export class SimpleGarage {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    console.log("✅ Elevador adicionado à cena");
   }
 
   createWorkbench(x, y, z) {
-    console.log(`🔨 Criando bancada em (${x}, ${y}, ${z})`);
 
     const group = new THREE.Group();
 
@@ -277,11 +264,9 @@ export class SimpleGarage {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    console.log("✅ Bancada adicionada à cena");
   }
 
   createCabinet(x, y, z, color) {
-    console.log(`🔨 Criando armário em (${x}, ${y}, ${z})`);
 
     const group = new THREE.Group();
 
@@ -295,11 +280,9 @@ export class SimpleGarage {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    console.log("✅ Armário adicionado à cena");
   }
 
   createTireMachine(x, y, z) {
-    console.log(`🔨 Criando máquina de pneus em (${x}, ${y}, ${z})`);
 
     const group = new THREE.Group();
 
@@ -320,11 +303,9 @@ export class SimpleGarage {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    console.log("✅ Máquina de pneus adicionada à cena");
   }
 
   createComputer(x, y, z) {
-    console.log(`🔨 Criando computador em (${x}, ${y}, ${z})`);
 
     const group = new THREE.Group();
 
@@ -345,11 +326,9 @@ export class SimpleGarage {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    console.log("✅ Computador adicionado à cena");
   }
 
   createStorageRack(x, y, z) {
-    console.log(`🔨 Criando estante em (${x}, ${y}, ${z})`);
 
     const rackMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
 
@@ -361,11 +340,9 @@ export class SimpleGarage {
       shelf.receiveShadow = true;
       this.scene.add(shelf);
     }
-    console.log("✅ Estante adicionada à cena");
   }
 
   createTestArea(x, y, z) {
-    console.log(`🔨 Criando área de teste em (${x}, ${y}, ${z})`);
 
     const mat = new THREE.LineBasicMaterial({ color: 0xffff00 });
     const points = [
@@ -375,11 +352,9 @@ export class SimpleGarage {
     const geo = new THREE.BufferGeometry().setFromPoints(points);
     const line = new THREE.Line(geo, mat);
     this.scene.add(line);
-    console.log("✅ Área de teste adicionada à cena");
   }
 
   createPaintBooth(x, y, z) {
-    console.log(`🔨 Criando oficina de pintura em (${x}, ${y}, ${z})`);
 
     const group = new THREE.Group();
 
@@ -397,11 +372,9 @@ export class SimpleGarage {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    console.log("✅ Oficina de pintura adicionada à cena");
   }
 
   createEngineCrane(x, y, z) {
-    console.log(`🔨 Criando guincho em (${x}, ${y}, ${z})`);
 
     const group = new THREE.Group();
 
@@ -421,11 +394,9 @@ export class SimpleGarage {
 
     group.position.set(x, y, z);
     this.scene.add(group);
-    console.log("✅ Guincho adicionado à cena");
   }
 
   createPosters() {
-    console.log("🔨 Criando pôsteres");
 
     const posterMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
 
@@ -443,12 +414,10 @@ export class SimpleGarage {
     poster2.position.set(7, 2.0, -9.5);
     this.scene.add(poster2);
 
-    console.log("✅ Pôsteres adicionados à cena");
   }
 
   // ===== MÉTODO PARA UPGRADE =====
   upgradeToLevel(level) {
-    console.log(`⬆️ Fazendo upgrade para nível ${level}`);
 
     switch (level) {
       case 2:
@@ -464,17 +433,14 @@ export class SimpleGarage {
         this.createLevel5();
         break;
       default:
-        console.log("❌ Nível inválido");
         return;
     }
 
     this.level = level;
-    console.log(`✅ Garagem agora no nível ${level}`);
   }
 
   // ===== MÉTODO PARA LISTAR OBJETOS =====
   listObjects() {
-    console.log(`📊 Total de objetos na cena: ${this.scene.children.length}`);
     return this.scene.children.length;
   }
 
@@ -488,5 +454,4 @@ export class SimpleGarage {
 // Expor globalmente
 if (typeof window !== "undefined") {
   window.SimpleGarage = SimpleGarage;
-  console.log("🌐 SimpleGarage disponível globalmente");
 }

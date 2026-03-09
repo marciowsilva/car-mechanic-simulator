@@ -4,7 +4,6 @@ import * as THREE from 'three';
 
 export class MinimalGarage {
     constructor(container) {
-        console.log('🏢 Criando garagem mínima...');
         
         // Cena
         this.scene = new THREE.Scene();
@@ -44,7 +43,6 @@ export class MinimalGarage {
     }
     
     createTestLift() {
-        console.log('🔧 Criando elevador de teste...');
         
         // Um cubo simples para testar
         const geometry = new THREE.BoxGeometry(2, 0.5, 3);
@@ -53,7 +51,6 @@ export class MinimalGarage {
         lift.position.set(0, 0.25, 0);
         this.scene.add(lift);
         
-        console.log('✅ Elevador adicionado à cena');
     }
     
     animate() {

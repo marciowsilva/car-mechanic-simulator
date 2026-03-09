@@ -379,5 +379,4 @@ export class DailyChallenges {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.DailyChallenges = DailyChallenges;
-    console.log('🌐 DailyChallenges disponível globalmente');
 }

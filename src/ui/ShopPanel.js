@@ -653,5 +653,4 @@ export class ShopPanel {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.ShopPanel = ShopPanel;
-    console.log('🌐 ShopPanel disponível globalmente');
 }

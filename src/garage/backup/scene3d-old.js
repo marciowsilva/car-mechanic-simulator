@@ -10,7 +10,6 @@ import { gameState } from './game.js';
 
 export class Scene3D {
     constructor(container) {
-        console.log('🎮 Inicializando Scene3D com garagem realista...');
         
         this.container = container;
         this.scene = new THREE.Scene();
@@ -60,7 +59,6 @@ export class Scene3D {
         this.mouse = new THREE.Vector2();
         this.renderer.domElement.addEventListener('click', (event) => this.onMouseClick(event));
         
-        console.log('✅ Scene3D inicializada');
     }
 
     setupLights() {
@@ -584,7 +582,6 @@ export class Scene3D {
     }
 
     createCar(carData, job) {
-        console.log('🚗 Criando carro com modelo 3D realista...');
         
         this.clearAllLabels();
         this.clearHighlight();
@@ -632,17 +629,14 @@ export class Scene3D {
         
         this.updatePartLabels(carData, job);
         
-        console.log('✅ Carro criado com sucesso');
         return carGroup;
     }
 
     updatePartLabels(carData, job) {
-        console.log('🏷️ Atualizando labels...');
         
         this.clearAllLabels();
 
         if (!this.currentCar || !carData || !job) {
-            console.log('❌ Sem dados para criar labels');
             return;
         }
 
@@ -782,7 +776,6 @@ export class Scene3D {
     selectPart(partName) {
         if (!gameState || !this.normalLabels) return;
         
-        console.log('🎯 Selecionando peça:', partName);
         gameState.selectedPart = partName;
         
         // Resetar todos os labels
@@ -1082,7 +1075,6 @@ export class Scene3D {
     }
 
     updateGarageAppearance(appearance) {
-        console.log('🏢 Atualizando aparência da garagem:', appearance);
         // Implementar mudanças visuais baseadas no nível da garagem
     }
 

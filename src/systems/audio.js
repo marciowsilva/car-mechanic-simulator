@@ -59,7 +59,6 @@ export class AudioManager {
             oscillator.start();
             oscillator.stop(audioContext.currentTime + sound.duration);
         } catch (e) {
-            console.log('Áudio não suportado:', e);
         }
     }
 
@@ -68,7 +67,6 @@ export class AudioManager {
         
         // Nota: Para música real, você precisaria de arquivos MP3
         // Por enquanto, vamos simular com uma nota sustentada
-        console.log('🎵 Música ambiente:', type);
     }
 
     stopMusic() {
@@ -95,5 +93,4 @@ export class AudioManager {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.AudioManager = AudioManager;
-    console.log('🌐 AudioManager disponível globalmente');
 }

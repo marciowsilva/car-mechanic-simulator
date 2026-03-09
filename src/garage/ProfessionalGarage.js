@@ -5,7 +5,6 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export class ProfessionalGarage {
     constructor(container) {
-        console.log('🏢 Inicializando garagem profissional...');
         
         this.container = container;
         this.scene = new THREE.Scene();

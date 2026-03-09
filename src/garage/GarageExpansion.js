@@ -2,7 +2,6 @@
 
 export class GarageExpansion {
     constructor() {
-        console.log('🏢 Inicializando sistema de expansão da garagem...');
         
         // Níveis da garagem
         this.level = 1;
@@ -96,7 +95,6 @@ export class GarageExpansion {
                 const data = JSON.parse(saved);
                 this.level = data.level || 1;
                 this.decorationsPlaced = data.decorationsPlaced || [];
-                console.log('✅ Progresso da garagem carregado');
             } catch (e) {
                 console.error('❌ Erro ao carregar garagem:', e);
             }

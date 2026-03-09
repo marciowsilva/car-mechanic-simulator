@@ -5,7 +5,6 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 export class SimpleScene3D {
   constructor(container) {
-    console.log("🎮 Inicializando cena 3D simples...");
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x111122);
@@ -218,5 +217,4 @@ export class SimpleScene3D {
 // Expor globalmente
 if (typeof window !== "undefined") {
   window.SimpleScene3D = SimpleScene3D;
-  console.log("🌐 SimpleScene3D disponível globalmente");
 }

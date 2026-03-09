@@ -14,7 +14,6 @@ export class EquipmentInteractionSystem {
     this.minigameActive = false;
     this.minigameManager = new MinigameManager();
     this.listeners = new Map();
-    console.log("🔧 Sistema de interação com equipamentos inicializado");
   }
 
   // Interagir com equipamento

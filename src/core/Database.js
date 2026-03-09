@@ -40,7 +40,6 @@ export class Database {
 
       request.onsuccess = (event) => {
         this.db = event.target.result;
-        console.log("Banco de dados inicializado com sucesso");
         resolve();
       };
     });
@@ -172,5 +171,4 @@ export class Database {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.Database = Database;
-    console.log('🌐 Database disponível globalmente');
 }

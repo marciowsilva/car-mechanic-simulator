@@ -6,7 +6,6 @@ import { GarageConfig } from './GarageConfig.js';
 
 export class RealisticGarage {
     constructor(container) {
-        console.log('🏢 Inicializando garagem realista...');
         
         this.container = container;
         this.scene = new THREE.Scene();

@@ -2,7 +2,6 @@
 
 export class AchievementSystem {
     constructor() {
-        console.log('🏆 AchievementSystem (mínimo) inicializado');
         this.achievements = {};
     }
     
@@ -12,5 +11,4 @@ export class AchievementSystem {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.AchievementSystem = AchievementSystem;
-    console.log('🌐 AchievementSystem disponível globalmente');
 }

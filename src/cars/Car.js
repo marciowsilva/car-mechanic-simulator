@@ -46,5 +46,4 @@ export const CustomerCar = Car;
 if (typeof window !== "undefined") {
   window.Car = Car;
   window.CustomerCar = Car;
-  console.log("🌐 Car e CustomerCar disponíveis globalmente");
 }

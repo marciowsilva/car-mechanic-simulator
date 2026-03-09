@@ -81,5 +81,4 @@ export class Inventory {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.Inventory = Inventory;
-    console.log('🌐 Inventory disponível globalmente');
 }

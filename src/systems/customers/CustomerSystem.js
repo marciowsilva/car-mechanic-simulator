@@ -64,7 +64,6 @@ const LOYALTY_LEVELS = {
 
 export class CustomerSystem {
     constructor() {
-        console.log('👥 Inicializando CustomerSystem avançado...');
         this.customers = this.generateCustomers(15);
         this.currentJob = null;
         this.totalEarnings = 0;

@@ -2,7 +2,6 @@
 
 export class UpgradeManager {
     constructor() {
-        console.log('🔧 Inicializando UpgradeManager...');
         
         // Níveis das ferramentas (1-5)
         this.toolLevels = {
@@ -247,5 +246,4 @@ export class UpgradeManager {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.UpgradeManager = UpgradeManager;
-    console.log('🌐 UpgradeManager disponível globalmente');
 }

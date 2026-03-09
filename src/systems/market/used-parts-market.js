@@ -171,5 +171,4 @@ export class UsedPartsMarket {
 // Expor globalmente
 if (typeof window !== 'undefined') {
     window.UsedPartsMarket = UsedPartsMarket;
-    console.log('🌐 UsedPartsMarket disponível globalmente');
 }

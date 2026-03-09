@@ -4,7 +4,6 @@ import * as THREE from 'three';
 
 export class CarModelLoader {
     constructor() {
-        console.log('🚗 Inicializando CarModelLoader (modo procedural)');
         this.modelCache = new Map();
     }
 
@@ -87,7 +86,6 @@ export class CarModelLoader {
             await this.loadModel(types[i]);
             if (onProgress) onProgress((i + 1) / types.length);
         }
-        console.log('✅ Modelos procedurais carregados');
     }
 
     getCacheStats() {

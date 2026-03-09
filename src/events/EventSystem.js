@@ -127,7 +127,6 @@ export const SPECIAL_EVENTS = {
 
 export class EventSystem {
     constructor() {
-        console.log('📅 Inicializando sistema de eventos...');
         this.activeEvents = [];
         this.completedEvents = [];
         this.eventProgress = {};
