@@ -57,13 +57,27 @@ export class EquipmentInteractionSystem {
     let difficulty = this.calculateDifficulty(equipment);
 
     switch (equipment.id) {
-      case "wheelBalancer":
-        gameType = "wheelBalancer";
+      case "tireChanger":
+        gameType = "wheelBalancer"; // Fallback por enquanto
         break;
       case "oilDrain":
         gameType = "oilDrain";
         break;
-      // Adicionar outros minigames aqui
+      case "workbench":
+        if (window.uiManager && window.uiManager.upgradePanel) {
+          window.uiManager.upgradePanel.show();
+        }
+        break;
+      case "workComputer":
+        if (window.uiManager && window.uiManager.shopPanel) {
+          window.uiManager.shopPanel.show();
+        }
+        break;
+      case "carLift":
+        if (window.scene3D && window.scene3D.toggleLift) {
+          window.scene3D.toggleLift();
+        }
+        break;
     }
 
     if (gameType) {

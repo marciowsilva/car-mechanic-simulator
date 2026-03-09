@@ -9,6 +9,8 @@ import { TooltipSystem } from "/src/ui/TooltipSystem.js";
 import { AnimationSystem } from "/src/systems/AnimationSystem.js";
 import { GarageManager } from "/src/garage/GarageManager.js";
 import { GarageUpgradePanel } from "/src/ui/GarageUpgradePanel.js";
+import { EquipmentInteractionSystem } from "/src/systems/EquipmentInteractionSystem.js";
+import { EquipmentPanel } from "/src/ui/EquipmentPanel.js";
 
 export class UIManager {
   constructor() {
@@ -30,7 +32,6 @@ export class UIManager {
 
   // ===== SISTEMA DE CACHE DE ELEMENTOS =====
   cacheElements() {
-
     const elementosIds = [
       // Painéis principais
       "game-container",
@@ -82,7 +83,6 @@ export class UIManager {
         this.elements[id] = this.createFallbackElement(id);
       }
     });
-
   }
 
   createFallbackElement(id) {
@@ -171,7 +171,6 @@ export class UIManager {
 
   // ===== CARREGAMENTO DE SISTEMAS =====
   async loadSystems() {
-
     try {
       // 1. Sistemas de UI (sempre primeiros)
       this.notifications = new NotificationSystem();
@@ -193,8 +192,7 @@ export class UIManager {
         const AchievementsPanel = (await import("/src/ui/AchievementsPanel.js"))
           .AchievementsPanel;
         this.achievementsPanel = new AchievementsPanel(this.achievementSystem);
-      } catch (err) {
-      }
+      } catch (err) {}
 
       // 3. UpgradeManager
       const upgradeModule = await import("/src/systems/UpgradeManager.js");
@@ -220,16 +218,14 @@ export class UIManager {
 
         const ShopPanel = (await import("/src/ui/ShopPanel.js")).ShopPanel;
         this.shopPanel = new ShopPanel(this.economySystem);
-      } catch (err) {
-      }
+      } catch (err) {}
 
       // 6. Inventory
       try {
         const inventoryModule = await import("/src/systems/Inventory.js");
         const Inventory = inventoryModule.Inventory || inventoryModule.default;
         this.inventory = new Inventory();
-      } catch (err) {
-      }
+      } catch (err) {}
 
       // 7. GARAGE MANAGER (CARREGAR DEPOIS DO ACHIEVEMENT)
       try {
@@ -241,10 +237,23 @@ export class UIManager {
         );
 
         this.garageUpgradePanel = new GarageUpgradePanel(this.garageManager);
-      } catch (err) {
-      }
 
-      // 8. Sistemas adicionais
+        // 8. INTERAÇÃO COM EQUIPAMENTOS
+        this.equipmentInteractionSystem = new EquipmentInteractionSystem(
+          this.garageManager,
+        );
+        this.equipmentPanel = new EquipmentPanel(
+          this.equipmentInteractionSystem,
+          this.garageManager,
+        );
+
+        // Sincronizar com o 3D
+        if (window.scene3D) {
+          window.scene3D.equipmentSystem = this.equipmentInteractionSystem;
+        }
+      } catch (err) {}
+
+      // 9. Sistemas adicionais
       this.loadAdditionalSystems();
     } catch (err) {
       console.error("❌ Erro ao carregar sistemas:", err);
@@ -281,7 +290,6 @@ export class UIManager {
 
   // ===== INICIALIZAÇÃO DE EVENTOS =====
   initEventListeners() {
-
     // Botão Novo Cliente
     this.getElement("new-job").addEventListener("click", () => {
       this.sounds?.play("click");

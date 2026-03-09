@@ -17,10 +17,17 @@ export class OptimizedGarage {
     this.setupRenderer();
     this.setupControls();
     this.setupLights();
-    this.createGarage();
+    this.setupInteraction();
 
     this.currentCar = null;
     this.particles = [];
+    this.equipmentSystem = null; // Será injetado pelo UIManager
+    this.clickableObjects = []; // Objetos que respondem a cliques
+    this.raycaster = new THREE.Raycaster();
+    this.mouse = new THREE.Vector2();
+    this.hoveredObject = null;
+    this.carLifted = false;
+    this.liftHeight = 0;
 
     this.animate();
 
@@ -68,85 +75,178 @@ export class OptimizedGarage {
     this.controls.rotateSpeed = 0.8;
   }
 
+  setupInteraction() {
+    this.renderer.domElement.addEventListener("click", (e) => this.onClick(e));
+    this.renderer.domElement.addEventListener("mousemove", (e) =>
+      this.onMouseMove(e),
+    );
+  }
+
+  onMouseMove(event) {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const intersects = this.raycaster.intersectObjects(
+      this.clickableObjects,
+      true,
+    );
+
+    if (intersects.length > 0) {
+      let obj = intersects[0].object;
+      while (obj && !obj.userData.equipmentId) obj = obj.parent;
+
+      if (obj && this.hoveredObject !== obj) {
+        if (this.hoveredObject) this.highlightObject(this.hoveredObject, false);
+        this.hoveredObject = obj;
+        this.highlightObject(this.hoveredObject, true);
+        this.container.style.cursor = "pointer";
+        this.showInteractionTooltip(obj.userData.equipmentId);
+      }
+    } else {
+      if (this.hoveredObject) {
+        this.highlightObject(this.hoveredObject, false);
+        this.hoveredObject = null;
+        this.container.style.cursor = "default";
+        this.hideInteractionTooltip();
+      }
+    }
+  }
+
+  onClick(event) {
+    if (!this.hoveredObject || !this.equipmentSystem) return;
+
+    const eqId = this.hoveredObject.userData.equipmentId;
+    console.warn(`Interagindo com: ${eqId}`);
+    this.equipmentSystem.interactWithEquipment(eqId);
+  }
+
+  highlightObject(obj, active) {
+    obj.traverse((child) => {
+      if (child.isMesh) {
+        if (active) {
+          child.userData.oldEmissive = child.material.emissive?.getHex() || 0;
+          child.material.emissive?.setHex(0x333300);
+        } else {
+          child.material.emissive?.setHex(child.userData.oldEmissive || 0);
+        }
+      }
+    });
+  }
+
+  showInteractionTooltip(id) {
+    const info = document.getElementById("interaction-info");
+    if (info) {
+      info.innerHTML = `Clique para usar: <b>${id.toUpperCase()}</b>`;
+      info.style.display = "block";
+    }
+  }
+
+  hideInteractionTooltip() {
+    const info = document.getElementById("interaction-info");
+    if (info) info.style.display = "none";
+  }
+
+  toggleLift() {
+    this.carLifted = !this.carLifted;
+    const targetHeight = this.carLifted ? 1.5 : 0;
+
+    // Animação simples via GSAP ou no frame (usando o animate loop agora)
+    this.targetLiftHeight = targetHeight;
+    window.uiManager?.showNotification(
+      this.carLifted ? "⬆️ Elevando veículo..." : "⬇️ Descendo veículo...",
+      "info",
+    );
+  }
+
   setupLights() {
-    // Luz ambiente
-    const ambientLight = new THREE.AmbientLight(0x404060);
-    this.scene.add(ambientLight);
+    // Luz Hemisférica mais suave
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.25);
+    this.scene.add(hemiLight);
 
-    // Luz principal
-    const mainLight = new THREE.DirectionalLight(0xffeedd, 1.2);
-    mainLight.position.set(5, 10, 5);
+    // Luz principal Direcional menos intensa
+    const mainLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    mainLight.position.set(10, 20, 10);
     mainLight.castShadow = true;
-    mainLight.receiveShadow = true;
-    mainLight.shadow.mapSize.width = 1024;
-    mainLight.shadow.mapSize.height = 1024;
+    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.height = 2048;
     mainLight.shadow.camera.near = 0.5;
-    mainLight.shadow.camera.far = 30;
-    mainLight.shadow.camera.left = -15;
-    mainLight.shadow.camera.right = 15;
-    mainLight.shadow.camera.top = 15;
-    mainLight.shadow.camera.bottom = -15;
-    mainLight.shadow.bias = -0.0005;
+    mainLight.shadow.camera.far = 50;
+    mainLight.shadow.bias = -0.001;
     this.scene.add(mainLight);
-
-    // Luz de preenchimento
-    const fillLight = new THREE.PointLight(0x4466ff, 0.5);
-    fillLight.position.set(-3, 4, 4);
-    fillLight.castShadow = false;
-    this.scene.add(fillLight);
-
-    const fillLight2 = new THREE.PointLight(0xffaa66, 0.5);
-    fillLight2.position.set(4, 4, -3);
-    fillLight2.castShadow = false;
-    this.scene.add(fillLight2);
   }
 
   createGarage() {
-    // ===== CHÃO (textura simples) =====
-    const floorGeo = new THREE.CircleGeometry(25, 32);
+    const texLoader = new THREE.TextureLoader();
+
+    // Carregar texturas geradas
+    const floorTex = texLoader.load(
+      "/src/assets/images/garage_floor_texture_concrete.png",
+    );
+    floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
+    floorTex.repeat.set(4, 4);
+
+    const wallTex = texLoader.load(
+      "/src/assets/images/garage_wall_texture_brick_metal.png",
+    );
+    wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
+    wallTex.repeat.set(6, 2);
+
+    // ===== CHÃO REALISTA COM PBR =====
+    const floorGeo = new THREE.PlaneGeometry(30, 30);
     const floorMat = new THREE.MeshStandardMaterial({
-      color: 0x2a2a2a,
-      roughness: 0.8,
+      map: floorTex,
+      roughness: 0.3,
       metalness: 0.1,
+      bumpScale: 0.02,
     });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = 0;
     floor.receiveShadow = true;
     this.scene.add(floor);
 
-    // Grid simples (menos linhas)
-    const gridHelper = new THREE.GridHelper(25, 20, 0xff6b00, 0x444444);
-    gridHelper.position.y = 0.01;
-    this.scene.add(gridHelper);
+    // Grid de neon sutil
+    const grid = new THREE.GridHelper(30, 30, 0x4444ff, 0x222222);
+    grid.position.y = 0.01;
+    grid.material.transparent = true;
+    grid.material.opacity = 0.2;
+    this.scene.add(grid);
 
-    // ===== PAREDES (simplificadas) =====
-    this.wallMat = new THREE.MeshStandardMaterial({ color: 0x3a3a3a });
+    // ===== PAREDES DETALHADAS =====
+    this.wallMat = new THREE.MeshStandardMaterial({
+      map: wallTex,
+      roughness: 0.8,
+      metalness: 0.3,
+    });
 
-    // Parede dos fundos
     const backWall = new THREE.Mesh(
-      new THREE.BoxGeometry(25, 5, 0.3),
+      new THREE.BoxGeometry(30, 8, 0.5),
       this.wallMat,
     );
-    backWall.position.set(0, 2.5, -12);
+    backWall.position.set(0, 4, -15);
     backWall.receiveShadow = true;
-    backWall.castShadow = true;
     this.scene.add(backWall);
 
-    // Paredes laterais
-    const sideWallGeo = new THREE.BoxGeometry(0.3, 5, 25);
-
+    const sideWallGeo = new THREE.BoxGeometry(0.5, 8, 30);
     const leftWall = new THREE.Mesh(sideWallGeo, this.wallMat);
-    leftWall.position.set(-12.5, 2.5, 0);
+    leftWall.position.set(-15, 4, 0);
     leftWall.receiveShadow = true;
-    leftWall.castShadow = true;
     this.scene.add(leftWall);
 
     const rightWall = new THREE.Mesh(sideWallGeo, this.wallMat);
-    rightWall.position.set(12.5, 2.5, 0);
+    rightWall.position.set(15, 4, 0);
     rightWall.receiveShadow = true;
-    rightWall.castShadow = true;
     this.scene.add(rightWall);
+
+    // Teto sutil
+    const ceiling = new THREE.Mesh(
+      new THREE.PlaneGeometry(30, 30),
+      new THREE.MeshStandardMaterial({ color: 0x111111 }),
+    );
+    ceiling.position.y = 8;
+    ceiling.rotation.x = Math.PI / 2;
+    this.scene.add(ceiling);
 
     // Grupos para níveis
     this.levelGroups = {
@@ -164,83 +264,236 @@ export class OptimizedGarage {
   }
 
   setupLevelContent() {
-    // --- NÍVEL 1: Itens básicos ---
+    // --- NÍVEL 1: Itens básicos + Luz 1 ---
     this.addLift([-5, 0, -4], this.levelGroups[1]);
     this.addWorkbench([-9, 0, -9], this.levelGroups[1]);
     this.addCabinet(-10, 0xcc3333, this.levelGroups[1]);
+    this.addCeilingLight([-5, 7.5, -4], 0xffffff, this.levelGroups[1]);
 
-    // --- NÍVEL 2: Expansão básica ---
+    // --- NÍVEL 2: Expansão básica + Luz 2 ---
     this.addLift([5, 0, -4], this.levelGroups[2]);
     this.addTireMachine([-7, 0, 8], this.levelGroups[2]);
-    this.addPoster(-9, 0xffaa00, this.levelGroups[2]);
+    this.addPoster(-14.7, 0xffaa00, this.levelGroups[2], "left");
+    this.addCeilingLight([5, 7.5, -4], 0xffffff, this.levelGroups[2]);
 
-    // --- NÍVEL 3: Profissionalizante ---
+    // --- NÍVEL 3: Profissionalizante + Luz 3 ---
     this.addLift([-5, 0, 4], this.levelGroups[3]);
     this.addWorkbench([9, 0, -9], this.levelGroups[3]);
-    this.addComputerTable([10, 0, -11], this.levelGroups[3]);
-    this.addCabinet(10, 0x3333cc, this.levelGroups[3]);
+    this.addComputerTable([14, 0, -11], this.levelGroups[3]);
+    this.addCabinet(12, 0x3333cc, this.levelGroups[3]);
+    this.addCeilingLight([-5, 7.5, 4], 0xccddff, this.levelGroups[3]);
 
-    // --- NÍVEL 4: Oficina Completa ---
+    // --- NÍVEL 4: Oficina Completa + Luz 4 ---
     this.addLift([5, 0, 4], this.levelGroups[4]);
     this.addWorkbench([-9, 0, 9], this.levelGroups[4]);
-    this.addShelf([-11, 0, 0], this.levelGroups[4]);
+    this.addShelf([-14, 0, 0], this.levelGroups[4]);
+    this.addCeilingLight([5, 7.5, 4], 0xffeebb, this.levelGroups[4]);
 
-    // --- NÍVEL 5: Ultra Master ---
-    this.addWorkbench([9, 0, 9], this.levelGroups[5]);
+    // --- NÍVEL 5: Ultra Master (Detalhes finais) ---
+    this.addWorkbench([12, 0, 12], this.levelGroups[5]);
     this.addPaintArea(this.levelGroups[5]);
-    this.addPoster(9, 0x00ffaa, this.levelGroups[5]);
+    this.addPoster(14.7, 0x00ffaa, this.levelGroups[5], "right");
     this.addExtraTires(this.levelGroups[5]);
+    this.addCrane(this.levelGroups[5]);
+  }
+
+  addCeilingLight(pos, color, group) {
+    const lightGroup = new THREE.Group();
+
+    // Suporte da lâmpada
+    const frame = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.15, 0.6),
+      new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }),
+    );
+    lightGroup.add(frame);
+
+    // Malha emissiva (brilho visual)
+    const bulb = new THREE.Mesh(
+      new THREE.BoxGeometry(2, 0.05, 0.4),
+      new THREE.MeshStandardMaterial({
+        color: color,
+        emissive: color,
+        emissiveIntensity: 1,
+      }),
+    );
+    bulb.position.y = -0.08;
+    lightGroup.add(bulb);
+
+    // Luz real mais fraca e localizada
+    const light = new THREE.PointLight(color, 2, 15);
+    light.position.y = -0.5;
+    light.castShadow = true;
+    light.shadow.bias = -0.01;
+    lightGroup.add(light);
+
+    lightGroup.position.set(pos[0], pos[1], pos[2]);
+    group.add(lightGroup);
+  }
+
+  addPoster(pos, color, group, side = "back") {
+    const poster = new THREE.Mesh(
+      new THREE.PlaneGeometry(3, 2),
+      new THREE.MeshStandardMaterial({ color: color, side: THREE.DoubleSide }),
+    );
+
+    if (side === "left") {
+      poster.position.set(-14.7, 4, -5);
+      poster.rotation.y = Math.PI / 2;
+    } else if (side === "right") {
+      poster.position.set(14.7, 4, 5);
+      poster.rotation.y = -Math.PI / 2;
+    } else {
+      poster.position.set(pos, 4, -14.7);
+    }
+
+    group.add(poster);
+  }
+
+  addCrane(group) {
+    const crane = new THREE.Group();
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 4, 0.5),
+      new THREE.MeshStandardMaterial({ color: 0xffaa00 }),
+    );
+    base.position.y = 2;
+    crane.add(base);
+    const arm = new THREE.Mesh(
+      new THREE.BoxGeometry(3, 0.3, 0.3),
+      new THREE.MeshStandardMaterial({ color: 0xffaa00 }),
+    );
+    arm.position.set(1.5, 4, 0);
+    crane.add(arm);
+    crane.position.set(-12, 0, -12);
+    crane.userData.equipmentId = "engineCrane";
+    group.add(crane);
+    this.clickableObjects.push(crane);
   }
 
   addLift(pos, group) {
     const liftGroup = new THREE.Group();
-    // Base
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 0.2, 4.2),
-      new THREE.MeshStandardMaterial({ color: 0xcccccc }),
-    );
-    base.position.set(0, 0.1, 0);
-    base.receiveShadow = true;
-    base.castShadow = true;
+    const ironMat = new THREE.MeshStandardMaterial({
+      color: 0x444444,
+      roughness: 0.6,
+      metalness: 0.7,
+    });
+    const blueMat = new THREE.MeshStandardMaterial({
+      color: 0x1a4a8a,
+      roughness: 0.5,
+      metalness: 0.4,
+    });
+    const rubberMat = new THREE.MeshStandardMaterial({
+      color: 0x111111,
+      roughness: 1,
+    });
+
+    // Base fixada no chão
+    const base = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 4.4), ironMat);
+    base.position.set(0, 0.05, 0);
     liftGroup.add(base);
 
-    // Colunas
-    const columnGeo = new THREE.BoxGeometry(0.25, 2.5, 0.25);
-    const columnMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa });
+    // Colunas reforçadas
+    const colGeo = new THREE.BoxGeometry(0.4, 3, 0.4);
+    const col1 = new THREE.Mesh(colGeo, blueMat);
+    col1.position.set(-1.1, 1.5, -1.8);
+    liftGroup.add(col1);
 
-    const column1 = new THREE.Mesh(columnGeo, columnMat);
-    column1.position.set(-1.0, 1.3, -1.8);
-    column1.castShadow = true;
-    liftGroup.add(column1);
+    const col2 = new THREE.Mesh(colGeo, blueMat);
+    col2.position.set(1.1, 1.5, -1.8);
+    liftGroup.add(col2);
 
-    const column2 = new THREE.Mesh(columnGeo, columnMat);
-    column2.position.set(1.0, 1.3, -1.8);
-    column2.castShadow = true;
-    liftGroup.add(column2);
+    // Braços hidráulicos
+    const armGeo = new THREE.BoxGeometry(0.15, 0.2, 1.8);
+    for (let i = 0; i < 4; i++) {
+      const arm = new THREE.Mesh(armGeo, ironMat);
+      arm.position.y = 0.4;
+      arm.position.x = i < 2 ? -0.8 : 0.8;
+      arm.position.z = i % 2 === 0 ? 1 : -1;
+      arm.rotation.y = (i % 2 === 0 ? 0.3 : -0.3) * (i < 2 ? 1 : -1);
+
+      // Sapata de borracha
+      const pad = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8),
+        rubberMat,
+      );
+      pad.position.set(0, 0.1, i % 2 === 0 ? 0.8 : -0.8);
+      arm.add(pad);
+
+      liftGroup.add(arm);
+    }
+
+    // Unidade de potência
+    const unit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), blueMat);
+    unit.position.set(-1.3, 1.5, -1.8);
+    liftGroup.add(unit);
 
     liftGroup.position.set(pos[0], pos[1], pos[2]);
+    liftGroup.userData.equipmentId = "carLift"; // CMS usa Car Lift
     group.add(liftGroup);
+    this.clickableObjects.push(liftGroup);
   }
 
   addWorkbench(pos, group) {
     const benchGroup = new THREE.Group();
-    const benchMat = new THREE.MeshStandardMaterial({ color: 0x8b4513 });
-    const base = new THREE.Mesh(new THREE.BoxGeometry(2, 0.8, 1), benchMat);
-    base.position.set(0, 0.4, 0);
-    base.castShadow = true;
-    base.receiveShadow = true;
-    benchGroup.add(base);
+    const woodMat = new THREE.MeshStandardMaterial({
+      color: 0x5a3a22,
+      roughness: 0.9,
+    });
+    const metalMat = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      metalness: 0.8,
+      roughness: 0.4,
+    });
+    const redMat = new THREE.MeshStandardMaterial({
+      color: 0x880000,
+      roughness: 0.7,
+    });
 
-    const top = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 0.1, 1.1),
-      new THREE.MeshStandardMaterial({ color: 0x2a2a2a }),
+    // Estrutura de metal
+    const legGeo = new THREE.BoxGeometry(0.1, 0.8, 0.1);
+    for (let i = 0; i < 4; i++) {
+      const leg = new THREE.Mesh(legGeo, metalMat);
+      leg.position.set(i < 2 ? -0.9 : 0.9, 0.4, i % 2 === 0 ? -0.4 : 0.4);
+      benchGroup.add(leg);
+    }
+
+    // Gavetas
+    const drawer = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.4, 0.8), redMat);
+    drawer.position.set(0, 0.5, 0);
+    benchGroup.add(drawer);
+
+    // Puxadores
+    const handle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.4, 0.05, 0.05),
+      metalMat,
     );
-    top.position.set(0, 0.85, 0);
-    top.castShadow = true;
+    handle.position.set(0, 0.5, 0.41);
+    benchGroup.add(handle);
+
+    // Tampo de madeira pesada
+    const top = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.15, 1.1), woodMat);
+    top.position.set(0, 0.87, 0);
     benchGroup.add(top);
 
+    // Torno de bancada (Morsa)
+    const vise = new THREE.Group();
+    const viseBase = new THREE.Mesh(
+      new THREE.BoxGeometry(0.3, 0.2, 0.3),
+      metalMat,
+    );
+    vise.add(viseBase);
+    const viseJaw = new THREE.Mesh(
+      new THREE.BoxGeometry(0.2, 0.15, 0.4),
+      metalMat,
+    );
+    viseJaw.position.y = 0.15;
+    vise.add(viseJaw);
+    vise.position.set(-0.8, 1, 0.3);
+    benchGroup.add(vise);
+
     benchGroup.position.set(pos[0], pos[1], pos[2]);
+    benchGroup.userData.equipmentId = "workbench";
     group.add(benchGroup);
+    this.clickableObjects.push(benchGroup);
   }
 
   addCabinet(x, color, group) {
@@ -265,20 +518,61 @@ export class OptimizedGarage {
 
   addTireMachine(pos, group) {
     const machine = new THREE.Group();
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(1, 1, 1),
-      new THREE.MeshStandardMaterial({ color: 0x444444 }),
-    );
+    const greyMat = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      roughness: 0.6,
+      metalness: 0.5,
+    });
+    const blueMat = new THREE.MeshStandardMaterial({
+      color: 0x0044aa,
+      roughness: 0.7,
+    });
+
+    // Gabinete principal
+    const base = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.2), blueMat);
     base.position.y = 0.5;
     machine.add(base);
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, 1.5, 0.2),
-      new THREE.MeshStandardMaterial({ color: 0x666666 }),
+
+    // Prato giratório
+    const turntable = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.6, 0.6, 0.1, 16),
+      greyMat,
     );
-    arm.position.set(0.4, 1, 0);
-    machine.add(arm);
+    turntable.position.y = 1.05;
+    machine.add(turntable);
+
+    // Coluna vertical
+    const col = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 0.2), greyMat);
+    col.position.set(0.5, 1.6, -0.5);
+    machine.add(col);
+
+    // Braço horizontal
+    const bArm = new THREE.Mesh(
+      new THREE.BoxGeometry(0.8, 0.15, 0.15),
+      greyMat,
+    );
+    bArm.position.set(0.1, 2.1, -0.5);
+    machine.add(bArm);
+
+    // Cabeça de montagem
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.1), greyMat);
+    head.position.set(-0.3, 1.8, -0.5);
+    machine.add(head);
+
+    // Pedais
+    for (let i = 0; i < 3; i++) {
+      const pedal = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.05, 0.3),
+        greyMat,
+      );
+      pedal.position.set(-0.3 + i * 0.3, 0.05, 0.65);
+      machine.add(pedal);
+    }
+
     machine.position.set(pos[0], pos[1], pos[2]);
+    machine.userData.equipmentId = "tireChanger";
     group.add(machine);
+    this.clickableObjects.push(machine);
   }
 
   addComputerTable(pos, group) {
@@ -286,8 +580,9 @@ export class OptimizedGarage {
       new THREE.BoxGeometry(2, 0.8, 1),
       new THREE.MeshStandardMaterial({ color: 0x333333 }),
     );
-    table.position.set(pos[0], 0.4, pos[2]);
+    table.userData.equipmentId = "workComputer";
     group.add(table);
+    this.clickableObjects.push(table);
     const screen = new THREE.Mesh(
       new THREE.BoxGeometry(0.8, 0.6, 0.1),
       new THREE.MeshStandardMaterial({ color: 0x000000 }),
@@ -321,7 +616,9 @@ export class OptimizedGarage {
       }),
     );
     area.position.set(8, 0.03, 8);
+    area.userData.equipmentId = "paintShop";
     group.add(area);
+    this.clickableObjects.push(area);
   }
 
   addExtraTires(group) {
@@ -475,6 +772,19 @@ export class OptimizedGarage {
       // Se estiver acima de 60fps, renderiza mesmo assim para não travar
       this.updateParticles();
       this.controls.update();
+      // 5. ATUALIZAR ELEVADOR
+      if (this.targetLiftHeight !== undefined) {
+        const step = 0.05;
+        if (Math.abs(this.liftHeight - this.targetLiftHeight) > step) {
+          this.liftHeight +=
+            this.targetLiftHeight > this.liftHeight ? step : -step;
+
+          // Mover o carro se existir
+          if (this.currentCar) {
+            this.currentCar.position.y = this.liftHeight;
+          }
+        }
+      }
       this.renderer.render(this.scene, this.camera);
     }
     // ================================

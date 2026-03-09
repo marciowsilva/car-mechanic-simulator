@@ -46,6 +46,11 @@ const modules = [
   },
   { path: "/src/systems/market/used-parts-market.js", name: "UsedPartsMarket" },
   { path: "/src/systems/career-mode.js", name: "CareerMode" },
+  {
+    path: "/src/systems/EquipmentInteractionSystem.js",
+    name: "EquipmentInteractionSystem",
+  },
+  { path: "/src/minigames/MinigameManager.js", name: "MinigameManager" },
 
   // 6. Garage e UI (dependem de outros)
   { path: "/src/garage/Garage.js", name: "GarageSystem" },

@@ -24,7 +24,7 @@ import { CareerMode } from "/src/systems/career-mode.js";
 // ===== ESTADO GLOBAL DO JOGO =====
 class GameState {
   constructor() {
-    this.money = 5000; // Valor inicial
+    this.money = 500000; // Valor inicial
     this.level = 1;
     this.experience = 0;
     this.experienceToNextLevel = 1000;
