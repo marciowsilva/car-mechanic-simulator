@@ -31,6 +31,75 @@ body {
   z-index: 10;
 }
 
+/* ===== PAINEL DE CONTROLES (canto inferior esquerdo) ===== */
+#controls-panel {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(20, 20, 30, 0.88);
+  color: white;
+  padding: 14px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 107, 0, 0.4);
+  font-size: 12px;
+  pointer-events: auto;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+  min-width: 200px;
+}
+
+.controls-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #ff6b00;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  margin-bottom: 10px;
+}
+
+.ctrl-key {
+  background: rgba(255, 107, 0, 0.2);
+  border: 1px solid rgba(255, 107, 0, 0.5);
+  border-radius: 5px;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  color: #ffaa55;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ctrl-label {
+  color: #bbb;
+  align-self: center;
+}
+
+.ctrl-toggle {
+  width: 100%;
+  background: rgba(255, 107, 0, 0.15);
+  border: 1px solid rgba(255, 107, 0, 0.4);
+  color: #ff6b00;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+.ctrl-toggle:hover {
+  background: rgba(255, 107, 0, 0.3);
+}
+.ctrl-toggle.active {
+  background: rgba(255, 107, 0, 0.25);
+  border-color: #ff6b00;
+  color: #ffcc88;
+}
+
 /* ===== PAINEL SUPERIOR ===== */
 #top-panel {
   position: absolute;

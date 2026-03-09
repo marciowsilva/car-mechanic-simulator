@@ -29,7 +29,13 @@ export class OptimizedGarage {
     this.rotateLeft = false;
     this.rotateRight = false;
     this.eyeHeight = 1.7;
-    this.cameraYaw = 0; // Ângulo horizontal da câmera
+    this.cameraYaw = 0; // Ângulo horizontal (esq/dir)
+    this.cameraPitch = 0; // Ângulo vertical (cima/baixo)
+    this.maxPitch = Math.PI / 3.5; // ~51° para cima/baixo
+    // Rotação horizontal pelo mouse: opcional
+    this.mouseRotationEnabled = JSON.parse(
+      localStorage.getItem("garage_mouseRotation") ?? "true",
+    );
 
     this.setupCamera();
     this.setupRenderer();
@@ -168,40 +174,63 @@ export class OptimizedGarage {
 
   updateMovement(delta) {
     const speed = 5.0;
-    const rotKeySpeed = 1.8; // Velocidade de giro pelo teclado
-    const rotMouseSpeed = 5.0; // Velocidade de giro pelo mouse
+    const rotKeySpeed = 1.8;
+    const rotMouseSpeed = 5.0;
+    const pitchSpeed = 4.0; // Velocidade de olhar cima/baixo
 
-    // 1. Girar horizontalmente (YAW) — camera rotaciona NO LUGAR
-    // A / ArrowLeft / Q → yaw diminui = gira para esquerda
-    // D / ArrowRight / E → yaw aumenta = gira para direita
+    // 1. YAW — giro horizontal NO LUGAR
     if (this.rotateLeft) this.cameraYaw -= rotKeySpeed * delta;
     if (this.rotateRight) this.cameraYaw += rotKeySpeed * delta;
 
-    // Mouse à direita → yaw aumenta (gira direita), mouse à esquerda → yaw diminui
-    const mouseThreshold = 0.4;
-    if (this.mouse.x > mouseThreshold) {
-      const power = (this.mouse.x - mouseThreshold) / (1 - mouseThreshold);
-      this.cameraYaw += rotMouseSpeed * power * delta;
-    } else if (this.mouse.x < -mouseThreshold) {
-      const power =
-        (Math.abs(this.mouse.x) - mouseThreshold) / (1 - mouseThreshold);
-      this.cameraYaw -= rotMouseSpeed * power * delta;
+    // Mouse horizontal (opcional — controlado por mouseRotationEnabled)
+    if (this.mouseRotationEnabled) {
+      const threshX = 0.4;
+      if (this.mouse.x > threshX) {
+        const p = (this.mouse.x - threshX) / (1 - threshX);
+        this.cameraYaw += rotMouseSpeed * p * delta;
+      } else if (this.mouse.x < -threshX) {
+        const p = (Math.abs(this.mouse.x) - threshX) / (1 - threshX);
+        this.cameraYaw -= rotMouseSpeed * p * delta;
+      }
     }
 
-    // 2. Vetor de direção a partir do yaw (plano XZ)
+    // 2. PITCH — olhar cima/baixo pelo mouse (sempre ativo)
+    const threshY = 0.4;
+    if (this.mouse.y > threshY) {
+      // Mouse no topo da tela → olha pra cima (pitch positivo)
+      const p = (this.mouse.y - threshY) / (1 - threshY);
+      this.cameraPitch += pitchSpeed * p * delta;
+    } else if (this.mouse.y < -threshY) {
+      // Mouse na baixo da tela → olha pra baixo (pitch negativo)
+      const p = (Math.abs(this.mouse.y) - threshY) / (1 - threshY);
+      this.cameraPitch -= pitchSpeed * p * delta;
+    }
+    // Limitar ângulo vertical para não virar de cabeça para baixo
+    this.cameraPitch = Math.max(
+      -this.maxPitch,
+      Math.min(this.maxPitch, this.cameraPitch),
+    );
+
+    // 3. Vetor de direção 3D considerando yaw + pitch
     const forward = new THREE.Vector3(
+      Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
+      Math.sin(this.cameraPitch),
+      -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch),
+    );
+    // Direção no chão (sem pitch) para movimentação WASD
+    const groundForward = new THREE.Vector3(
       Math.sin(this.cameraYaw),
       0,
       -Math.cos(this.cameraYaw),
     );
 
-    // 3. W/S: mover posição da câmera na direção em que olha
+    // 4. W/S: mover na direção horizontal (ignora pitch para não flutuar)
     if (this.moveForward)
-      this.camera.position.addScaledVector(forward, speed * delta);
+      this.camera.position.addScaledVector(groundForward, speed * delta);
     if (this.moveBackward)
-      this.camera.position.addScaledVector(forward, -speed * delta);
+      this.camera.position.addScaledVector(groundForward, -speed * delta);
 
-    // 4. Manter altura e limites da garagem
+    // 5. Manter altura e limites
     this.camera.position.y = this.eyeHeight;
     const limit = 14;
     this.camera.position.x = Math.max(
@@ -213,12 +242,29 @@ export class OptimizedGarage {
       Math.min(limit, this.camera.position.z),
     );
 
-    // 5. Atualizar a direção que a câmera aponta (sem mover posição!)
+    // 6. Aplicar direção à câmera (yaw + pitch)
     this.camera.lookAt(
       this.camera.position.x + forward.x,
-      this.camera.position.y,
+      this.camera.position.y + forward.y,
       this.camera.position.z + forward.z,
     );
+  }
+
+  // Alterna a rotação horizontal pelo mouse e salva a preferência
+  toggleMouseRotation() {
+    this.mouseRotationEnabled = !this.mouseRotationEnabled;
+    localStorage.setItem(
+      "garage_mouseRotation",
+      JSON.stringify(this.mouseRotationEnabled),
+    );
+    const label = this.mouseRotationEnabled ? "Ligado" : "Desligado";
+    window.uiManager?.showNotification(`🖱️ Mouse horizontal: ${label}`, "info");
+    // Atualizar botão da UI se existir
+    const btn = document.getElementById("btn-mouse-rotation");
+    if (btn) {
+      btn.classList.toggle("active", this.mouseRotationEnabled);
+      btn.textContent = `🖱️ Mouse Horizontal: ${this.mouseRotationEnabled ? "ON" : "OFF"}`;
+    }
   }
 
   onMouseMove(event) {

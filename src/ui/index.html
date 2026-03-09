@@ -128,6 +128,27 @@
     <!-- NOTIFICAÇÕES -->
     <div id="notification"></div>
 
+    <!-- PAINEL DE CONTROLES -->
+    <div id="controls-panel">
+      <div class="controls-title">⌨️ Controles</div>
+      <div class="controls-grid">
+        <span class="ctrl-key">W / S</span><span class="ctrl-label">Andar</span>
+        <span class="ctrl-key">A / D</span><span class="ctrl-label">Girar</span>
+        <span class="ctrl-key">Mouse ↔</span
+        ><span class="ctrl-label">Girar câmera</span>
+        <span class="ctrl-key">Mouse ↕</span
+        ><span class="ctrl-label">Olhar cima/baixo</span>
+        <span class="ctrl-key">Scroll</span><span class="ctrl-label">Zoom</span>
+      </div>
+      <button
+        id="btn-mouse-rotation"
+        class="ctrl-toggle active"
+        onclick="window.scene3D?.toggleMouseRotation()"
+      >
+        🖱️ Mouse Horizontal: ON
+      </button>
+    </div>
+
     <!-- CARREGADOR DE MÓDULOS -->
     <script type="module" src="/src/core/Exports.js"></script>
   </body>
