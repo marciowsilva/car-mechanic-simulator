@@ -13,12 +13,6 @@ export class OptimizedGarage {
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x111122);
 
-    this.setupCamera();
-    this.setupRenderer();
-    this.setupControls();
-    this.setupLights();
-    this.setupInteraction();
-
     this.currentCar = null;
     this.particles = [];
     this.equipmentSystem = null; // Será injetado pelo UIManager
@@ -28,6 +22,13 @@ export class OptimizedGarage {
     this.hoveredObject = null;
     this.carLifted = false;
     this.liftHeight = 0;
+
+    this.setupCamera();
+    this.setupRenderer();
+    this.setupControls();
+    this.setupLights();
+    this.createGarage();
+    this.setupInteraction();
 
     this.animate();
 
@@ -366,7 +367,7 @@ export class OptimizedGarage {
     crane.position.set(-12, 0, -12);
     crane.userData.equipmentId = "engineCrane";
     group.add(crane);
-    this.clickableObjects.push(crane);
+    if (this.clickableObjects) this.clickableObjects.push(crane);
   }
 
   addLift(pos, group) {
@@ -429,7 +430,12 @@ export class OptimizedGarage {
     liftGroup.position.set(pos[0], pos[1], pos[2]);
     liftGroup.userData.equipmentId = "carLift"; // CMS usa Car Lift
     group.add(liftGroup);
-    this.clickableObjects.push(liftGroup);
+    if (this.clickableObjects) {
+      this.clickableObjects.push(liftGroup);
+    } else {
+      console.error("3D: clickableObjects is UNDEFINED in addLift!");
+      this.clickableObjects = [liftGroup];
+    }
   }
 
   addWorkbench(pos, group) {
@@ -493,7 +499,7 @@ export class OptimizedGarage {
     benchGroup.position.set(pos[0], pos[1], pos[2]);
     benchGroup.userData.equipmentId = "workbench";
     group.add(benchGroup);
-    this.clickableObjects.push(benchGroup);
+    if (this.clickableObjects) this.clickableObjects.push(benchGroup);
   }
 
   addCabinet(x, color, group) {
@@ -572,7 +578,7 @@ export class OptimizedGarage {
     machine.position.set(pos[0], pos[1], pos[2]);
     machine.userData.equipmentId = "tireChanger";
     group.add(machine);
-    this.clickableObjects.push(machine);
+    if (this.clickableObjects) this.clickableObjects.push(machine);
   }
 
   addComputerTable(pos, group) {
@@ -582,7 +588,7 @@ export class OptimizedGarage {
     );
     table.userData.equipmentId = "workComputer";
     group.add(table);
-    this.clickableObjects.push(table);
+    if (this.clickableObjects) this.clickableObjects.push(table);
     const screen = new THREE.Mesh(
       new THREE.BoxGeometry(0.8, 0.6, 0.1),
       new THREE.MeshStandardMaterial({ color: 0x000000 }),
@@ -618,7 +624,7 @@ export class OptimizedGarage {
     area.position.set(8, 0.03, 8);
     area.userData.equipmentId = "paintShop";
     group.add(area);
-    this.clickableObjects.push(area);
+    if (this.clickableObjects) this.clickableObjects.push(area);
   }
 
   addExtraTires(group) {
