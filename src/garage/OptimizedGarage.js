@@ -23,6 +23,13 @@ export class OptimizedGarage {
     this.carLifted = false;
     this.liftHeight = 0;
 
+    // Movimentação FPS
+    this.moveForward = false;
+    this.moveBackward = false;
+    this.moveLeft = false;
+    this.moveRight = false;
+    this.eyeHeight = 1.7; // Altura do mecânico
+
     this.setupCamera();
     this.setupRenderer();
     this.setupControls();
@@ -80,6 +87,88 @@ export class OptimizedGarage {
     this.renderer.domElement.addEventListener("click", (e) => this.onClick(e));
     this.renderer.domElement.addEventListener("mousemove", (e) =>
       this.onMouseMove(e),
+    );
+
+    // Teclas para FPS
+    window.addEventListener("keydown", (e) => this.onKeyDown(e));
+    window.addEventListener("keyup", (e) => this.onKeyUp(e));
+  }
+
+  setupFPSControls() {
+    // Sistema removido conforme solicitado para combinar teclado + mouse livre
+  }
+
+  onKeyDown(event) {
+    switch (event.code) {
+      case "KeyW":
+        this.moveForward = true;
+        break;
+      case "KeyS":
+        this.moveBackward = true;
+        break;
+      case "KeyA":
+        this.moveLeft = true;
+        break;
+      case "KeyD":
+        this.moveRight = true;
+        break;
+    }
+  }
+
+  onKeyUp(event) {
+    switch (event.code) {
+      case "KeyW":
+        this.moveForward = false;
+        break;
+      case "KeyS":
+        this.moveBackward = false;
+        break;
+      case "KeyA":
+        this.moveLeft = false;
+        break;
+      case "KeyD":
+        this.moveRight = false;
+        break;
+    }
+  }
+
+  updateMovement(delta) {
+    // Simplificado para ser "snappy" (parar instantaneamente)
+    const speed = 12.0;
+    const moveVector = new THREE.Vector3(0, 0, 0);
+
+    // Vetores de direção da câmera (apenas no plano XZ)
+    const forward = new THREE.Vector3();
+    this.camera.getWorldDirection(forward);
+    forward.y = 0;
+    forward.normalize();
+
+    const right = new THREE.Vector3();
+    right.crossVectors(forward, this.camera.up);
+
+    if (this.moveForward) moveVector.add(forward);
+    if (this.moveBackward) moveVector.sub(forward);
+    if (this.moveLeft) moveVector.sub(right);
+    if (this.moveRight) moveVector.add(right);
+
+    if (moveVector.lengthSq() > 0) {
+      moveVector.normalize().multiplyScalar(speed * delta);
+
+      // Mover câmera e o alvo dos controles (para não dar "snap" de volta)
+      this.camera.position.add(moveVector);
+      this.controls.target.add(moveVector);
+    }
+
+    // Manter altura e limites
+    this.camera.position.y = this.eyeHeight;
+    const limit = 14;
+    this.camera.position.x = Math.max(
+      -limit,
+      Math.min(limit, this.camera.position.x),
+    );
+    this.camera.position.z = Math.max(
+      -limit,
+      Math.min(limit, this.camera.position.z),
     );
   }
 
@@ -768,6 +857,10 @@ export class OptimizedGarage {
 
     // ===== 3. LIMITADOR DE FPS =====
     const delta = this.clock.getDelta();
+
+    // Atualiza movimento mecânico
+    this.updateMovement(delta);
+
     if (delta > 0.016) {
       // Se passou mais de 16ms (abaixo de 60fps)
       // Atualiza apenas se necessário
