@@ -26,9 +26,10 @@ export class OptimizedGarage {
     // Movimentação FPS
     this.moveForward = false;
     this.moveBackward = false;
-    this.moveLeft = false;
-    this.moveRight = false;
-    this.eyeHeight = 1.7; // Altura do mecânico
+    this.rotateLeft = false;
+    this.rotateRight = false;
+    this.eyeHeight = 1.7;
+    this.cameraYaw = 0; // Ângulo horizontal da câmera
 
     this.setupCamera();
     this.setupRenderer();
@@ -46,13 +47,16 @@ export class OptimizedGarage {
 
   setupCamera() {
     this.camera = new THREE.PerspectiveCamera(
-      50,
+      60,
       window.innerWidth / window.innerHeight,
       0.1,
       1000,
     );
-    this.camera.position.set(8, 4, 15);
-    this.camera.lookAt(0, 1, 0);
+    // Posicionar o mecânico na entrada da garagem, olhando para dentro
+    this.camera.position.set(0, this.eyeHeight || 1.7, 10);
+    this.camera.lookAt(0, this.eyeHeight || 1.7, 0);
+    // Ângulo horizontal inicial: olhando para -Z (para dentro da garagem)
+    this.cameraYaw = 0;
   }
 
   setupRenderer() {
@@ -74,13 +78,14 @@ export class OptimizedGarage {
 
   setupControls() {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.05;
-    this.controls.maxPolarAngle = Math.PI / 2.2;
-    this.controls.minDistance = 5;
-    this.controls.maxDistance = 25;
+    this.controls.enableDamping = false; // Damping causa drift ao brigar com controle manual
+    this.controls.maxPolarAngle = Math.PI / 2.1;
+    this.controls.minDistance = 0.1;
+    this.controls.maxDistance = 30;
     this.controls.target.set(0, 1, 0);
-    this.controls.rotateSpeed = 0.8;
+    this.controls.enableRotate = false;
+    this.controls.enableZoom = true;
+    this.controls.enablePan = false;
   }
 
   setupInteraction() {
@@ -89,7 +94,20 @@ export class OptimizedGarage {
       this.onMouseMove(e),
     );
 
-    // Teclas para FPS
+    // Scroll = zoom manual (avança câmera na direção que ela aponta)
+    this.renderer.domElement.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const zoomDir = new THREE.Vector3();
+        this.camera.getWorldDirection(zoomDir);
+        const zoomSpeed = 0.04;
+        this.camera.position.addScaledVector(zoomDir, -e.deltaY * zoomSpeed);
+        this.camera.position.y = this.eyeHeight; // Manter altura
+      },
+      { passive: false },
+    );
+
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
     window.addEventListener("keyup", (e) => this.onKeyUp(e));
   }
@@ -107,10 +125,18 @@ export class OptimizedGarage {
         this.moveBackward = true;
         break;
       case "KeyA":
-        this.moveLeft = true;
+        this.rotateLeft = true; // A = girar esquerda
         break;
       case "KeyD":
-        this.moveRight = true;
+        this.rotateRight = true; // D = girar direita
+        break;
+      case "ArrowLeft":
+      case "KeyQ":
+        this.rotateLeft = true;
+        break;
+      case "ArrowRight":
+      case "KeyE":
+        this.rotateRight = true;
         break;
     }
   }
@@ -124,42 +150,58 @@ export class OptimizedGarage {
         this.moveBackward = false;
         break;
       case "KeyA":
-        this.moveLeft = false;
+        this.rotateLeft = false;
         break;
       case "KeyD":
-        this.moveRight = false;
+        this.rotateRight = false;
+        break;
+      case "ArrowLeft":
+      case "KeyQ":
+        this.rotateLeft = false;
+        break;
+      case "ArrowRight":
+      case "KeyE":
+        this.rotateRight = false;
         break;
     }
   }
 
   updateMovement(delta) {
-    // Simplificado para ser "snappy" (parar instantaneamente)
-    const speed = 12.0;
-    const moveVector = new THREE.Vector3(0, 0, 0);
+    const speed = 5.0;
+    const rotKeySpeed = 1.8; // Velocidade de giro pelo teclado
+    const rotMouseSpeed = 5.0; // Velocidade de giro pelo mouse
 
-    // Vetores de direção da câmera (apenas no plano XZ)
-    const forward = new THREE.Vector3();
-    this.camera.getWorldDirection(forward);
-    forward.y = 0;
-    forward.normalize();
+    // 1. Girar horizontalmente (YAW) — camera rotaciona NO LUGAR
+    // A / ArrowLeft / Q → yaw diminui = gira para esquerda
+    // D / ArrowRight / E → yaw aumenta = gira para direita
+    if (this.rotateLeft) this.cameraYaw -= rotKeySpeed * delta;
+    if (this.rotateRight) this.cameraYaw += rotKeySpeed * delta;
 
-    const right = new THREE.Vector3();
-    right.crossVectors(forward, this.camera.up);
-
-    if (this.moveForward) moveVector.add(forward);
-    if (this.moveBackward) moveVector.sub(forward);
-    if (this.moveLeft) moveVector.sub(right);
-    if (this.moveRight) moveVector.add(right);
-
-    if (moveVector.lengthSq() > 0) {
-      moveVector.normalize().multiplyScalar(speed * delta);
-
-      // Mover câmera e o alvo dos controles (para não dar "snap" de volta)
-      this.camera.position.add(moveVector);
-      this.controls.target.add(moveVector);
+    // Mouse à direita → yaw aumenta (gira direita), mouse à esquerda → yaw diminui
+    const mouseThreshold = 0.4;
+    if (this.mouse.x > mouseThreshold) {
+      const power = (this.mouse.x - mouseThreshold) / (1 - mouseThreshold);
+      this.cameraYaw += rotMouseSpeed * power * delta;
+    } else if (this.mouse.x < -mouseThreshold) {
+      const power =
+        (Math.abs(this.mouse.x) - mouseThreshold) / (1 - mouseThreshold);
+      this.cameraYaw -= rotMouseSpeed * power * delta;
     }
 
-    // Manter altura e limites
+    // 2. Vetor de direção a partir do yaw (plano XZ)
+    const forward = new THREE.Vector3(
+      Math.sin(this.cameraYaw),
+      0,
+      -Math.cos(this.cameraYaw),
+    );
+
+    // 3. W/S: mover posição da câmera na direção em que olha
+    if (this.moveForward)
+      this.camera.position.addScaledVector(forward, speed * delta);
+    if (this.moveBackward)
+      this.camera.position.addScaledVector(forward, -speed * delta);
+
+    // 4. Manter altura e limites da garagem
     this.camera.position.y = this.eyeHeight;
     const limit = 14;
     this.camera.position.x = Math.max(
@@ -169,6 +211,13 @@ export class OptimizedGarage {
     this.camera.position.z = Math.max(
       -limit,
       Math.min(limit, this.camera.position.z),
+    );
+
+    // 5. Atualizar a direção que a câmera aponta (sem mover posição!)
+    this.camera.lookAt(
+      this.camera.position.x + forward.x,
+      this.camera.position.y,
+      this.camera.position.z + forward.z,
     );
   }
 
@@ -855,43 +904,25 @@ export class OptimizedGarage {
   animate() {
     requestAnimationFrame(() => this.animate());
 
-    // ===== 3. LIMITADOR DE FPS =====
     const delta = this.clock.getDelta();
 
-    // Atualiza movimento mecânico
     this.updateMovement(delta);
+    this.updateParticles();
 
-    if (delta > 0.016) {
-      // Se passou mais de 16ms (abaixo de 60fps)
-      // Atualiza apenas se necessário
-      this.updateParticles();
-      this.controls.update();
-      this.renderer.render(this.scene, this.camera);
-    } else {
-      // Se estiver acima de 60fps, renderiza mesmo assim para não travar
-      this.updateParticles();
-      this.controls.update();
-      // 5. ATUALIZAR ELEVADOR
-      if (this.targetLiftHeight !== undefined) {
-        const step = 0.05;
-        if (Math.abs(this.liftHeight - this.targetLiftHeight) > step) {
-          this.liftHeight +=
-            this.targetLiftHeight > this.liftHeight ? step : -step;
-
-          // Mover o carro se existir
-          if (this.currentCar) {
-            this.currentCar.position.y = this.liftHeight;
-          }
+    // Animação do elevador
+    if (this.targetLiftHeight !== undefined) {
+      const step = 0.05;
+      if (Math.abs(this.liftHeight - this.targetLiftHeight) > step) {
+        this.liftHeight +=
+          this.targetLiftHeight > this.liftHeight ? step : -step;
+        if (this.currentCar) {
+          this.currentCar.position.y = this.liftHeight;
         }
       }
-      this.renderer.render(this.scene, this.camera);
     }
-    // ================================
 
-    // Versão mais simples (recomendada):
-    // Simplesmente renderiza sempre, mas o clock já ajuda
-    this.updateParticles();
-    this.controls.update();
+    // NÃO chamar controls.update() — ele reseta a câmera para coordenadas
+    // esféricas internas e anula nossos movimentos manuais
     this.renderer.render(this.scene, this.camera);
 
     // Código temporario monitoramento FPS
