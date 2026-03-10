@@ -47,6 +47,7 @@
           <button class="audio-btn" id="toggle-sfx" title="Efeitos sonoros">
             🔊
           </button>
+          <button class="audio-btn" id="toggle-fullscreen" title="Tela Cheia" onclick="toggleFullscreen()">⛶</button>
         </div>
       </div>
 
@@ -151,5 +152,40 @@
 
     <!-- CARREGADOR DE MÓDULOS -->
     <script type="module" src="/src/core/Exports.js"></script>
+
+    <!-- FULLSCREEN -->
+    <script>
+      function toggleFullscreen() {
+        const btn = document.getElementById('toggle-fullscreen');
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().then(() => {
+            btn.textContent = '⛶';
+            btn.title = 'Sair da Tela Cheia';
+            btn.classList.add('active');
+          }).catch(() => {});
+        } else {
+          document.exitFullscreen().then(() => {
+            btn.textContent = '⛶';
+            btn.title = 'Tela Cheia';
+            btn.classList.remove('active');
+          }).catch(() => {});
+        }
+      }
+
+      // Atualiza o ícone se o usuário sair via ESC
+      document.addEventListener('fullscreenchange', () => {
+        const btn = document.getElementById('toggle-fullscreen');
+        if (!btn) return;
+        if (document.fullscreenElement) {
+          btn.innerHTML = '✕&nbsp;FS';
+          btn.title = 'Sair da Tela Cheia';
+          btn.classList.add('active');
+        } else {
+          btn.textContent = '⛶';
+          btn.title = 'Tela Cheia';
+          btn.classList.remove('active');
+        }
+      });
+    </script>
   </body>
 </html>
