@@ -92,29 +92,29 @@ export class OptimizedGarage {
   }
 
   setupInteraction() {
-    this.renderer.domElement.addEventListener("click", (e) => this.onClick(e));
-
-    // Botão direito pressionado → iniciar arrasto
-    this.renderer.domElement.addEventListener("mousedown", (e) => {
-      if (e.button === 2) {
+    // Botão esquerdo pressionado → iniciar arrasto
+    this.renderer.domElement.addEventListener("pointerdown", (e) => {
+      if (e.button === 0) {
         this.isDragging = true;
+        this.hasDragged = false;
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
         this.container.style.cursor = "grabbing";
       }
     });
 
-    // Soltar botão direito → parar arrasto
-    this.renderer.domElement.addEventListener("mouseup", (e) => {
-      if (e.button === 2) {
+    // Soltar botão esquerdo → parar arrasto ou disparar clique
+    this.renderer.domElement.addEventListener("pointerup", (e) => {
+      if (e.button === 0) {
         this.isDragging = false;
         this.container.style.cursor = "default";
+        if (!this.hasDragged) this.onClick(e);
       }
     });
 
     // Segurança: soltar fora do canvas também para o arrasto
-    window.addEventListener("mouseup", (e) => {
-      if (e.button === 2) {
+    window.addEventListener("pointerup", (e) => {
+      if (e.button === 0) {
         this.isDragging = false;
         this.container.style.cursor = "default";
       }
@@ -126,7 +126,7 @@ export class OptimizedGarage {
     });
 
     // Mouse move: hover de equipamentos OU rotação de câmera
-    this.renderer.domElement.addEventListener("mousemove", (e) =>
+    this.renderer.domElement.addEventListener("pointermove", (e) =>
       this.onMouseMove(e),
     );
 
@@ -225,12 +225,14 @@ export class OptimizedGarage {
   }
 
   onMouseMove(event) {
-    // Se arrastando com botão direito → rotar câmera
+    // Se arrastando → rotar câmera
     if (this.isDragging) {
       const dx = event.clientX - this.lastMouseX;
       const dy = event.clientY - this.lastMouseY;
       this.lastMouseX = event.clientX;
       this.lastMouseY = event.clientY;
+
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) this.hasDragged = true;
 
       this.cameraYaw += dx * this.dragSensitivity;
       this.cameraPitch -= dy * this.dragSensitivity;
@@ -244,7 +246,8 @@ export class OptimizedGarage {
     this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObjects(this.clickableObjects, true);
+    const visibleObjects = this.clickableObjects.filter(obj => { let o = obj; while (o) { if (!o.visible) return false; o = o.parent; } return true; });
+    const intersects = this.raycaster.intersectObjects(visibleObjects, true);
 
     if (intersects.length > 0) {
       let obj = intersects[0].object;
@@ -268,6 +271,7 @@ export class OptimizedGarage {
   }
 
   onClick(event) {
+
     if (!this.hoveredObject || !this.equipmentSystem) return;
     const eqId = this.hoveredObject.userData.equipmentId;
     console.warn(`Interagindo com: ${eqId}`);
