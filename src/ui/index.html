@@ -44,9 +44,7 @@
         </div>
         <div class="audio-controls">
           <button class="audio-btn" id="toggle-music" title="Música">🎵</button>
-          <button class="audio-btn" id="toggle-sfx" title="Efeitos sonoros">
-            🔊
-          </button>
+          <button class="audio-btn" id="toggle-sfx" title="Efeitos sonoros">🔊</button>
           <button class="audio-btn" id="toggle-fullscreen" title="Tela Cheia" onclick="toggleFullscreen()">⛶</button>
         </div>
       </div>
@@ -102,9 +100,7 @@
       <!-- Painel Inferior -->
       <div id="bottom-panel">
         <button class="action-btn" id="new-job">🚗 Novo Cliente</button>
-        <button class="action-btn secondary" id="upgrade-shop-btn">
-          🛠️ Upgrades
-        </button>
+        <button class="action-btn secondary" id="upgrade-shop-btn">🛠️ Upgrades</button>
         <button class="action-btn" id="equipment-btn">🔧 Equipamentos</button>
         <button class="action-btn" id="events-btn">📅 Eventos</button>
         <button class="action-btn" id="inventory-btn">📦 Estoque</button>
@@ -112,12 +108,8 @@
         <button class="action-btn" id="shop-btn">🛒 Loja</button>
         <button class="action-btn" id="achievements-btn">🏆 Conquistas</button>
         <button class="action-btn" id="garage-btn">🏢 Garagem</button>
-        <button class="action-btn" id="garage-upgrade-btn">
-          🏢 Expandir Garagem
-        </button>
-        <button class="action-btn success" id="deliver-car" disabled>
-          ✅ Entregar Carro
-        </button>
+        <button class="action-btn" id="garage-upgrade-btn">🏢 Expandir Garagem</button>
+        <button class="action-btn success" id="deliver-car" disabled>✅ Entregar Carro</button>
       </div>
 
       <!-- Informação de Interação -->
@@ -133,21 +125,15 @@
     <div id="controls-panel">
       <div class="controls-title">⌨️ Controles</div>
       <div class="controls-grid">
-        <span class="ctrl-key">W / S</span><span class="ctrl-label">Andar</span>
-        <span class="ctrl-key">A / D</span><span class="ctrl-label">Girar</span>
-        <span class="ctrl-key">Mouse ↔</span
-        ><span class="ctrl-label">Girar câmera</span>
-        <span class="ctrl-key">Mouse ↕</span
-        ><span class="ctrl-label">Olhar cima/baixo</span>
-        <span class="ctrl-key">Scroll</span><span class="ctrl-label">Zoom</span>
+        <span class="ctrl-key">W / S</span>
+        <span class="ctrl-label">Andar</span>
+        <span class="ctrl-key">A / D</span>
+        <span class="ctrl-label">Girar</span>
+        <span class="ctrl-key">Botão direito + arrastar</span>
+        <span class="ctrl-label">Olhar ao redor</span>
+        <span class="ctrl-key">Scroll</span>
+        <span class="ctrl-label">Zoom</span>
       </div>
-      <button
-        id="btn-mouse-rotation"
-        class="ctrl-toggle active"
-        onclick="window.scene3D?.toggleMouseRotation()"
-      >
-        🖱️ Mouse Horizontal: ON
-      </button>
     </div>
 
     <!-- CARREGADOR DE MÓDULOS -->
@@ -172,7 +158,6 @@
         }
       }
 
-      // Atualiza o ícone se o usuário sair via ESC
       document.addEventListener('fullscreenchange', () => {
         const btn = document.getElementById('toggle-fullscreen');
         if (!btn) return;
