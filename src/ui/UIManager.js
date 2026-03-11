@@ -486,11 +486,7 @@ export class UIManager {
 
       window.gameState.currentJob = job;
       window.gameState.currentCar = { parts: job.parts };
-
-      // Spawnar carro na cena 3D
-      if (window.scene3D) {
-        window.scene3D.createCar(job.car || job, job);
-      }
+      if (window.scene3D) window.scene3D.createCar(job.car || job, job);
 
       const customer = job.customer;
       const personalityIcon = customer.icon || "👤";
@@ -515,6 +511,7 @@ export class UIManager {
 
       window.gameState.currentJob = job;
       window.gameState.currentCar = { parts: job.parts };
+      if (window.scene3D) window.scene3D.createCar(job, job);
       this.showNotification(`🚗 Novo cliente: ${job.customerName}`, "success");
       this.sounds?.play("success");
     }
@@ -603,11 +600,7 @@ export class UIManager {
 
     window.gameState.currentJob = null;
     window.gameState.currentCar = null;
-
-    // Remover carro da cena 3D
-    if (window.scene3D) {
-      window.scene3D.removeCar();
-    }
+    if (window.scene3D) window.scene3D.removeCar();
 
     this.updateMoney();
     this.updateJobsCompleted();

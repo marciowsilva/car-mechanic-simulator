@@ -227,6 +227,7 @@ export const GarageEquipment = {
     rotation: 0,
     unlockLevel: 1,
     price: 0,
+    minigame: true,
     category: "utility",
   },
   workbench: {
