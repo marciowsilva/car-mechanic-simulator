@@ -22,6 +22,7 @@ export class OptimizedGarage {
     this.hoveredObject = null;
     this.carLifted = false;
     this.liftHeight = 0;
+    this.liftArms = []; // Braços do elevador ativo
 
     // Movimentação FPS
     this.moveForward = false;
@@ -234,8 +235,8 @@ export class OptimizedGarage {
 
       if (Math.abs(dx) > 2 || Math.abs(dy) > 2) this.hasDragged = true;
 
-      this.cameraYaw += dx * this.dragSensitivity;
-      this.cameraPitch -= dy * this.dragSensitivity;
+      this.cameraYaw -= dx * this.dragSensitivity;
+      this.cameraPitch += dy * this.dragSensitivity;
       this.cameraPitch = Math.max(-this.maxPitch, Math.min(this.maxPitch, this.cameraPitch));
       return;
     }
@@ -307,6 +308,15 @@ export class OptimizedGarage {
   toggleLift() {
     this.carLifted = !this.carLifted;
     this.targetLiftHeight = this.carLifted ? 1.5 : 0;
+    // Encontrar elevador do nível atual visível
+    if (!this.activeLiftGroup) {
+      for (const group of Object.values(this.levelGroups)) {
+        if (group.visible) {
+          const lift = group.children.find(c => c.userData.equipmentId === 'carLift');
+          if (lift) { this.activeLiftGroup = lift; break; }
+        }
+      }
+    }
     window.uiManager?.showNotification(
       this.carLifted ? "⬆️ Elevando veículo..." : "⬇️ Descendo veículo...",
       "info",
@@ -508,9 +518,11 @@ export class OptimizedGarage {
     liftGroup.add(col2);
 
     const armGeo = new THREE.BoxGeometry(0.15, 0.2, 1.8);
+    const arms = [];
     for (let i = 0; i < 4; i++) {
       const arm = new THREE.Mesh(armGeo, ironMat);
       arm.position.y = 0.4;
+      arm.userData.baseY = 0.4;
       arm.position.x = i < 2 ? -0.8 : 0.8;
       arm.position.z = i % 2 === 0 ? 1 : -1;
       arm.rotation.y = (i % 2 === 0 ? 0.3 : -0.3) * (i < 2 ? 1 : -1);
@@ -518,6 +530,7 @@ export class OptimizedGarage {
       pad.position.set(0, 0.1, i % 2 === 0 ? 0.8 : -0.8);
       arm.add(pad);
       liftGroup.add(arm);
+      arms.push(arm);
     }
 
     const unit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), blueMat);
@@ -526,6 +539,7 @@ export class OptimizedGarage {
 
     liftGroup.position.set(pos[0], pos[1], pos[2]);
     liftGroup.userData.equipmentId = "carLift";
+    liftGroup.userData.arms = arms;
     group.add(liftGroup);
     if (this.clickableObjects) {
       this.clickableObjects.push(liftGroup);
@@ -785,6 +799,13 @@ export class OptimizedGarage {
         this.liftHeight += this.targetLiftHeight > this.liftHeight ? step : -step;
         if (this.currentCar) {
           this.currentCar.position.y = this.liftHeight;
+        }
+        // Animar braços do elevador ativo
+        if (this.activeLiftGroup) {
+          const arms = this.activeLiftGroup.userData.arms || [];
+          arms.forEach(arm => {
+            arm.position.y = (arm.userData.baseY || 0.4) + this.liftHeight * 0.6;
+          });
         }
       }
     }
