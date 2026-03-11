@@ -23,21 +23,21 @@ export class OptimizedGarage {
     this.carLifted = false;
     this.liftHeight = 0;
 
-    // Movimentação FPS
-    this.moveForward = false;
+    // Movimentação
+    this.moveForward  = false;
     this.moveBackward = false;
-    this.rotateLeft = false;
-    this.rotateRight = false;
-    this.eyeHeight = 1.7;
-    this.cameraYaw = 0;
-    this.cameraPitch = 0;
-    this.maxPitch = Math.PI / 3.5;
+    this.rotateLeft   = false;
+    this.rotateRight  = false;
+    this.eyeHeight    = 1.7;
+    this.cameraYaw    = 0;
+    this.cameraPitch  = 0;
+    this.maxPitch     = Math.PI / 3.5;
 
-    // Rotação por arrasto com botão direito
-    this.isDragging = false;
-    this.lastMouseX = 0;
-    this.lastMouseY = 0;
-    this.dragSensitivity = 0.003;
+    // Botão direito → olhar ao redor
+    this.isDragging      = false;
+    this.lastMouseX      = 0;
+    this.lastMouseY      = 0;
+    this.dragSensitivity = 0.004;
 
     this.setupCamera();
     this.setupRenderer();
@@ -59,8 +59,8 @@ export class OptimizedGarage {
       0.1,
       1000,
     );
-    this.camera.position.set(0, this.eyeHeight || 1.7, 10);
-    this.camera.lookAt(0, this.eyeHeight || 1.7, 0);
+    this.camera.position.set(0, this.eyeHeight, 10);
+    this.camera.lookAt(0, this.eyeHeight, 0);
     this.cameraYaw = 0;
   }
 
@@ -82,64 +82,57 @@ export class OptimizedGarage {
   setupControls() {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = false;
-    this.controls.maxPolarAngle = Math.PI / 2.1;
-    this.controls.minDistance = 0.1;
-    this.controls.maxDistance = 30;
-    this.controls.target.set(0, 1, 0);
-    this.controls.enableRotate = false;
-    this.controls.enableZoom = true;
-    this.controls.enablePan = false;
+    this.controls.enableRotate  = false;
+    this.controls.enableZoom    = false; // zoom feito manualmente
+    this.controls.enablePan     = false;
   }
 
   setupInteraction() {
-    this.renderer.domElement.addEventListener("click", (e) => this.onClick(e));
+    const el = this.renderer.domElement;
 
-    // Botão direito pressionado — inicia arrasto de câmera
-    this.renderer.domElement.addEventListener("mousedown", (e) => {
+    // Clique esquerdo — interagir com equipamento
+    el.addEventListener("click", (e) => this.onClick(e));
+
+    // Botão direito pressionado — inicia olhar ao redor
+    el.addEventListener("mousedown", (e) => {
       if (e.button === 2) {
         this.isDragging = true;
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
-        this.renderer.domElement.style.cursor = "grabbing";
+        el.style.cursor = "grabbing";
       }
     });
 
-    // Botão direito solto — para arrasto
-    this.renderer.domElement.addEventListener("mouseup", (e) => {
+    el.addEventListener("mouseup", (e) => {
       if (e.button === 2) {
         this.isDragging = false;
-        this.renderer.domElement.style.cursor = "default";
+        el.style.cursor = "default";
       }
     });
 
-    // Também capturar mouseup fora do canvas (evita travar arrastando para fora)
+    // Soltar fora do canvas não trava o arrasto
     window.addEventListener("mouseup", (e) => {
       if (e.button === 2) {
         this.isDragging = false;
-        this.renderer.domElement.style.cursor = "default";
+        el.style.cursor = "default";
       }
     });
 
-    // Movimento do mouse — hover de equipamentos + arrasto de câmera
-    this.renderer.domElement.addEventListener("mousemove", (e) => {
-      // Atualiza mouse normalizado para raycaster
-      const rect = this.renderer.domElement.getBoundingClientRect();
-      this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    // Movimento do mouse
+    el.addEventListener("mousemove", (e) => {
+      const rect = el.getBoundingClientRect();
+      this.mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
+      this.mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
 
-      // Raycaster hover de equipamentos (só quando não está arrastando)
+      // Hover de equipamentos (só quando não arrasta)
       if (!this.isDragging) {
         this.raycaster.setFromCamera(this.mouse, this.camera);
-        const intersects = this.raycaster.intersectObjects(
-          this.clickableObjects,
-          true,
-        );
+        const intersects = this.raycaster.intersectObjects(this.clickableObjects, true);
         if (intersects.length > 0) {
           let obj = intersects[0].object;
           while (obj && !obj.userData.equipmentId) obj = obj.parent;
           if (obj && this.hoveredObject !== obj) {
-            if (this.hoveredObject)
-              this.highlightObject(this.hoveredObject, false);
+            if (this.hoveredObject) this.highlightObject(this.hoveredObject, false);
             this.hoveredObject = obj;
             this.highlightObject(this.hoveredObject, true);
             this.container.style.cursor = "pointer";
@@ -155,110 +148,91 @@ export class OptimizedGarage {
         }
       }
 
-      // Rotação de câmera por arrasto (botão direito)
+      // Rotação por arrasto com botão direito
       if (this.isDragging) {
         const dx = e.clientX - this.lastMouseX;
         const dy = e.clientY - this.lastMouseY;
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
 
-        this.cameraYaw += dx * this.dragSensitivity * 2;
+        this.cameraYaw   += dx * this.dragSensitivity * 2;
         this.cameraPitch -= dy * this.dragSensitivity;
-        this.cameraPitch = Math.max(
-          -this.maxPitch,
-          Math.min(this.maxPitch, this.cameraPitch),
-        );
+        this.cameraPitch  = Math.max(-this.maxPitch, Math.min(this.maxPitch, this.cameraPitch));
       }
     });
 
-    // Impedir menu de contexto do botão direito no canvas
-    this.renderer.domElement.addEventListener("contextmenu", (e) =>
-      e.preventDefault(),
-    );
+    // Impedir menu de contexto no canvas
+    el.addEventListener("contextmenu", (e) => e.preventDefault());
 
-    // Scroll = zoom manual
-    this.renderer.domElement.addEventListener(
-      "wheel",
-      (e) => {
-        e.preventDefault();
-        const zoomDir = new THREE.Vector3();
-        this.camera.getWorldDirection(zoomDir);
-        const zoomSpeed = 0.008;
-        this.camera.position.addScaledVector(zoomDir, -e.deltaY * zoomSpeed);
-        this.camera.position.y = this.eyeHeight;
-      },
-      { passive: false },
-    );
+    // ===== SCROLL — zoom suave no plano horizontal =====
+    // Move só em X e Z (não sobe nem desce junto com o pitch da câmera)
+    el.addEventListener("wheel", (e) => {
+      e.preventDefault();
+
+      const zoomStep = 0.5; // unidades por tick de scroll
+      const groundForward = new THREE.Vector3(
+        Math.sin(this.cameraYaw),
+        0,
+        -Math.cos(this.cameraYaw),
+      );
+
+      // scroll pra cima (deltaY < 0) → avança; pra baixo → recua
+      const dir = e.deltaY < 0 ? 1 : -1;
+      this.camera.position.addScaledVector(groundForward, zoomStep * dir);
+
+      // Manter altura e limites
+      this.camera.position.y = this.eyeHeight;
+      const limit = 14;
+      this.camera.position.x = Math.max(-limit, Math.min(limit, this.camera.position.x));
+      this.camera.position.z = Math.max(-limit, Math.min(limit, this.camera.position.z));
+    }, { passive: false });
 
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
-    window.addEventListener("keyup", (e) => this.onKeyUp(e));
+    window.addEventListener("keyup",   (e) => this.onKeyUp(e));
   }
 
   onKeyDown(event) {
     switch (event.code) {
-      case "KeyW":
-        this.moveForward = true;
-        break;
-      case "KeyS":
-        this.moveBackward = true;
-        break;
-      case "KeyA":
-        this.rotateLeft = true;
-        break;
-      case "KeyD":
-        this.rotateRight = true;
-        break;
+      case "KeyW":       this.moveForward  = true;  break;
+      case "KeyS":       this.moveBackward = true;  break;
+      case "KeyA":       this.rotateLeft   = true;  break;
+      case "KeyD":       this.rotateRight  = true;  break;
       case "ArrowLeft":
-      case "KeyQ":
-        this.rotateLeft = true;
-        break;
+      case "KeyQ":       this.rotateLeft   = true;  break;
       case "ArrowRight":
-      case "KeyE":
-        this.rotateRight = true;
-        break;
+      case "KeyE":       this.rotateRight  = true;  break;
     }
   }
 
   onKeyUp(event) {
     switch (event.code) {
-      case "KeyW":
-        this.moveForward = false;
-        break;
-      case "KeyS":
-        this.moveBackward = false;
-        break;
-      case "KeyA":
-        this.rotateLeft = false;
-        break;
-      case "KeyD":
-        this.rotateRight = false;
-        break;
+      case "KeyW":       this.moveForward  = false; break;
+      case "KeyS":       this.moveBackward = false; break;
+      case "KeyA":       this.rotateLeft   = false; break;
+      case "KeyD":       this.rotateRight  = false; break;
       case "ArrowLeft":
-      case "KeyQ":
-        this.rotateLeft = false;
-        break;
+      case "KeyQ":       this.rotateLeft   = false; break;
       case "ArrowRight":
-      case "KeyE":
-        this.rotateRight = false;
-        break;
+      case "KeyE":       this.rotateRight  = false; break;
     }
   }
 
   updateMovement(delta) {
-    const speed = 5.0;
+    const speed       = 5.0;
     const rotKeySpeed = 1.8;
 
-    // YAW — teclado apenas (mouse é pelo arrasto com botão direito)
-    if (this.rotateLeft) this.cameraYaw -= rotKeySpeed * delta;
+    // YAW pelo teclado (mouse só quando arrasta com botão direito)
+    if (this.rotateLeft)  this.cameraYaw -= rotKeySpeed * delta;
     if (this.rotateRight) this.cameraYaw += rotKeySpeed * delta;
 
-    // Vetor de direção 3D considerando yaw + pitch
+    // Direção 3D completa (yaw + pitch) para lookAt
     const forward = new THREE.Vector3(
       Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
       Math.sin(this.cameraPitch),
       -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch),
     );
-    // Direção no chão (sem pitch) para movimentação WASD
+
+    // Direção só no plano do chão para WASD não flutuar
     const groundForward = new THREE.Vector3(
       Math.sin(this.cameraYaw),
       0,
@@ -266,23 +240,17 @@ export class OptimizedGarage {
     );
 
     if (this.moveForward)
-      this.camera.position.addScaledVector(groundForward, speed * delta);
+      this.camera.position.addScaledVector(groundForward,  speed * delta);
     if (this.moveBackward)
       this.camera.position.addScaledVector(groundForward, -speed * delta);
 
     // Manter altura e limites
     this.camera.position.y = this.eyeHeight;
     const limit = 14;
-    this.camera.position.x = Math.max(
-      -limit,
-      Math.min(limit, this.camera.position.x),
-    );
-    this.camera.position.z = Math.max(
-      -limit,
-      Math.min(limit, this.camera.position.z),
-    );
+    this.camera.position.x = Math.max(-limit, Math.min(limit, this.camera.position.x));
+    this.camera.position.z = Math.max(-limit, Math.min(limit, this.camera.position.z));
 
-    // Aplicar direção à câmera (yaw + pitch)
+    // Aplicar orientação à câmera
     this.camera.lookAt(
       this.camera.position.x + forward.x,
       this.camera.position.y + forward.y,
@@ -338,10 +306,10 @@ export class OptimizedGarage {
     const mainLight = new THREE.DirectionalLight(0xffffff, 0.5);
     mainLight.position.set(10, 20, 10);
     mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 2048;
+    mainLight.shadow.mapSize.width  = 2048;
     mainLight.shadow.mapSize.height = 2048;
     mainLight.shadow.camera.near = 0.5;
-    mainLight.shadow.camera.far = 50;
+    mainLight.shadow.camera.far  = 50;
     mainLight.shadow.bias = -0.001;
     this.scene.add(mainLight);
   }
@@ -349,48 +317,34 @@ export class OptimizedGarage {
   createGarage() {
     const texLoader = new THREE.TextureLoader();
 
-    const floorTex = texLoader.load(
-      "/src/assets/images/garage_floor_texture_concrete.png",
-    );
+    const floorTex = texLoader.load("/src/assets/images/garage_floor_texture_concrete.png");
     floorTex.wrapS = floorTex.wrapT = THREE.RepeatWrapping;
     floorTex.repeat.set(4, 4);
 
-    const wallTex = texLoader.load(
-      "/src/assets/images/garage_wall_texture_brick_metal.png",
-    );
+    const wallTex = texLoader.load("/src/assets/images/garage_wall_texture_brick_metal.png");
     wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
     wallTex.repeat.set(6, 2);
 
-    // ===== CHÃO =====
-    const floorGeo = new THREE.PlaneGeometry(30, 30);
-    const floorMat = new THREE.MeshStandardMaterial({
-      map: floorTex,
-      roughness: 0.3,
-      metalness: 0.1,
-      bumpScale: 0.02,
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    // Chão
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(30, 30),
+      new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.3, metalness: 0.1, bumpScale: 0.02 }),
+    );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.scene.add(floor);
 
+    // Grid sutil
     const grid = new THREE.GridHelper(30, 30, 0x4444ff, 0x222222);
     grid.position.y = 0.01;
     grid.material.transparent = true;
     grid.material.opacity = 0.2;
     this.scene.add(grid);
 
-    // ===== PAREDES =====
-    this.wallMat = new THREE.MeshStandardMaterial({
-      map: wallTex,
-      roughness: 0.8,
-      metalness: 0.3,
-    });
+    // Paredes
+    this.wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.8, metalness: 0.3 });
 
-    const backWall = new THREE.Mesh(
-      new THREE.BoxGeometry(30, 8, 0.5),
-      this.wallMat,
-    );
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(30, 8, 0.5), this.wallMat);
     backWall.position.set(0, 4, -15);
     backWall.receiveShadow = true;
     this.scene.add(backWall);
@@ -406,6 +360,7 @@ export class OptimizedGarage {
     rightWall.receiveShadow = true;
     this.scene.add(rightWall);
 
+    // Teto
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(30, 30),
       new THREE.MeshStandardMaterial({ color: 0x111111 }),
@@ -415,15 +370,8 @@ export class OptimizedGarage {
     this.scene.add(ceiling);
 
     // Grupos para níveis
-    this.levelGroups = {
-      1: new THREE.Group(),
-      2: new THREE.Group(),
-      3: new THREE.Group(),
-      4: new THREE.Group(),
-      5: new THREE.Group(),
-    };
-
-    Object.values(this.levelGroups).forEach((group) => this.scene.add(group));
+    this.levelGroups = { 1: new THREE.Group(), 2: new THREE.Group(), 3: new THREE.Group(), 4: new THREE.Group(), 5: new THREE.Group() };
+    Object.values(this.levelGroups).forEach((g) => this.scene.add(g));
 
     this.setupLevelContent();
     this.updateVisibility(1);
@@ -474,11 +422,7 @@ export class OptimizedGarage {
 
     const bulb = new THREE.Mesh(
       new THREE.BoxGeometry(2, 0.05, 0.4),
-      new THREE.MeshStandardMaterial({
-        color: color,
-        emissive: color,
-        emissiveIntensity: 1,
-      }),
+      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1 }),
     );
     bulb.position.y = -0.08;
     lightGroup.add(bulb);
@@ -496,9 +440,8 @@ export class OptimizedGarage {
   addPoster(pos, color, group, side = "back") {
     const poster = new THREE.Mesh(
       new THREE.PlaneGeometry(3, 2),
-      new THREE.MeshStandardMaterial({ color: color, side: THREE.DoubleSide }),
+      new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide }),
     );
-
     if (side === "left") {
       poster.position.set(-14.7, 4, -5);
       poster.rotation.y = Math.PI / 2;
@@ -508,24 +451,21 @@ export class OptimizedGarage {
     } else {
       poster.position.set(pos, 4, -14.7);
     }
-
     group.add(poster);
   }
 
   addCrane(group) {
     const crane = new THREE.Group();
-    const base = new THREE.Mesh(
-      new THREE.BoxGeometry(0.5, 4, 0.5),
-      new THREE.MeshStandardMaterial({ color: 0xffaa00 }),
-    );
+    const yellowMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4, 0.5), yellowMat);
     base.position.y = 2;
     crane.add(base);
-    const arm = new THREE.Mesh(
-      new THREE.BoxGeometry(3, 0.3, 0.3),
-      new THREE.MeshStandardMaterial({ color: 0xffaa00 }),
-    );
+
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(3, 0.3, 0.3), yellowMat);
     arm.position.set(1.5, 4, 0);
     crane.add(arm);
+
     crane.position.set(-12, 0, -12);
     crane.userData.equipmentId = "engineCrane";
     group.add(crane);
@@ -534,20 +474,9 @@ export class OptimizedGarage {
 
   addLift(pos, group) {
     const liftGroup = new THREE.Group();
-    const ironMat = new THREE.MeshStandardMaterial({
-      color: 0x444444,
-      roughness: 0.6,
-      metalness: 0.7,
-    });
-    const blueMat = new THREE.MeshStandardMaterial({
-      color: 0x1a4a8a,
-      roughness: 0.5,
-      metalness: 0.4,
-    });
-    const rubberMat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      roughness: 1,
-    });
+    const ironMat   = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.6, metalness: 0.7 });
+    const blueMat   = new THREE.MeshStandardMaterial({ color: 0x1a4a8a, roughness: 0.5, metalness: 0.4 });
+    const rubberMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
 
     const base = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 4.4), ironMat);
     base.position.set(0, 0.05, 0);
@@ -570,13 +499,9 @@ export class OptimizedGarage {
       arm.position.z = i % 2 === 0 ? 1 : -1;
       arm.rotation.y = (i % 2 === 0 ? 0.3 : -0.3) * (i < 2 ? 1 : -1);
 
-      const pad = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8),
-        rubberMat,
-      );
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8), rubberMat);
       pad.position.set(0, 0.1, i % 2 === 0 ? 0.8 : -0.8);
       arm.add(pad);
-
       liftGroup.add(arm);
     }
 
@@ -596,19 +521,9 @@ export class OptimizedGarage {
 
   addWorkbench(pos, group) {
     const benchGroup = new THREE.Group();
-    const woodMat = new THREE.MeshStandardMaterial({
-      color: 0x5a3a22,
-      roughness: 0.9,
-    });
-    const metalMat = new THREE.MeshStandardMaterial({
-      color: 0x333333,
-      metalness: 0.8,
-      roughness: 0.4,
-    });
-    const redMat = new THREE.MeshStandardMaterial({
-      color: 0x880000,
-      roughness: 0.7,
-    });
+    const woodMat  = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.9 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.4 });
+    const redMat   = new THREE.MeshStandardMaterial({ color: 0x880000, roughness: 0.7 });
 
     const legGeo = new THREE.BoxGeometry(0.1, 0.8, 0.1);
     for (let i = 0; i < 4; i++) {
@@ -621,10 +536,7 @@ export class OptimizedGarage {
     drawer.position.set(0, 0.5, 0);
     benchGroup.add(drawer);
 
-    const handle = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.05, 0.05),
-      metalMat,
-    );
+    const handle = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.05, 0.05), metalMat);
     handle.position.set(0, 0.5, 0.41);
     benchGroup.add(handle);
 
@@ -633,15 +545,9 @@ export class OptimizedGarage {
     benchGroup.add(top);
 
     const vise = new THREE.Group();
-    const viseBase = new THREE.Mesh(
-      new THREE.BoxGeometry(0.3, 0.2, 0.3),
-      metalMat,
-    );
+    const viseBase = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.3), metalMat);
     vise.add(viseBase);
-    const viseJaw = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, 0.15, 0.4),
-      metalMat,
-    );
+    const viseJaw = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.15, 0.4), metalMat);
     viseJaw.position.y = 0.15;
     vise.add(viseJaw);
     vise.position.set(-0.8, 1, 0.3);
@@ -656,7 +562,7 @@ export class OptimizedGarage {
   addCabinet(x, color, group) {
     const cabinet = new THREE.Mesh(
       new THREE.BoxGeometry(1.5, 2, 0.8),
-      new THREE.MeshStandardMaterial({ color: color }),
+      new THREE.MeshStandardMaterial({ color }),
     );
     cabinet.position.set(x, 1, -11);
     cabinet.castShadow = true;
@@ -666,24 +572,14 @@ export class OptimizedGarage {
 
   addTireMachine(pos, group) {
     const machine = new THREE.Group();
-    const greyMat = new THREE.MeshStandardMaterial({
-      color: 0x333333,
-      roughness: 0.6,
-      metalness: 0.5,
-    });
-    const blueMat = new THREE.MeshStandardMaterial({
-      color: 0x0044aa,
-      roughness: 0.7,
-    });
+    const greyMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.6, metalness: 0.5 });
+    const blueMat = new THREE.MeshStandardMaterial({ color: 0x0044aa, roughness: 0.7 });
 
     const base = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.2), blueMat);
     base.position.y = 0.5;
     machine.add(base);
 
-    const turntable = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.6, 0.6, 0.1, 16),
-      greyMat,
-    );
+    const turntable = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.1, 16), greyMat);
     turntable.position.y = 1.05;
     machine.add(turntable);
 
@@ -691,10 +587,7 @@ export class OptimizedGarage {
     col.position.set(0.5, 1.6, -0.5);
     machine.add(col);
 
-    const bArm = new THREE.Mesh(
-      new THREE.BoxGeometry(0.8, 0.15, 0.15),
-      greyMat,
-    );
+    const bArm = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.15, 0.15), greyMat);
     bArm.position.set(0.1, 2.1, -0.5);
     machine.add(bArm);
 
@@ -703,10 +596,7 @@ export class OptimizedGarage {
     machine.add(head);
 
     for (let i = 0; i < 3; i++) {
-      const pedal = new THREE.Mesh(
-        new THREE.BoxGeometry(0.15, 0.05, 0.3),
-        greyMat,
-      );
+      const pedal = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.3), greyMat);
       pedal.position.set(-0.3 + i * 0.3, 0.05, 0.65);
       machine.add(pedal);
     }
@@ -753,11 +643,7 @@ export class OptimizedGarage {
   addPaintArea(group) {
     const area = new THREE.Mesh(
       new THREE.BoxGeometry(8, 0.05, 8),
-      new THREE.MeshStandardMaterial({
-        color: 0x44ff44,
-        transparent: true,
-        opacity: 0.3,
-      }),
+      new THREE.MeshStandardMaterial({ color: 0x44ff44, transparent: true, opacity: 0.3 }),
     );
     area.position.set(8, 0.03, 8);
     area.userData.equipmentId = "paintShop";
@@ -768,10 +654,7 @@ export class OptimizedGarage {
   addExtraTires(group) {
     const tireMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
     for (let i = 0; i < 4; i++) {
-      const tire = new THREE.Mesh(
-        new THREE.TorusGeometry(0.4, 0.1, 8, 16),
-        tireMat,
-      );
+      const tire = new THREE.Mesh(new THREE.TorusGeometry(0.4, 0.1, 8, 16), tireMat);
       tire.rotation.x = Math.PI / 2;
       tire.position.set(5 + (i % 2) * 1.5, 0.3, 8 + (i > 1 ? 1 : 0));
       group.add(tire);
@@ -788,52 +671,40 @@ export class OptimizedGarage {
   }
 
   createCar(carData, job) {
-    if (this.currentCar) {
-      this.scene.remove(this.currentCar);
-    }
+    if (this.currentCar) this.scene.remove(this.currentCar);
 
     const carGroup = new THREE.Group();
 
-    const bodyGeo = new THREE.BoxGeometry(2.2, 0.6, 4.5);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3366cc });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    const body = new THREE.Mesh(
+      new THREE.BoxGeometry(2.2, 0.6, 4.5),
+      new THREE.MeshStandardMaterial({ color: 0x3366cc }),
+    );
     body.position.y = 0.6;
     body.castShadow = true;
     body.receiveShadow = true;
     carGroup.add(body);
 
-    const cabinGeo = new THREE.BoxGeometry(1.8, 0.5, 1.5);
-    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+    const cabin = new THREE.Mesh(
+      new THREE.BoxGeometry(1.8, 0.5, 1.5),
+      new THREE.MeshStandardMaterial({ color: 0x222222 }),
+    );
     cabin.position.set(0, 1.1, -0.5);
     cabin.castShadow = true;
-    cabin.receiveShadow = true;
     carGroup.add(cabin);
 
     const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 12);
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-
-    const wheelPositions = [
-      [-1.0, 0.3, 1.2],
-      [1.0, 0.3, 1.2],
-      [-1.0, 0.3, -1.4],
-      [1.0, 0.3, -1.4],
-    ];
-
-    wheelPositions.forEach((pos) => {
+    [[-1.0, 0.3, 1.2], [1.0, 0.3, 1.2], [-1.0, 0.3, -1.4], [1.0, 0.3, -1.4]].forEach(([x, y, z]) => {
       const wheel = new THREE.Mesh(wheelGeo, wheelMat);
       wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(pos[0], pos[1], pos[2]);
+      wheel.position.set(x, y, z);
       wheel.castShadow = true;
-      wheel.receiveShadow = true;
       carGroup.add(wheel);
     });
 
     carGroup.position.set(-5, 0.3, -4);
-
     this.currentCar = carGroup;
     this.scene.add(carGroup);
-
     return carGroup;
   }
 
@@ -845,21 +716,19 @@ export class OptimizedGarage {
   }
 
   preloadCarModels() {
-    // Stub necessário — Game.js chama este método ao inicializar
     return Promise.resolve();
   }
 
   createRepairEffect(position) {
     for (let i = 0; i < 6; i++) {
-      const geometry = new THREE.SphereGeometry(0.04, 4);
-      const material = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
-      const particle = new THREE.Mesh(geometry, material);
-
+      const particle = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 4),
+        new THREE.MeshStandardMaterial({ color: 0xffaa00 }),
+      );
       particle.position.copy(position);
       particle.position.x += (Math.random() - 0.5) * 0.4;
       particle.position.y += (Math.random() - 0.5) * 0.4;
       particle.position.z += (Math.random() - 0.5) * 0.4;
-
       particle.userData = {
         velocity: new THREE.Vector3(
           (Math.random() - 0.5) * 0.02,
@@ -868,7 +737,6 @@ export class OptimizedGarage {
         ),
         life: 1.0,
       };
-
       this.scene.add(particle);
       this.particles.push(particle);
     }
@@ -878,34 +746,21 @@ export class OptimizedGarage {
     for (let i = this.particles.length - 1; i >= 0; i--) {
       const p = this.particles[i];
       p.userData.life -= 0.02;
-
       if (p.userData.life <= 0) {
         this.scene.remove(p);
         this.particles.splice(i, 1);
       } else {
-        p.position.x += p.userData.velocity.x;
-        p.position.y += p.userData.velocity.y;
-        p.position.z += p.userData.velocity.z;
+        p.position.add(p.userData.velocity);
         p.scale.setScalar(p.userData.life);
       }
     }
   }
 
-  upgradeToLevel(level) {
-    this.updateVisibility(level);
-  }
-  upgradeToLevel2() {
-    this.updateVisibility(2);
-  }
-  upgradeToLevel3() {
-    this.updateVisibility(3);
-  }
-  upgradeToLevel4() {
-    this.updateVisibility(4);
-  }
-  upgradeToLevel5() {
-    this.updateVisibility(5);
-  }
+  upgradeToLevel(level) { this.updateVisibility(level); }
+  upgradeToLevel2() { this.updateVisibility(2); }
+  upgradeToLevel3() { this.updateVisibility(3); }
+  upgradeToLevel4() { this.updateVisibility(4); }
+  upgradeToLevel5() { this.updateVisibility(5); }
 
   animate() {
     requestAnimationFrame(() => this.animate());
@@ -919,11 +774,8 @@ export class OptimizedGarage {
     if (this.targetLiftHeight !== undefined) {
       const step = 0.05;
       if (Math.abs(this.liftHeight - this.targetLiftHeight) > step) {
-        this.liftHeight +=
-          this.targetLiftHeight > this.liftHeight ? step : -step;
-        if (this.currentCar) {
-          this.currentCar.position.y = this.liftHeight;
-        }
+        this.liftHeight += this.targetLiftHeight > this.liftHeight ? step : -step;
+        if (this.currentCar) this.currentCar.position.y = this.liftHeight;
       }
     }
 
