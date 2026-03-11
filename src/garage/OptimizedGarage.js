@@ -23,20 +23,20 @@ export class OptimizedGarage {
     this.carLifted = false;
     this.liftHeight = 0;
 
-    // Movimentação
-    this.moveForward  = false;
+    // Movimentação FPS
+    this.moveForward = false;
     this.moveBackward = false;
-    this.rotateLeft   = false;
-    this.rotateRight  = false;
-    this.eyeHeight    = 1.7;
-    this.cameraYaw    = 0;
-    this.cameraPitch  = 0;
-    this.maxPitch     = Math.PI / 3.5;
+    this.rotateLeft = false;
+    this.rotateRight = false;
+    this.eyeHeight = 1.7;
+    this.cameraYaw = 0;
+    this.cameraPitch = 0;
+    this.maxPitch = Math.PI / 3.5;
 
     // Botão direito → olhar ao redor
-    this.isDragging      = false;
-    this.lastMouseX      = 0;
-    this.lastMouseY      = 0;
+    this.isDragging = false;
+    this.lastMouseX = 0;
+    this.lastMouseY = 0;
     this.dragSensitivity = 0.004;
 
     this.setupCamera();
@@ -59,8 +59,8 @@ export class OptimizedGarage {
       0.1,
       1000,
     );
-    this.camera.position.set(0, this.eyeHeight, 10);
-    this.camera.lookAt(0, this.eyeHeight, 0);
+    this.camera.position.set(0, this.eyeHeight || 1.7, 10);
+    this.camera.lookAt(0, this.eyeHeight || 1.7, 0);
     this.cameraYaw = 0;
   }
 
@@ -82,157 +82,123 @@ export class OptimizedGarage {
   setupControls() {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = false;
-    this.controls.enableRotate  = false;
-    this.controls.enableZoom    = false; // zoom feito manualmente
-    this.controls.enablePan     = false;
+    this.controls.maxPolarAngle = Math.PI / 2.1;
+    this.controls.minDistance = 0.1;
+    this.controls.maxDistance = 30;
+    this.controls.target.set(0, 1, 0);
+    this.controls.enableRotate = false;
+    this.controls.enableZoom = false; // zoom feito manualmente
+    this.controls.enablePan = false;
   }
 
   setupInteraction() {
-    const el = this.renderer.domElement;
+    this.renderer.domElement.addEventListener("click", (e) => this.onClick(e));
 
-    // Clique esquerdo — interagir com equipamento
-    el.addEventListener("click", (e) => this.onClick(e));
-
-    // Botão direito pressionado — inicia olhar ao redor
-    el.addEventListener("mousedown", (e) => {
+    // Botão direito pressionado → iniciar arrasto
+    this.renderer.domElement.addEventListener("mousedown", (e) => {
       if (e.button === 2) {
         this.isDragging = true;
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
-        el.style.cursor = "grabbing";
+        this.container.style.cursor = "grabbing";
       }
     });
 
-    el.addEventListener("mouseup", (e) => {
+    // Soltar botão direito → parar arrasto
+    this.renderer.domElement.addEventListener("mouseup", (e) => {
       if (e.button === 2) {
         this.isDragging = false;
-        el.style.cursor = "default";
+        this.container.style.cursor = "default";
       }
     });
 
-    // Soltar fora do canvas não trava o arrasto
+    // Segurança: soltar fora do canvas também para o arrasto
     window.addEventListener("mouseup", (e) => {
       if (e.button === 2) {
         this.isDragging = false;
-        el.style.cursor = "default";
+        this.container.style.cursor = "default";
       }
     });
 
-    // Movimento do mouse
-    el.addEventListener("mousemove", (e) => {
-      const rect = el.getBoundingClientRect();
-      this.mouse.x =  ((e.clientX - rect.left) / rect.width)  * 2 - 1;
-      this.mouse.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1;
-
-      // Hover de equipamentos (só quando não arrasta)
-      if (!this.isDragging) {
-        this.raycaster.setFromCamera(this.mouse, this.camera);
-        const intersects = this.raycaster.intersectObjects(this.clickableObjects, true);
-        if (intersects.length > 0) {
-          let obj = intersects[0].object;
-          while (obj && !obj.userData.equipmentId) obj = obj.parent;
-          if (obj && this.hoveredObject !== obj) {
-            if (this.hoveredObject) this.highlightObject(this.hoveredObject, false);
-            this.hoveredObject = obj;
-            this.highlightObject(this.hoveredObject, true);
-            this.container.style.cursor = "pointer";
-            this.showInteractionTooltip(obj.userData.equipmentId);
-          }
-        } else {
-          if (this.hoveredObject) {
-            this.highlightObject(this.hoveredObject, false);
-            this.hoveredObject = null;
-            this.container.style.cursor = "default";
-            this.hideInteractionTooltip();
-          }
-        }
-      }
-
-      // Rotação por arrasto com botão direito
-      if (this.isDragging) {
-        const dx = e.clientX - this.lastMouseX;
-        const dy = e.clientY - this.lastMouseY;
-        this.lastMouseX = e.clientX;
-        this.lastMouseY = e.clientY;
-
-        this.cameraYaw   += dx * this.dragSensitivity * 2;
-        this.cameraPitch -= dy * this.dragSensitivity;
-        this.cameraPitch  = Math.max(-this.maxPitch, Math.min(this.maxPitch, this.cameraPitch));
-      }
-    });
-
-    // Impedir menu de contexto no canvas
-    el.addEventListener("contextmenu", (e) => e.preventDefault());
-
-    // ===== SCROLL — zoom suave no plano horizontal =====
-    // Move só em X e Z (não sobe nem desce junto com o pitch da câmera)
-    el.addEventListener("wheel", (e) => {
+    // Bloquear menu de contexto do botão direito
+    this.renderer.domElement.addEventListener("contextmenu", (e) => {
       e.preventDefault();
+    });
 
-      const zoomStep = 0.5; // unidades por tick de scroll
-      const groundForward = new THREE.Vector3(
-        Math.sin(this.cameraYaw),
-        0,
-        -Math.cos(this.cameraYaw),
-      );
+    // Mouse move: hover de equipamentos OU rotação de câmera
+    this.renderer.domElement.addEventListener("mousemove", (e) =>
+      this.onMouseMove(e),
+    );
 
-      // scroll pra cima (deltaY < 0) → avança; pra baixo → recua
-      const dir = e.deltaY < 0 ? 1 : -1;
-      this.camera.position.addScaledVector(groundForward, zoomStep * dir);
-
-      // Manter altura e limites
-      this.camera.position.y = this.eyeHeight;
-      const limit = 14;
-      this.camera.position.x = Math.max(-limit, Math.min(limit, this.camera.position.x));
-      this.camera.position.z = Math.max(-limit, Math.min(limit, this.camera.position.z));
-    }, { passive: false });
+    // Scroll = zoom horizontal (sem subir/descer com pitch)
+    this.renderer.domElement.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const groundForward = new THREE.Vector3(
+          Math.sin(this.cameraYaw),
+          0,
+          -Math.cos(this.cameraYaw),
+        );
+        const dir = e.deltaY < 0 ? 1 : -1;
+        this.camera.position.addScaledVector(groundForward, 0.5 * dir);
+        this.camera.position.y = this.eyeHeight;
+      },
+      { passive: false },
+    );
 
     window.addEventListener("keydown", (e) => this.onKeyDown(e));
-    window.addEventListener("keyup",   (e) => this.onKeyUp(e));
+    window.addEventListener("keyup", (e) => this.onKeyUp(e));
   }
 
   onKeyDown(event) {
     switch (event.code) {
-      case "KeyW":       this.moveForward  = true;  break;
-      case "KeyS":       this.moveBackward = true;  break;
-      case "KeyA":       this.rotateLeft   = true;  break;
-      case "KeyD":       this.rotateRight  = true;  break;
+      case "KeyW": this.moveForward = true; break;
+      case "KeyS": this.moveBackward = true; break;
+      case "KeyA": this.rotateLeft = true; break;
+      case "KeyD": this.rotateRight = true; break;
       case "ArrowLeft":
-      case "KeyQ":       this.rotateLeft   = true;  break;
+      case "KeyQ": this.rotateLeft = true; break;
       case "ArrowRight":
-      case "KeyE":       this.rotateRight  = true;  break;
+      case "KeyE": this.rotateRight = true; break;
     }
   }
 
   onKeyUp(event) {
     switch (event.code) {
-      case "KeyW":       this.moveForward  = false; break;
-      case "KeyS":       this.moveBackward = false; break;
-      case "KeyA":       this.rotateLeft   = false; break;
-      case "KeyD":       this.rotateRight  = false; break;
+      case "KeyW": this.moveForward = false; break;
+      case "KeyS": this.moveBackward = false; break;
+      case "KeyA": this.rotateLeft = false; break;
+      case "KeyD": this.rotateRight = false; break;
       case "ArrowLeft":
-      case "KeyQ":       this.rotateLeft   = false; break;
+      case "KeyQ": this.rotateLeft = false; break;
       case "ArrowRight":
-      case "KeyE":       this.rotateRight  = false; break;
+      case "KeyE": this.rotateRight = false; break;
     }
   }
 
   updateMovement(delta) {
-    const speed       = 5.0;
+    const speed = 5.0;
     const rotKeySpeed = 1.8;
 
-    // YAW pelo teclado (mouse só quando arrasta com botão direito)
-    if (this.rotateLeft)  this.cameraYaw -= rotKeySpeed * delta;
+    // YAW pelo teclado
+    if (this.rotateLeft) this.cameraYaw -= rotKeySpeed * delta;
     if (this.rotateRight) this.cameraYaw += rotKeySpeed * delta;
 
-    // Direção 3D completa (yaw + pitch) para lookAt
+    // Limitar pitch
+    this.cameraPitch = Math.max(
+      -this.maxPitch,
+      Math.min(this.maxPitch, this.cameraPitch),
+    );
+
+    // Vetor de direção 3D (yaw + pitch)
     const forward = new THREE.Vector3(
       Math.sin(this.cameraYaw) * Math.cos(this.cameraPitch),
       Math.sin(this.cameraPitch),
       -Math.cos(this.cameraYaw) * Math.cos(this.cameraPitch),
     );
 
-    // Direção só no plano do chão para WASD não flutuar
+    // Direção no chão para WASD
     const groundForward = new THREE.Vector3(
       Math.sin(this.cameraYaw),
       0,
@@ -240,7 +206,7 @@ export class OptimizedGarage {
     );
 
     if (this.moveForward)
-      this.camera.position.addScaledVector(groundForward,  speed * delta);
+      this.camera.position.addScaledVector(groundForward, speed * delta);
     if (this.moveBackward)
       this.camera.position.addScaledVector(groundForward, -speed * delta);
 
@@ -250,7 +216,7 @@ export class OptimizedGarage {
     this.camera.position.x = Math.max(-limit, Math.min(limit, this.camera.position.x));
     this.camera.position.z = Math.max(-limit, Math.min(limit, this.camera.position.z));
 
-    // Aplicar orientação à câmera
+    // Aplicar direção
     this.camera.lookAt(
       this.camera.position.x + forward.x,
       this.camera.position.y + forward.y,
@@ -258,9 +224,53 @@ export class OptimizedGarage {
     );
   }
 
+  onMouseMove(event) {
+    // Se arrastando com botão direito → rotar câmera
+    if (this.isDragging) {
+      const dx = event.clientX - this.lastMouseX;
+      const dy = event.clientY - this.lastMouseY;
+      this.lastMouseX = event.clientX;
+      this.lastMouseY = event.clientY;
+
+      this.cameraYaw += dx * this.dragSensitivity;
+      this.cameraPitch -= dy * this.dragSensitivity;
+      this.cameraPitch = Math.max(-this.maxPitch, Math.min(this.maxPitch, this.cameraPitch));
+      return;
+    }
+
+    // Hover de equipamentos (só quando não está arrastando)
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const intersects = this.raycaster.intersectObjects(this.clickableObjects, true);
+
+    if (intersects.length > 0) {
+      let obj = intersects[0].object;
+      while (obj && !obj.userData.equipmentId) obj = obj.parent;
+
+      if (obj && this.hoveredObject !== obj) {
+        if (this.hoveredObject) this.highlightObject(this.hoveredObject, false);
+        this.hoveredObject = obj;
+        this.highlightObject(this.hoveredObject, true);
+        this.container.style.cursor = "pointer";
+        this.showInteractionTooltip(obj.userData.equipmentId);
+      }
+    } else {
+      if (this.hoveredObject) {
+        this.highlightObject(this.hoveredObject, false);
+        this.hoveredObject = null;
+        this.container.style.cursor = "default";
+        this.hideInteractionTooltip();
+      }
+    }
+  }
+
   onClick(event) {
     if (!this.hoveredObject || !this.equipmentSystem) return;
     const eqId = this.hoveredObject.userData.equipmentId;
+    console.warn(`Interagindo com: ${eqId}`);
     this.equipmentSystem.interactWithEquipment(eqId);
   }
 
@@ -306,10 +316,10 @@ export class OptimizedGarage {
     const mainLight = new THREE.DirectionalLight(0xffffff, 0.5);
     mainLight.position.set(10, 20, 10);
     mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width  = 2048;
+    mainLight.shadow.mapSize.width = 2048;
     mainLight.shadow.mapSize.height = 2048;
     mainLight.shadow.camera.near = 0.5;
-    mainLight.shadow.camera.far  = 50;
+    mainLight.shadow.camera.far = 50;
     mainLight.shadow.bias = -0.001;
     this.scene.add(mainLight);
   }
@@ -325,24 +335,29 @@ export class OptimizedGarage {
     wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
     wallTex.repeat.set(6, 2);
 
-    // Chão
-    const floor = new THREE.Mesh(
-      new THREE.PlaneGeometry(30, 30),
-      new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.3, metalness: 0.1, bumpScale: 0.02 }),
-    );
+    const floorGeo = new THREE.PlaneGeometry(30, 30);
+    const floorMat = new THREE.MeshStandardMaterial({
+      map: floorTex,
+      roughness: 0.3,
+      metalness: 0.1,
+      bumpScale: 0.02,
+    });
+    const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.scene.add(floor);
 
-    // Grid sutil
     const grid = new THREE.GridHelper(30, 30, 0x4444ff, 0x222222);
     grid.position.y = 0.01;
     grid.material.transparent = true;
     grid.material.opacity = 0.2;
     this.scene.add(grid);
 
-    // Paredes
-    this.wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.8, metalness: 0.3 });
+    this.wallMat = new THREE.MeshStandardMaterial({
+      map: wallTex,
+      roughness: 0.8,
+      metalness: 0.3,
+    });
 
     const backWall = new THREE.Mesh(new THREE.BoxGeometry(30, 8, 0.5), this.wallMat);
     backWall.position.set(0, 4, -15);
@@ -360,7 +375,6 @@ export class OptimizedGarage {
     rightWall.receiveShadow = true;
     this.scene.add(rightWall);
 
-    // Teto
     const ceiling = new THREE.Mesh(
       new THREE.PlaneGeometry(30, 30),
       new THREE.MeshStandardMaterial({ color: 0x111111 }),
@@ -369,41 +383,42 @@ export class OptimizedGarage {
     ceiling.rotation.x = Math.PI / 2;
     this.scene.add(ceiling);
 
-    // Grupos para níveis
-    this.levelGroups = { 1: new THREE.Group(), 2: new THREE.Group(), 3: new THREE.Group(), 4: new THREE.Group(), 5: new THREE.Group() };
-    Object.values(this.levelGroups).forEach((g) => this.scene.add(g));
+    this.levelGroups = {
+      1: new THREE.Group(),
+      2: new THREE.Group(),
+      3: new THREE.Group(),
+      4: new THREE.Group(),
+      5: new THREE.Group(),
+    };
+
+    Object.values(this.levelGroups).forEach((group) => this.scene.add(group));
 
     this.setupLevelContent();
     this.updateVisibility(1);
   }
 
   setupLevelContent() {
-    // --- NÍVEL 1 ---
     this.addLift([-5, 0, -4], this.levelGroups[1]);
     this.addWorkbench([-9, 0, -9], this.levelGroups[1]);
     this.addCabinet(-10, 0xcc3333, this.levelGroups[1]);
     this.addCeilingLight([-5, 7.5, -4], 0xffffff, this.levelGroups[1]);
 
-    // --- NÍVEL 2 ---
     this.addLift([5, 0, -4], this.levelGroups[2]);
     this.addTireMachine([-7, 0, 8], this.levelGroups[2]);
     this.addPoster(-14.7, 0xffaa00, this.levelGroups[2], "left");
     this.addCeilingLight([5, 7.5, -4], 0xffffff, this.levelGroups[2]);
 
-    // --- NÍVEL 3 ---
     this.addLift([-5, 0, 4], this.levelGroups[3]);
     this.addWorkbench([9, 0, -9], this.levelGroups[3]);
     this.addComputerTable([14, 0, -11], this.levelGroups[3]);
     this.addCabinet(12, 0x3333cc, this.levelGroups[3]);
     this.addCeilingLight([-5, 7.5, 4], 0xccddff, this.levelGroups[3]);
 
-    // --- NÍVEL 4 ---
     this.addLift([5, 0, 4], this.levelGroups[4]);
     this.addWorkbench([-9, 0, 9], this.levelGroups[4]);
     this.addShelf([-14, 0, 0], this.levelGroups[4]);
     this.addCeilingLight([5, 7.5, 4], 0xffeebb, this.levelGroups[4]);
 
-    // --- NÍVEL 5 ---
     this.addWorkbench([12, 0, 12], this.levelGroups[5]);
     this.addPaintArea(this.levelGroups[5]);
     this.addPoster(14.7, 0x00ffaa, this.levelGroups[5], "right");
@@ -413,26 +428,22 @@ export class OptimizedGarage {
 
   addCeilingLight(pos, color, group) {
     const lightGroup = new THREE.Group();
-
     const frame = new THREE.Mesh(
       new THREE.BoxGeometry(2.2, 0.15, 0.6),
       new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }),
     );
     lightGroup.add(frame);
-
     const bulb = new THREE.Mesh(
       new THREE.BoxGeometry(2, 0.05, 0.4),
       new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1 }),
     );
     bulb.position.y = -0.08;
     lightGroup.add(bulb);
-
     const light = new THREE.PointLight(color, 2, 15);
     light.position.y = -0.5;
     light.castShadow = true;
     light.shadow.bias = -0.01;
     lightGroup.add(light);
-
     lightGroup.position.set(pos[0], pos[1], pos[2]);
     group.add(lightGroup);
   }
@@ -456,16 +467,18 @@ export class OptimizedGarage {
 
   addCrane(group) {
     const crane = new THREE.Group();
-    const yellowMat = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
-
-    const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 4, 0.5), yellowMat);
+    const base = new THREE.Mesh(
+      new THREE.BoxGeometry(0.5, 4, 0.5),
+      new THREE.MeshStandardMaterial({ color: 0xffaa00 }),
+    );
     base.position.y = 2;
     crane.add(base);
-
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(3, 0.3, 0.3), yellowMat);
+    const arm = new THREE.Mesh(
+      new THREE.BoxGeometry(3, 0.3, 0.3),
+      new THREE.MeshStandardMaterial({ color: 0xffaa00 }),
+    );
     arm.position.set(1.5, 4, 0);
     crane.add(arm);
-
     crane.position.set(-12, 0, -12);
     crane.userData.equipmentId = "engineCrane";
     group.add(crane);
@@ -474,8 +487,8 @@ export class OptimizedGarage {
 
   addLift(pos, group) {
     const liftGroup = new THREE.Group();
-    const ironMat   = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.6, metalness: 0.7 });
-    const blueMat   = new THREE.MeshStandardMaterial({ color: 0x1a4a8a, roughness: 0.5, metalness: 0.4 });
+    const ironMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.6, metalness: 0.7 });
+    const blueMat = new THREE.MeshStandardMaterial({ color: 0x1a4a8a, roughness: 0.5, metalness: 0.4 });
     const rubberMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
 
     const base = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 4.4), ironMat);
@@ -486,7 +499,6 @@ export class OptimizedGarage {
     const col1 = new THREE.Mesh(colGeo, blueMat);
     col1.position.set(-1.1, 1.5, -1.8);
     liftGroup.add(col1);
-
     const col2 = new THREE.Mesh(colGeo, blueMat);
     col2.position.set(1.1, 1.5, -1.8);
     liftGroup.add(col2);
@@ -498,7 +510,6 @@ export class OptimizedGarage {
       arm.position.x = i < 2 ? -0.8 : 0.8;
       arm.position.z = i % 2 === 0 ? 1 : -1;
       arm.rotation.y = (i % 2 === 0 ? 0.3 : -0.3) * (i < 2 ? 1 : -1);
-
       const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8), rubberMat);
       pad.position.set(0, 0.1, i % 2 === 0 ? 0.8 : -0.8);
       arm.add(pad);
@@ -521,9 +532,9 @@ export class OptimizedGarage {
 
   addWorkbench(pos, group) {
     const benchGroup = new THREE.Group();
-    const woodMat  = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.9 });
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.9 });
     const metalMat = new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.8, roughness: 0.4 });
-    const redMat   = new THREE.MeshStandardMaterial({ color: 0x880000, roughness: 0.7 });
+    const redMat = new THREE.MeshStandardMaterial({ color: 0x880000, roughness: 0.7 });
 
     const legGeo = new THREE.BoxGeometry(0.1, 0.8, 0.1);
     for (let i = 0; i < 4; i++) {
@@ -578,23 +589,18 @@ export class OptimizedGarage {
     const base = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.2), blueMat);
     base.position.y = 0.5;
     machine.add(base);
-
     const turntable = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.1, 16), greyMat);
     turntable.position.y = 1.05;
     machine.add(turntable);
-
     const col = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 0.2), greyMat);
     col.position.set(0.5, 1.6, -0.5);
     machine.add(col);
-
     const bArm = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.15, 0.15), greyMat);
     bArm.position.set(0.1, 2.1, -0.5);
     machine.add(bArm);
-
     const head = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.6, 0.1), greyMat);
     head.position.set(-0.3, 1.8, -0.5);
     machine.add(head);
-
     for (let i = 0; i < 3; i++) {
       const pedal = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.3), greyMat);
       pedal.position.set(-0.3 + i * 0.3, 0.05, 0.65);
@@ -671,33 +677,33 @@ export class OptimizedGarage {
   }
 
   createCar(carData, job) {
-    if (this.currentCar) this.scene.remove(this.currentCar);
+    if (this.currentCar) {
+      this.scene.remove(this.currentCar);
+    }
 
     const carGroup = new THREE.Group();
 
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(2.2, 0.6, 4.5),
-      new THREE.MeshStandardMaterial({ color: 0x3366cc }),
-    );
+    const bodyGeo = new THREE.BoxGeometry(2.2, 0.6, 4.5);
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3366cc });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
     body.position.y = 0.6;
     body.castShadow = true;
     body.receiveShadow = true;
     carGroup.add(body);
 
-    const cabin = new THREE.Mesh(
-      new THREE.BoxGeometry(1.8, 0.5, 1.5),
-      new THREE.MeshStandardMaterial({ color: 0x222222 }),
-    );
+    const cabinGeo = new THREE.BoxGeometry(1.8, 0.5, 1.5);
+    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
     cabin.position.set(0, 1.1, -0.5);
     cabin.castShadow = true;
     carGroup.add(cabin);
 
     const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 12);
     const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    [[-1.0, 0.3, 1.2], [1.0, 0.3, 1.2], [-1.0, 0.3, -1.4], [1.0, 0.3, -1.4]].forEach(([x, y, z]) => {
+    [[-1.0, 0.3, 1.2], [1.0, 0.3, 1.2], [-1.0, 0.3, -1.4], [1.0, 0.3, -1.4]].forEach((wp) => {
       const wheel = new THREE.Mesh(wheelGeo, wheelMat);
       wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(x, y, z);
+      wheel.position.set(wp[0], wp[1], wp[2]);
       wheel.castShadow = true;
       carGroup.add(wheel);
     });
@@ -721,10 +727,9 @@ export class OptimizedGarage {
 
   createRepairEffect(position) {
     for (let i = 0; i < 6; i++) {
-      const particle = new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 4),
-        new THREE.MeshStandardMaterial({ color: 0xffaa00 }),
-      );
+      const geometry = new THREE.SphereGeometry(0.04, 4);
+      const material = new THREE.MeshStandardMaterial({ color: 0xffaa00 });
+      const particle = new THREE.Mesh(geometry, material);
       particle.position.copy(position);
       particle.position.x += (Math.random() - 0.5) * 0.4;
       particle.position.y += (Math.random() - 0.5) * 0.4;
@@ -750,7 +755,9 @@ export class OptimizedGarage {
         this.scene.remove(p);
         this.particles.splice(i, 1);
       } else {
-        p.position.add(p.userData.velocity);
+        p.position.x += p.userData.velocity.x;
+        p.position.y += p.userData.velocity.y;
+        p.position.z += p.userData.velocity.z;
         p.scale.setScalar(p.userData.life);
       }
     }
@@ -764,18 +771,17 @@ export class OptimizedGarage {
 
   animate() {
     requestAnimationFrame(() => this.animate());
-
     const delta = this.clock.getDelta();
-
     this.updateMovement(delta);
     this.updateParticles();
 
-    // Animação do elevador
     if (this.targetLiftHeight !== undefined) {
       const step = 0.05;
       if (Math.abs(this.liftHeight - this.targetLiftHeight) > step) {
         this.liftHeight += this.targetLiftHeight > this.liftHeight ? step : -step;
-        if (this.currentCar) this.currentCar.position.y = this.liftHeight;
+        if (this.currentCar) {
+          this.currentCar.position.y = this.liftHeight;
+        }
       }
     }
 
@@ -783,7 +789,6 @@ export class OptimizedGarage {
   }
 }
 
-// Expor globalmente
 if (typeof window !== "undefined") {
   window.OptimizedGarage = OptimizedGarage;
 }
