@@ -338,10 +338,10 @@ export class OptimizedGarage {
   }
 
   setupLights() {
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.25);
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 0.8);
     this.scene.add(hemiLight);
 
-    const mainLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
     mainLight.position.set(10, 20, 10);
     mainLight.castShadow = true;
     mainLight.shadow.mapSize.width = 2048;
@@ -604,45 +604,69 @@ export class OptimizedGarage {
 
   addLift(pos, group) {
     const liftGroup = new THREE.Group();
-    const ironMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.6, metalness: 0.7 });
-    const blueMat = new THREE.MeshStandardMaterial({ color: 0x1a4a8a, roughness: 0.5, metalness: 0.4 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0x778899, roughness: 0.3, metalness: 0.9 });
+    const yellowMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.5, metalness: 0.3 });
     const rubberMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x334455, roughness: 0.4, metalness: 0.8 });
 
-    const base = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.1, 4.4), ironMat);
-    base.position.set(0, 0.05, 0);
+    // Base no chão
+    const base = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 5.0), darkMat);
+    base.position.set(0, 0.04, 0);
     liftGroup.add(base);
 
-    const colGeo = new THREE.BoxGeometry(0.4, 3, 0.4);
-    const col1 = new THREE.Mesh(colGeo, blueMat);
-    col1.position.set(-1.1, 1.5, -1.8);
-    liftGroup.add(col1);
-    const col2 = new THREE.Mesh(colGeo, blueMat);
-    col2.position.set(1.1, 1.5, -1.8);
-    liftGroup.add(col2);
+    // 4 colunas verticais nos cantos — FORA da largura do carro (X=±1.5)
+    const colH = 3.5;
+    const colGeo = new THREE.BoxGeometry(0.25, colH, 0.25);
+    const colPositions = [[-1.45, colH/2, -2.1], [1.45, colH/2, -2.1], [-1.45, colH/2, 2.1], [1.45, colH/2, 2.1]];
+    colPositions.forEach(([x, y, z]) => {
+      const col = new THREE.Mesh(colGeo, steelMat);
+      col.position.set(x, y, z);
+      liftGroup.add(col);
+      // Faixa amarela decorativa no topo de cada coluna
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.15, 0.26), yellowMat);
+      stripe.position.set(x, colH - 0.1, z);
+      liftGroup.add(stripe);
+    });
 
-    const armGeo = new THREE.BoxGeometry(0.15, 0.2, 1.8);
-    const arms = [];
-    for (let i = 0; i < 4; i++) {
-      const arm = new THREE.Mesh(armGeo, ironMat);
-      arm.position.y = 0.4;
-      arm.userData.baseY = 0.4;
-      arm.position.x = i < 2 ? -0.8 : 0.8;
-      arm.position.z = i % 2 === 0 ? 1 : -1;
-      arm.rotation.y = (i % 2 === 0 ? 0.3 : -0.3) * (i < 2 ? 1 : -1);
-      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 8), rubberMat);
-      pad.position.set(0, 0.1, i % 2 === 0 ? 0.8 : -0.8);
-      arm.add(pad);
-      liftGroup.add(arm);
-      arms.push(arm);
-    }
+    // Travessas horizontais fixas no topo conectando as colunas (frente e trás)
+    const crossGeo = new THREE.BoxGeometry(3.2, 0.2, 0.2);
+    [-2.1, 2.1].forEach(z => {
+      const cross = new THREE.Mesh(crossGeo, steelMat);
+      cross.position.set(0, colH, z);
+      liftGroup.add(cross);
+    });
 
-    const unit = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.8, 0.3), blueMat);
-    unit.position.set(-1.3, 1.5, -1.8);
-    liftGroup.add(unit);
+    // === PARTE MÓVEL: 2 vigas laterais + plataforma que sobem ===
+    const movingGroup = new THREE.Group();
+    movingGroup.position.y = 0;
+
+    // 2 vigas laterais deslizantes (sobem pelas colunas)
+    const railGeo = new THREE.BoxGeometry(0.2, 0.18, 4.8);
+    [-1.45, 1.45].forEach(x => {
+      const rail = new THREE.Mesh(railGeo, darkMat);
+      rail.position.set(x, 0.09, 0);
+      movingGroup.add(rail);
+    });
+
+    // Travessa central de apoio
+    const centerBar = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.12, 0.2), steelMat);
+    centerBar.position.set(0, 0.18, 0);
+    movingGroup.add(centerBar);
+
+    // 4 pads de borracha nos pontos de apoio do chassi
+    const padPositions = [[-0.85, 0, -1.5], [0.85, 0, -1.5], [-0.85, 0, 1.5], [0.85, 0, 1.5]];
+    padPositions.forEach(([x, y, z]) => {
+      const pad = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.12, 8), rubberMat);
+      pad.position.set(x, 0.24, z);
+      movingGroup.add(pad);
+    });
+
+    liftGroup.add(movingGroup);
+    liftGroup.userData.movingGroup = movingGroup;
 
     liftGroup.position.set(pos[0], pos[1], pos[2]);
     liftGroup.userData.equipmentId = "carLift";
-    liftGroup.userData.arms = arms;
+    liftGroup.userData.arms = [movingGroup]; // animar o grupo móvel inteiro
     group.add(liftGroup);
     if (this.clickableObjects) {
       this.clickableObjects.push(liftGroup);
@@ -804,42 +828,172 @@ export class OptimizedGarage {
 
     const carGroup = new THREE.Group();
 
-    const bodyGeo = new THREE.BoxGeometry(2.2, 0.6, 4.5);
-    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3366cc });
-    const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 0.6;
+    // Cor aleatória para cada job
+    const carColors = [0x2255cc, 0xcc2222, 0x22aa44, 0xddaa00, 0x888888, 0xcc5500, 0x222222, 0xffffff];
+    const bodyColor = carColors[Math.floor(Math.random() * carColors.length)];
+
+    const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.3, metalness: 0.6 });
+    const glassMat = new THREE.MeshStandardMaterial({ color: 0x88bbcc, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.6 });
+    const darkMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+    const chromeMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, roughness: 0.1, metalness: 1.0 });
+    const lightMat = new THREE.MeshStandardMaterial({ color: 0xffffee, roughness: 0.1, emissive: 0x332200, emissiveIntensity: 0.3 });
+    const tailLightMat = new THREE.MeshStandardMaterial({ color: 0xff2200, roughness: 0.1, emissive: 0x440000, emissiveIntensity: 0.3 });
+    const tireMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 1.0 });
+    const rimMat = new THREE.MeshStandardMaterial({ color: 0xbbbbbb, roughness: 0.2, metalness: 0.9 });
+    const underbodyMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
+
+    // ===== CARROCERIA PRINCIPAL =====
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.55, 4.4), bodyMat);
+    body.position.y = 0.55;
     body.castShadow = true;
     body.receiveShadow = true;
     carGroup.add(body);
 
-    const cabinGeo = new THREE.BoxGeometry(1.8, 0.5, 1.5);
-    const cabinMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
-    cabin.position.set(0, 1.1, -0.5);
+    // Parte traseira (porta-malas)
+    const trunk = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.35, 1.0), bodyMat);
+    trunk.position.set(0, 1.0, 1.4);
+    trunk.castShadow = true;
+    carGroup.add(trunk);
+
+    // Cabine / teto
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.5, 1.8), bodyMat);
+    cabin.position.set(0, 1.28, 0.1);
     cabin.castShadow = true;
     carGroup.add(cabin);
 
-    const wheelGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.3, 12);
-    const wheelMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
-    [[-1.0, 0.3, 1.2], [1.0, 0.3, 1.2], [-1.0, 0.3, -1.4], [1.0, 0.3, -1.4]].forEach((wp) => {
-      const wheel = new THREE.Mesh(wheelGeo, wheelMat);
-      wheel.rotation.z = Math.PI / 2;
-      wheel.position.set(wp[0], wp[1], wp[2]);
-      wheel.castShadow = true;
-      carGroup.add(wheel);
+    // Capô (levemente elevado)
+    const hood = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.08, 1.4), bodyMat);
+    hood.position.set(0, 1.0, -1.3);
+    hood.castShadow = true;
+    carGroup.add(hood);
+
+    // ===== PARA-CHOQUES =====
+    const frontBumper = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, 0.2), darkMat);
+    frontBumper.position.set(0, 0.45, -2.3);
+    carGroup.add(frontBumper);
+
+    const rearBumper = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, 0.2), darkMat);
+    rearBumper.position.set(0, 0.45, 2.3);
+    carGroup.add(rearBumper);
+
+    // ===== GRADES DIANTEIRAS =====
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.25, 0.1), darkMat);
+    grille.position.set(0, 0.55, -2.26);
+    carGroup.add(grille);
+
+    // ===== JANELAS =====
+    // Pára-brisa
+    const windshield = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.45, 0.08), glassMat);
+    windshield.position.set(0, 1.32, -0.85);
+    windshield.rotation.x = Math.PI / 8;
+    carGroup.add(windshield);
+
+    // Vidro traseiro
+    const rearWindow = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.4, 0.08), glassMat);
+    rearWindow.position.set(0, 1.28, 1.05);
+    rearWindow.rotation.x = -Math.PI / 10;
+    carGroup.add(rearWindow);
+
+    // Janelas laterais
+    [[-0.94, 1.32, 0.1], [0.94, 1.32, 0.1]].forEach(([x, y, z]) => {
+      const sideWin = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.35, 1.4), glassMat);
+      sideWin.position.set(x, y, z);
+      carGroup.add(sideWin);
     });
 
+    // ===== FARÓIS DIANTEIROS =====
+    [[-0.7, 0.65, -2.25], [0.7, 0.65, -2.25]].forEach(([x, y, z]) => {
+      const headlight = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.1), lightMat);
+      headlight.position.set(x, y, z);
+      carGroup.add(headlight);
+
+      // Aro cromado
+      const ring = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.21, 0.08), chromeMat);
+      ring.position.set(x, y, z - 0.02);
+      carGroup.add(ring);
+    });
+
+    // ===== LANTERNAS TRASEIRAS =====
+    [[-0.75, 0.75, 2.25], [0.75, 0.75, 2.25]].forEach(([x, y, z]) => {
+      const taillight = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.18, 0.1), tailLightMat);
+      taillight.position.set(x, y, z);
+      carGroup.add(taillight);
+    });
+
+    // ===== ESPELHOS RETROVISORES =====
+    [[-1.1, 1.1, -0.4], [1.1, 1.1, -0.4]].forEach(([x, y, z]) => {
+      const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.22), darkMat);
+      mirror.position.set(x, y, z);
+      carGroup.add(mirror);
+    });
+
+    // ===== SOLEIRA (embaixo das portas) =====
+    [[-1.07, 0.28, 0.0], [1.07, 0.28, 0.0]].forEach(([x, y, z]) => {
+      const sill = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 3.6), chromeMat);
+      sill.position.set(x, y, z);
+      carGroup.add(sill);
+    });
+
+    // ===== CHASSI / FUNDO =====
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.12, 4.0), underbodyMat);
+    chassis.position.set(0, 0.18, 0);
+    chassis.receiveShadow = true;
+    carGroup.add(chassis);
+
+    // ===== RODAS (pneu + aro) =====
+    const wheelPositions = [[-1.1, 0.38, -1.4], [1.1, 0.38, -1.4], [-1.1, 0.38, 1.4], [1.1, 0.38, 1.4]];
+    wheelPositions.forEach(([x, y, z]) => {
+      // Pneu
+      const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.28, 16), tireMat);
+      tire.rotation.z = Math.PI / 2;
+      tire.position.set(x, y, z);
+      tire.castShadow = true;
+      carGroup.add(tire);
+
+      // Aro
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 0.3, 8), rimMat);
+      rim.rotation.z = Math.PI / 2;
+      rim.position.set(x, y, z);
+      carGroup.add(rim);
+
+      // Centro do aro
+      const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.32, 6), chromeMat);
+      hub.rotation.z = Math.PI / 2;
+      hub.position.set(x, y, z);
+      carGroup.add(hub);
+
+      // Parafusos do aro
+      for (let i = 0; i < 5; i++) {
+        const angle = (i / 5) * Math.PI * 2;
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.32, 5), darkMat);
+        bolt.rotation.z = Math.PI / 2;
+        bolt.position.set(x, y + Math.sin(angle) * 0.13, z + Math.cos(angle) * 0.13);
+        carGroup.add(bolt);
+      }
+    });
+
+    // ===== ESCAPAMENTO =====
+    const exhaust = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.3, 8), chromeMat);
+    exhaust.rotation.x = Math.PI / 2;
+    exhaust.position.set(0.6, 0.22, 2.35);
+    carGroup.add(exhaust);
+
     // Posição final no elevador
-    this.carTargetPos = new THREE.Vector3(-5, 0.3, -4);
+    this.carTargetPos = new THREE.Vector3(-5, 0, -4);
 
     // Abre porta e depois entra
-    carGroup.position.set(-5, 0.3, 16);
+    carGroup.position.set(-5, 0, 16);
     this.currentCar = carGroup;
     this.carEntering = false;
     this.scene.add(carGroup);
 
+    // Resetar elevador ao receber novo carro
+    this.liftHeight = 0;
+    this.targetLiftHeight = 0;
+    this.carLifted = false;
+    this.activeLiftGroup = null;
+
     this.openGarageDoor();
-    // Aguarda porta abrir antes de mover o carro
     setTimeout(() => {
       this.carEntering = true;
       window.uiManager?.showNotification("🚗 Carro entrando na garagem...", "info");
@@ -925,7 +1079,8 @@ export class OptimizedGarage {
         if (this.activeLiftGroup) {
           const arms = this.activeLiftGroup.userData.arms || [];
           arms.forEach(arm => {
-            arm.position.y = (arm.userData.baseY || 0.4) + this.liftHeight * 0.6;
+            // arm é o movingGroup — sobe diretamente
+            arm.position.y = 0.1 + this.liftHeight;
           });
         }
       }
