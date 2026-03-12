@@ -726,16 +726,25 @@ export class OptimizedGarage {
       carGroup.add(wheel);
     });
 
-    carGroup.position.set(-5, 0.3, -4);
+    // Posição final no elevador
+    this.carTargetPos = new THREE.Vector3(-5, 0.3, -4);
+
+    // Começa fora da garagem (porta de entrada em Z=14)
+    carGroup.position.set(-5, 0.3, 13);
     this.currentCar = carGroup;
+    this.carEntering = true;
     this.scene.add(carGroup);
+
+    window.uiManager?.showNotification("🚗 Carro entrando na garagem...", "info");
     return carGroup;
   }
 
   removeCar() {
     if (this.currentCar) {
-      this.scene.remove(this.currentCar);
-      this.currentCar = null;
+      // Animação de saída
+      this.carExiting = true;
+      this.carExitTarget = 13;
+      window.uiManager?.showNotification("🚗 Carro saindo da garagem...", "info");
     }
   }
 
@@ -807,6 +816,36 @@ export class OptimizedGarage {
             arm.position.y = (arm.userData.baseY || 0.4) + this.liftHeight * 0.6;
           });
         }
+      }
+    }
+
+    // Animação de entrada do carro
+    if (this.carEntering && this.currentCar) {
+      const target = this.carTargetPos;
+      const pos = this.currentCar.position;
+      const speed = 8 * delta;
+      if (pos.z > target.z + 0.05) {
+        pos.z -= speed;
+      } else {
+        pos.z = target.z;
+        this.carEntering = false;
+        window.uiManager?.showNotification("✅ Carro pronto para serviço!", "success");
+      }
+    }
+
+    // Animação de saída do carro
+    if (this.carExiting && this.currentCar) {
+      const pos = this.currentCar.position;
+      const speed = 8 * delta;
+      pos.z += speed;
+      if (pos.z >= this.carExitTarget) {
+        this.scene.remove(this.currentCar);
+        this.currentCar = null;
+        this.carExiting = false;
+        this.liftHeight = 0;
+        this.targetLiftHeight = 0;
+        this.carLifted = false;
+        this.activeLiftGroup = null;
       }
     }
 
