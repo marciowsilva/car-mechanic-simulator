@@ -305,6 +305,20 @@ export class OptimizedGarage {
     if (info) info.style.display = "none";
   }
 
+  openGarageDoor() {
+    if (!this.garageDoorOpen && !this.garageDoorMoving) {
+      this.garageDoorMoving = true;
+      this.garageDoorOpen = true;
+    }
+  }
+
+  closeGarageDoor() {
+    if (this.garageDoorOpen && !this.garageDoorMoving) {
+      this.garageDoorMoving = true;
+      this.garageDoorOpen = false;
+    }
+  }
+
   toggleLift() {
     this.carLifted = !this.carLifted;
     this.targetLiftHeight = this.carLifted ? 1.5 : 0;
@@ -349,53 +363,142 @@ export class OptimizedGarage {
     wallTex.wrapS = wallTex.wrapT = THREE.RepeatWrapping;
     wallTex.repeat.set(6, 2);
 
-    const floorGeo = new THREE.PlaneGeometry(30, 30);
-    const floorMat = new THREE.MeshStandardMaterial({
-      map: floorTex,
-      roughness: 0.3,
-      metalness: 0.1,
-      bumpScale: 0.02,
-    });
-    const floor = new THREE.Mesh(floorGeo, floorMat);
+    // ===== CHÃO =====
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(30, 30),
+      new THREE.MeshStandardMaterial({ map: floorTex, roughness: 0.3, metalness: 0.1 })
+    );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.scene.add(floor);
 
+    // Grid sutil
     const grid = new THREE.GridHelper(30, 30, 0x4444ff, 0x222222);
     grid.position.y = 0.01;
     grid.material.transparent = true;
     grid.material.opacity = 0.2;
     this.scene.add(grid);
 
-    this.wallMat = new THREE.MeshStandardMaterial({
-      map: wallTex,
-      roughness: 0.8,
-      metalness: 0.3,
-    });
+    // ===== MATERIAIS =====
+    this.wallMat = new THREE.MeshStandardMaterial({ map: wallTex, roughness: 0.8, metalness: 0.3 });
+    const metalMat = new THREE.MeshStandardMaterial({ color: 0x555566, roughness: 0.4, metalness: 0.8 });
+    const darkMetalMat = new THREE.MeshStandardMaterial({ color: 0x333344, roughness: 0.5, metalness: 0.9 });
+    const ceilingMat = new THREE.MeshStandardMaterial({ color: 0x222233, roughness: 0.9 });
+    const doorMat = new THREE.MeshStandardMaterial({ color: 0x445566, roughness: 0.3, metalness: 0.9 });
+    const doorStripeMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.4, metalness: 0.5, emissive: 0x332200, emissiveIntensity: 0.3 });
 
+    // ===== PAREDES =====
+    // Parede dos fundos
     const backWall = new THREE.Mesh(new THREE.BoxGeometry(30, 8, 0.5), this.wallMat);
     backWall.position.set(0, 4, -15);
     backWall.receiveShadow = true;
     this.scene.add(backWall);
 
-    const sideWallGeo = new THREE.BoxGeometry(0.5, 8, 30);
-    const leftWall = new THREE.Mesh(sideWallGeo, this.wallMat);
+    // Parede esquerda
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 8, 30), this.wallMat);
     leftWall.position.set(-15, 4, 0);
     leftWall.receiveShadow = true;
     this.scene.add(leftWall);
 
-    const rightWall = new THREE.Mesh(sideWallGeo, this.wallMat);
+    // Parede direita
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(0.5, 8, 30), this.wallMat);
     rightWall.position.set(15, 4, 0);
     rightWall.receiveShadow = true;
     this.scene.add(rightWall);
 
-    const ceiling = new THREE.Mesh(
-      new THREE.PlaneGeometry(30, 30),
-      new THREE.MeshStandardMaterial({ color: 0x111111 }),
-    );
+    // Parede frontal (com abertura para porta)
+    // Lado esquerdo da parede frontal
+    const frontWallLeft = new THREE.Mesh(new THREE.BoxGeometry(9, 8, 0.5), this.wallMat);
+    frontWallLeft.position.set(-10.5, 4, 15);
+    this.scene.add(frontWallLeft);
+    // Lado direito
+    const frontWallRight = new THREE.Mesh(new THREE.BoxGeometry(9, 8, 0.5), this.wallMat);
+    frontWallRight.position.set(10.5, 4, 15);
+    this.scene.add(frontWallRight);
+    // Cima da porta
+    const frontWallTop = new THREE.Mesh(new THREE.BoxGeometry(12, 2, 0.5), this.wallMat);
+    frontWallTop.position.set(0, 7, 15);
+    this.scene.add(frontWallTop);
+
+    // ===== TETO com vigas =====
+    const ceiling = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), ceilingMat);
     ceiling.position.y = 8;
     ceiling.rotation.x = Math.PI / 2;
     this.scene.add(ceiling);
+
+    // Vigas do teto
+    for (let i = -12; i <= 12; i += 6) {
+      const beam = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, 30), metalMat);
+      beam.position.set(i, 7.75, 0);
+      this.scene.add(beam);
+    }
+    // Viga transversal
+    const crossBeam = new THREE.Mesh(new THREE.BoxGeometry(30, 0.4, 0.4), darkMetalMat);
+    crossBeam.position.set(0, 7.6, -5);
+    this.scene.add(crossBeam);
+
+    // ===== FAIXAS DE SEGURANÇA no chão =====
+    const stripeGeo = new THREE.PlaneGeometry(0.3, 28);
+    const stripeMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.8 });
+    [-5.5, 5.5].forEach(x => {
+      const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+      stripe.rotation.x = -Math.PI / 2;
+      stripe.position.set(x, 0.02, -1);
+      this.scene.add(stripe);
+    });
+
+    // ===== PORTA DE GARAGEM =====
+    this.garageDoor = new THREE.Group();
+
+    // Painéis da porta (4 painéis horizontais que sobem)
+    const panelMat = doorMat;
+    for (let i = 0; i < 4; i++) {
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(11.8, 1.4, 0.15), panelMat);
+      panel.position.y = 0.7 + i * 1.5;
+      this.garageDoor.add(panel);
+
+      // Faixa laranja em cada painel
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(11.8, 0.1, 0.2), doorStripeMat);
+      stripe.position.y = 0.7 + i * 1.5;
+      this.garageDoor.add(stripe);
+    }
+
+    // Trilhos laterais da porta
+    [- 6, 6].forEach(x => {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 6.5, 0.15), darkMetalMat);
+      rail.position.set(x, 3, 0);
+      this.garageDoor.add(rail);
+    });
+
+    this.garageDoor.position.set(0, 0, 14.8);
+    this.garageDoorTargetY = 0;    // posição Y base dos painéis
+    this.garageDoorOpen = false;
+    this.garageDoorMoving = false;
+    this.scene.add(this.garageDoor);
+
+    // Marco da porta
+    const frameMat = darkMetalMat;
+    const frameTop = new THREE.Mesh(new THREE.BoxGeometry(12.4, 0.4, 0.4), frameMat);
+    frameTop.position.set(0, 6.2, 15);
+    this.scene.add(frameTop);
+    [-6.2, 6.2].forEach(x => {
+      const frameSide = new THREE.Mesh(new THREE.BoxGeometry(0.4, 6.5, 0.4), frameMat);
+      frameSide.position.set(x, 3, 15);
+      this.scene.add(frameSide);
+    });
+
+    // Rodapé metálico nas paredes
+    const baseboardGeo = new THREE.BoxGeometry(30, 0.3, 0.2);
+    const baseboardMat = new THREE.MeshStandardMaterial({ color: 0x444455, metalness: 0.8, roughness: 0.3 });
+    const bbBack = new THREE.Mesh(baseboardGeo, baseboardMat);
+    bbBack.position.set(0, 0.15, -14.8);
+    this.scene.add(bbBack);
+    const bbLeft = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 30), baseboardMat);
+    bbLeft.position.set(-14.8, 0.15, 0);
+    this.scene.add(bbLeft);
+    const bbRight = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.3, 30), baseboardMat);
+    bbRight.position.set(14.8, 0.15, 0);
+    this.scene.add(bbRight);
 
     this.levelGroups = {
       1: new THREE.Group(),
@@ -729,22 +832,31 @@ export class OptimizedGarage {
     // Posição final no elevador
     this.carTargetPos = new THREE.Vector3(-5, 0.3, -4);
 
-    // Começa fora da garagem (porta de entrada em Z=14)
-    carGroup.position.set(-5, 0.3, 13);
+    // Abre porta e depois entra
+    carGroup.position.set(-5, 0.3, 16);
     this.currentCar = carGroup;
-    this.carEntering = true;
+    this.carEntering = false;
     this.scene.add(carGroup);
 
-    window.uiManager?.showNotification("🚗 Carro entrando na garagem...", "info");
+    this.openGarageDoor();
+    // Aguarda porta abrir antes de mover o carro
+    setTimeout(() => {
+      this.carEntering = true;
+      window.uiManager?.showNotification("🚗 Carro entrando na garagem...", "info");
+    }, 800);
+
     return carGroup;
   }
 
   removeCar() {
     if (this.currentCar) {
-      // Animação de saída
-      this.carExiting = true;
-      this.carExitTarget = 13;
+      // Abrir porta, depois sair
+      this.openGarageDoor();
       window.uiManager?.showNotification("🚗 Carro saindo da garagem...", "info");
+      setTimeout(() => {
+        this.carExiting = true;
+        this.carExitTarget = 16;
+      }, 800);
     }
   }
 
@@ -819,6 +931,19 @@ export class OptimizedGarage {
       }
     }
 
+    // Animação da porta de garagem
+    if (this.garageDoorMoving && this.garageDoor) {
+      const targetY = this.garageDoorOpen ? 6.5 : 0;
+      const currentY = this.garageDoor.position.y;
+      const diff = targetY - currentY;
+      if (Math.abs(diff) > 0.05) {
+        this.garageDoor.position.y += diff * 5 * delta;
+      } else {
+        this.garageDoor.position.y = targetY;
+        this.garageDoorMoving = false;
+      }
+    }
+
     // Animação de entrada do carro
     if (this.carEntering && this.currentCar) {
       const target = this.carTargetPos;
@@ -829,6 +954,7 @@ export class OptimizedGarage {
       } else {
         pos.z = target.z;
         this.carEntering = false;
+        this.closeGarageDoor();
         window.uiManager?.showNotification("✅ Carro pronto para serviço!", "success");
       }
     }
@@ -846,6 +972,8 @@ export class OptimizedGarage {
         this.targetLiftHeight = 0;
         this.carLifted = false;
         this.activeLiftGroup = null;
+        // Fecha porta após carro sair
+        setTimeout(() => this.closeGarageDoor(), 300);
       }
     }
 
