@@ -909,26 +909,44 @@ export class OptimizedGarage {
         });
         console.log(`📋 Objetos (${modelInfo.name}):`, allNamed.slice(0, 30));
 
-        // --- Estratégia 1: buscar Groups/Objects3D por nome (não Meshes individuais) ---
-        // Modelos bem estruturados têm um Group "Wheel_FL" que contém pneu+aro
+        // --- Mapeamento manual por modelo (mais confiável) ---
+        const wheelMap = {
+          '1956_-_chevrolet_bel_air_nomad.glb': ['wheel', 'Wheel'],
+          '1970_dodge_challenger_rt.glb':        ['wheel', 'Wheel', 'tire', 'Tire'],
+          '1999_honda_civic_si.glb':             ['wheel', 'Wheel', 'tire', 'Tire'],
+          '1999_volkswagen_gol_2000_gti_g2.glb': ['Gol_wheel_R_4', 'Gol_wheel_F_5'],
+          '2013_ford_fiesta_st.glb':             [], // modelo sem rodas separadas
+          'beetlefusca_version_2.glb':           ['wheel', 'Wheel'],
+          'chevrolet_chevette_sl_76_.glb':       ['wheel', 'Wheel'],
+          'ford_f100_1967.glb':                  ['Ford_F100__Wheel_0'],
+          'generic_sedan_car.glb':               ['wheel', 'Wheel'],
+          'shvan_92_-_low_poly_model.glb':       ['wheel', 'Wheel'],
+          'vw_bus.glb':                          ['wheel', 'Wheel'],
+        };
+
+        const manualNames = wheelMap[modelInfo.file] || [];
+
         carGroup.traverse((child) => {
           if (child === carGroup) return;
-          const nameLower = (child.name || '').toLowerCase();
-          const isWheel = wheelKeywords.some(k => nameLower.includes(k));
-          if (!isWheel) return;
+          const name = child.name || '';
 
-          // Preferir o pai Group se ele também tem nome de roda
-          // (evita pegar cada mesh filho individualmente)
-          const parentName = (child.parent?.name || '').toLowerCase();
-          const parentIsWheel = wheelKeywords.some(k => parentName.includes(k));
-          if (parentIsWheel) return; // será adicionado pelo pai
+          // Verificar match exato primeiro, depois parcial
+          const isExact = manualNames.includes(name);
+          const isPartial = manualNames.some(k => name.toLowerCase().includes(k.toLowerCase()));
 
-          if (!this.carWheels.includes(child)) {
-            this.carWheels.push(child);
+          if ((isExact || isPartial) && !this.carWheels.includes(child)) {
+            // Evitar pegar filho se o pai já foi pego
+            let ancestor = child.parent;
+            let parentPicked = false;
+            while (ancestor && ancestor !== carGroup) {
+              if (this.carWheels.includes(ancestor)) { parentPicked = true; break; }
+              ancestor = ancestor.parent;
+            }
+            if (!parentPicked) this.carWheels.push(child);
           }
         });
 
-        // --- Estratégia 2: se não achou por nome, pegar os 4 Groups filhos diretos mais laterais e baixos ---
+        // --- Fallback por posição se ainda vazio ---
         if (this.carWheels.length === 0) {
           const carBox = new THREE.Box3().setFromObject(carGroup);
           const carSize = new THREE.Vector3();
@@ -936,41 +954,36 @@ export class OptimizedGarage {
           const carCenter = new THREE.Vector3();
           carBox.getCenter(carCenter);
 
-          // Coletar apenas Groups de primeiro e segundo nível
           const candidates = [];
-          carGroup.children.forEach(child => {
-            const worldPos = new THREE.Vector3();
-            child.getWorldPosition(worldPos);
-            const objBox = new THREE.Box3().setFromObject(child);
-            const objSize = new THREE.Vector3();
-            objBox.getSize(objSize);
-            const objDiam = Math.max(objSize.x, objSize.y, objSize.z);
-            // Deve ser lateral, baixo, e ter tamanho de roda (15%-40% da altura do carro)
-            const isLateral = Math.abs(worldPos.x - carCenter.x) > carSize.x * 0.28;
-            const isLow = worldPos.y < carBox.min.y + carSize.y * 0.42;
-            const rightSize = objDiam > carSize.y * 0.14 && objDiam < carSize.y * 0.7;
-            if (isLateral && isLow && rightSize) {
-              candidates.push({ obj: child, pos: worldPos, diam: objDiam });
+          carGroup.traverse(child => {
+            if (!child.isMesh) return;
+            const wp = new THREE.Vector3();
+            child.getWorldPosition(wp);
+            const cb = new THREE.Box3().setFromObject(child);
+            const cs = new THREE.Vector3();
+            cb.getSize(cs);
+            const diam = Math.max(cs.x, cs.y, cs.z);
+            const isLateral = Math.abs(wp.x - carCenter.x) > carSize.x * 0.3;
+            const isLow = wp.y < carBox.min.y + carSize.y * 0.4;
+            const goodSize = diam > carSize.y * 0.2 && diam < carSize.y * 0.65;
+            if (isLateral && isLow && goodSize) {
+              candidates.push({ obj: child, diam });
             }
           });
-
-          // Ordenar por diâmetro decrescente e pegar no máximo 4
           candidates.sort((a, b) => b.diam - a.diam);
-          this.carWheels = candidates.slice(0, 4).map(c => c.obj);
-        }
-
-        // Limitar a 4 ou 6 rodas (4 normais, 6 para van/bus)
-        if (this.carWheels.length > 6) {
-          // Manter só os 4 mais laterais
-          const carBox2 = new THREE.Box3().setFromObject(carGroup);
-          const carCenter2 = new THREE.Vector3();
-          carBox2.getCenter(carCenter2);
-          this.carWheels.sort((a, b) => {
-            const pa = new THREE.Vector3(); a.getWorldPosition(pa);
-            const pb = new THREE.Vector3(); b.getWorldPosition(pb);
-            return Math.abs(pb.x - carCenter2.x) - Math.abs(pa.x - carCenter2.x);
+          // Pegar no máximo 4, agrupando por posição similar
+          const picked = [];
+          candidates.forEach(c => {
+            const cp = new THREE.Vector3();
+            c.obj.getWorldPosition(cp);
+            const tooClose = picked.some(p => {
+              const pp = new THREE.Vector3();
+              p.getWorldPosition(pp);
+              return cp.distanceTo(pp) < carSize.y * 0.3;
+            });
+            if (!tooClose && picked.length < 4) picked.push(c.obj);
           });
-          this.carWheels = this.carWheels.slice(0, 4);
+          this.carWheels = picked;
         }
 
         console.log(`🚗 Rodas detectadas (${modelInfo.name}):`, this.carWheels.length, this.carWheels.map(w => w.name));
