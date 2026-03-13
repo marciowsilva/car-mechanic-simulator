@@ -20,6 +20,7 @@ export class OptimizedGarage {
     this.clickableObjects = [];
     this.raycaster = new THREE.Raycaster();
     this.gltfLoader = new GLTFLoader();
+    this.carWheels = [];
     this.mouse = new THREE.Vector2();
     this.hoveredObject = null;
     this.carLifted = false;
@@ -886,12 +887,16 @@ export class OptimizedGarage {
         carGroup.position.z -= center.z;
         carGroup.position.y += modelInfo.yOffset;
 
-        // --- Sombras em todos os meshes ---
+        // --- Sombras em todos os meshes + detectar rodas ---
+        this.carWheels = [];
+        const wheelKeywords = ['wheel', 'roda', 'tire', 'tyre', 'pneu', 'rueda', 'roue', 'felge', 'rim'];
+
+        // Coletar todos os objetos com nome para debug
+        const allNamed = [];
         carGroup.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
             child.receiveShadow = true;
-            // Melhorar materiais se forem muito opacos
             if (child.material) {
               const mats = Array.isArray(child.material) ? child.material : [child.material];
               mats.forEach(m => {
@@ -900,7 +905,75 @@ export class OptimizedGarage {
               });
             }
           }
+          if (child.name) allNamed.push(child.name);
         });
+        console.log(`📋 Objetos (${modelInfo.name}):`, allNamed.slice(0, 30));
+
+        // --- Estratégia 1: buscar Groups/Objects3D por nome (não Meshes individuais) ---
+        // Modelos bem estruturados têm um Group "Wheel_FL" que contém pneu+aro
+        carGroup.traverse((child) => {
+          if (child === carGroup) return;
+          const nameLower = (child.name || '').toLowerCase();
+          const isWheel = wheelKeywords.some(k => nameLower.includes(k));
+          if (!isWheel) return;
+
+          // Preferir o pai Group se ele também tem nome de roda
+          // (evita pegar cada mesh filho individualmente)
+          const parentName = (child.parent?.name || '').toLowerCase();
+          const parentIsWheel = wheelKeywords.some(k => parentName.includes(k));
+          if (parentIsWheel) return; // será adicionado pelo pai
+
+          if (!this.carWheels.includes(child)) {
+            this.carWheels.push(child);
+          }
+        });
+
+        // --- Estratégia 2: se não achou por nome, pegar os 4 Groups filhos diretos mais laterais e baixos ---
+        if (this.carWheels.length === 0) {
+          const carBox = new THREE.Box3().setFromObject(carGroup);
+          const carSize = new THREE.Vector3();
+          carBox.getSize(carSize);
+          const carCenter = new THREE.Vector3();
+          carBox.getCenter(carCenter);
+
+          // Coletar apenas Groups de primeiro e segundo nível
+          const candidates = [];
+          carGroup.children.forEach(child => {
+            const worldPos = new THREE.Vector3();
+            child.getWorldPosition(worldPos);
+            const objBox = new THREE.Box3().setFromObject(child);
+            const objSize = new THREE.Vector3();
+            objBox.getSize(objSize);
+            const objDiam = Math.max(objSize.x, objSize.y, objSize.z);
+            // Deve ser lateral, baixo, e ter tamanho de roda (15%-40% da altura do carro)
+            const isLateral = Math.abs(worldPos.x - carCenter.x) > carSize.x * 0.28;
+            const isLow = worldPos.y < carBox.min.y + carSize.y * 0.42;
+            const rightSize = objDiam > carSize.y * 0.14 && objDiam < carSize.y * 0.7;
+            if (isLateral && isLow && rightSize) {
+              candidates.push({ obj: child, pos: worldPos, diam: objDiam });
+            }
+          });
+
+          // Ordenar por diâmetro decrescente e pegar no máximo 4
+          candidates.sort((a, b) => b.diam - a.diam);
+          this.carWheels = candidates.slice(0, 4).map(c => c.obj);
+        }
+
+        // Limitar a 4 ou 6 rodas (4 normais, 6 para van/bus)
+        if (this.carWheels.length > 6) {
+          // Manter só os 4 mais laterais
+          const carBox2 = new THREE.Box3().setFromObject(carGroup);
+          const carCenter2 = new THREE.Vector3();
+          carBox2.getCenter(carCenter2);
+          this.carWheels.sort((a, b) => {
+            const pa = new THREE.Vector3(); a.getWorldPosition(pa);
+            const pb = new THREE.Vector3(); b.getWorldPosition(pb);
+            return Math.abs(pb.x - carCenter2.x) - Math.abs(pa.x - carCenter2.x);
+          });
+          this.carWheels = this.carWheels.slice(0, 4);
+        }
+
+        console.log(`🚗 Rodas detectadas (${modelInfo.name}):`, this.carWheels.length, this.carWheels.map(w => w.name));
 
         // --- Orientar: frente do carro para -Z (padrão da garagem) ---
         // Modelos do Sketchfab geralmente já vêm orientados, mas garantimos
@@ -1061,6 +1134,10 @@ export class OptimizedGarage {
 
     // Animação de entrada do carro
     if (this.carEntering && this.currentCar) {
+      // Girar rodas enquanto entra
+      if (this.carWheels && this.carWheels.length > 0) {
+        this.carWheels.forEach(w => { w.rotation.x -= 0.08; });
+      }
       const target = this.carTargetPos;
       const pos = this.currentCar.position;
       const speed = 8 * delta;
@@ -1076,6 +1153,9 @@ export class OptimizedGarage {
 
     // Animação de saída do carro
     if (this.carExiting && this.currentCar) {
+      if (this.carWheels && this.carWheels.length > 0) {
+        this.carWheels.forEach(w => { w.rotation.x += 0.08; });
+      }
       const pos = this.currentCar.position;
       const speed = 8 * delta;
       pos.z += speed;
