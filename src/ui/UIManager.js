@@ -255,6 +255,15 @@ export class UIManager {
 
       // 9. Sistemas adicionais
       this.loadAdditionalSystems();
+
+      // 10. Minigame
+      try {
+        const { MinigameSystem } = await import("/src/systems/MinigameSystem.js");
+        this.minigame = new MinigameSystem();
+        console.log("✅ MinigameSystem carregado");
+      } catch (err) {
+        console.error("❌ Erro ao carregar MinigameSystem:", err);
+      }
     } catch (err) {
       console.error("❌ Erro ao carregar sistemas:", err);
     }
@@ -1033,25 +1042,58 @@ window.repairPart = (partName) => {
     return;
   }
 
-  const result = window.gameState.repairPart(partName);
+  const mgSystem = window.uiManager?.minigame;
+  const toolId   = window.gameState?.selectedTool || 'wrench';
 
-  if (result.success) {
-    window.uiManager?.showNotification(result.message, "success");
-    window.uiManager?.updatePartsList();
-    window.uiManager?.updateMoney();
+  console.log('🔧 repairPart chamado:', partName, '| tool:', toolId, '| minigame:', !!mgSystem);
 
-    window.createRepairEffect?.(partName);
+  if (mgSystem) {
+    console.log('🎮 Abrindo minigame...');
+    mgSystem.start(partName, toolId, (quality) => {
+      // quality: 0–100
+      const result = window.gameState.repairPart(partName);
 
-    const status = window.gameState.checkCarReady();
-    if (status.ready) {
-      document.getElementById("deliver-car").disabled = false;
-      window.uiManager?.showNotification(
-        "🎉 Carro pronto para entrega!",
-        "success",
-      );
-    }
+      if (result.success) {
+        // Aplicar bônus de qualidade à condição da peça
+        const bonusRepair = Math.round((quality - 50) / 10); // -5 a +5 pts
+        if (bonusRepair > 0 && window.gameState.currentCar?.parts?.[partName]) {
+          window.gameState.currentCar.parts[partName].condition = Math.min(
+            100,
+            window.gameState.currentCar.parts[partName].condition + bonusRepair
+          );
+        }
+
+        const qualityLabel = quality >= 90 ? '🎯 Reparo perfeito!' : quality >= 70 ? '✅ Bom reparo!' : '🔧 Reparo básico';
+        window.uiManager?.showNotification(`${qualityLabel} (${quality}%)`, quality >= 70 ? 'success' : 'info');
+        window.uiManager?.updatePartsList();
+        window.uiManager?.updateMoney();
+        window.createRepairEffect?.(partName);
+
+        const status = window.gameState.checkCarReady();
+        if (status.ready) {
+          document.getElementById("deliver-car").disabled = false;
+          window.uiManager?.showNotification("🎉 Carro pronto para entrega!", "success");
+        }
+      } else {
+        window.uiManager?.showNotification(result.message, "error");
+      }
+    });
   } else {
-    window.uiManager?.showNotification(result.message, "error");
+    // Fallback sem minigame
+    const result = window.gameState.repairPart(partName);
+    if (result.success) {
+      window.uiManager?.showNotification(result.message, "success");
+      window.uiManager?.updatePartsList();
+      window.uiManager?.updateMoney();
+      window.createRepairEffect?.(partName);
+      const status = window.gameState.checkCarReady();
+      if (status.ready) {
+        document.getElementById("deliver-car").disabled = false;
+        window.uiManager?.showNotification("🎉 Carro pronto para entrega!", "success");
+      }
+    } else {
+      window.uiManager?.showNotification(result.message, "error");
+    }
   }
 };
 

@@ -25,6 +25,8 @@ export class OptimizedGarage {
     this.hoveredObject = null;
     this.carLifted = false;
     this.liftHeight = 0;
+    this._orbitActive = false;
+    this._orbitTarget = null;
     this.liftArms = []; // Braços do elevador ativo
 
     // Movimentação FPS
@@ -161,6 +163,7 @@ export class OptimizedGarage {
       case "KeyS": this.moveBackward = true; break;
       case "KeyA": this.rotateLeft = true; break;
       case "KeyD": this.rotateRight = true; break;
+      case "KeyC": this.toggleOrbit(); break;
       case "ArrowLeft":
       case "KeyQ": this.rotateLeft = true; break;
       case "ArrowRight":
@@ -275,11 +278,40 @@ export class OptimizedGarage {
   }
 
   onClick(event) {
-
     if (!this.hoveredObject || !this.equipmentSystem) return;
     const eqId = this.hoveredObject.userData.equipmentId;
     console.warn(`Interagindo com: ${eqId}`);
     this.equipmentSystem.interactWithEquipment(eqId);
+  }
+
+  toggleOrbit() {
+    if (this._orbitActive) this.exitOrbit();
+    else this.orbitToCar();
+  }
+
+  orbitToCar() {
+    if (!this.currentCar) {
+      window.uiManager?.showNotification('❌ Nenhum carro na garagem', 'error');
+      return;
+    }
+    const box = new THREE.Box3().setFromObject(this.currentCar);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+    this._orbitTarget = center.clone();
+    this._orbitActive = true;
+    this._orbitAngle = this.cameraYaw;
+    this._orbitDist = 5.0;
+    this._orbitHeight = center.y + 1.4;
+    window.uiManager?.showNotification('📷 Câmera orbital — C para sair', 'info');
+  }
+
+  exitOrbit() {
+    this._orbitActive = false;
+    // Voltar para posição da entrada olhando para o elevador
+    this.camera.position.set(0, this.eyeHeight, 10);
+    this.cameraYaw = 0;
+    this.cameraPitch = 0;
+    window.uiManager?.showNotification('📷 Câmera livre', 'info');
   }
 
   highlightObject(obj, active) {
