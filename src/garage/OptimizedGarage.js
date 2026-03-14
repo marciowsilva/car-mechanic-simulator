@@ -892,7 +892,6 @@ export class OptimizedGarage {
         const wheelKeywords = ['wheel', 'roda', 'tire', 'tyre', 'pneu', 'rueda', 'roue', 'felge', 'rim'];
 
         // Coletar todos os objetos com nome para debug
-        const allNamed = [];
         carGroup.traverse((child) => {
           if (child.isMesh) {
             child.castShadow = true;
@@ -905,16 +904,13 @@ export class OptimizedGarage {
               });
             }
           }
-          if (child.name) allNamed.push(child.name);
         });
-        console.log(`📋 Objetos (${modelInfo.name}):`, allNamed.slice(0, 30));
-
         // --- Mapeamento EXATO por modelo ---
         // exact: nomes exatos dos objetos raiz de cada roda
         // exclude: palavras que invalidam (volante, caliper, etc)
         const wheelMap = {
           // Bel Air: sem rodas ainda — aguardando nomes reais
-          '1956_-_chevrolet_bel_air_nomad.glb': { exact: [], keywords: ['wheel','tire','tyre','rim','pneu'], exclude: ['steering','caliper','brake','light','glass','body','bumper','window'], rotAxis: 'x', maxWheels: 4 },
+          '1956_-_chevrolet_bel_air_nomad.glb': { exact: [], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 0 }, // geometria fundida
           // Challenger: keyword case-insensitive para rtAni_Wheel_*
           '1970_dodge_challenger_rt.glb':        { exact: [], keywords: ['rtani_wheel_b','rtani_wheel_f'], exclude: ['caliper'], rotAxis: 'x', maxWheels: 4 },
           // Honda: instância única com as 4 rodas, eixo Y
@@ -1094,7 +1090,19 @@ export class OptimizedGarage {
   animate() {
     requestAnimationFrame(() => this.animate());
     const delta = this.clock.getDelta();
-    this.updateMovement(delta);
+    // Câmera orbital (quando ativa, substitui movimento livre)
+    if (this._orbitActive && this._orbitTarget) {
+      this._orbitAngle += 0.4 * delta; // rotação automática lenta
+      const x = this._orbitTarget.x + Math.sin(this._orbitAngle) * this._orbitDist;
+      const z = this._orbitTarget.z + Math.cos(this._orbitAngle) * this._orbitDist;
+      // Interpolação suave (lerp)
+      this.camera.position.x += (x - this.camera.position.x) * 8 * delta;
+      this.camera.position.z += (z - this.camera.position.z) * 8 * delta;
+      this.camera.position.y += (this._orbitHeight - this.camera.position.y) * 8 * delta;
+      this.camera.lookAt(this._orbitTarget);
+    } else {
+      this.updateMovement(delta);
+    }
     this.updateParticles();
 
     if (this.targetLiftHeight !== undefined) {
