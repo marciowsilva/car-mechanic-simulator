@@ -913,17 +913,28 @@ export class OptimizedGarage {
         // exact: nomes exatos dos objetos raiz de cada roda
         // exclude: palavras que invalidam (volante, caliper, etc)
         const wheelMap = {
-          '1956_-_chevrolet_bel_air_nomad.glb': { exact: [], keywords: ['wheel'], exclude: ['steering','caliper','brake'] },
-          '1970_dodge_challenger_rt.glb':        { exact: ['rtAni_Wheel_FL55','rtAni_Wheel_FR55','rtAni_Wheel_BL58','rtAni_Wheel_BR58'], keywords: [], exclude: [] },
-          '1999_honda_civic_si.glb':             { exact: ['Wheel1A_3D'], keywords: [], exclude: [] },
-          '1999_volkswagen_gol_2000_gti_g2.glb': { exact: ['Gol_wheel_R_4','Gol_wheel_F_5'], keywords: [], exclude: [] },
-          '2013_ford_fiesta_st.glb':             { exact: [], keywords: [], exclude: [] },
-          'beetlefusca_version_2.glb':           { exact: ['Wheel_F_L','Wheel_F_R','Wheel_B_L','Wheel_B_R'], keywords: [], exclude: [] },
-          'chevrolet_chevette_sl_76_.glb':       { exact: ['Pneu_D_Back_Pneu_0','Pneu_D_Front_Pneu_0','Pneu_E_Front_Pneu_0','Pneu_E_Back_Pneu_0'], keywords: [], exclude: [] },
-          'ford_f100_1967.glb':                  { exact: ['Ford_F100__Wheel_0'], keywords: [], exclude: [] },
-          'generic_sedan_car.glb':               { exact: ['DEF-WheelFtL_124','DEF-WheelFtR_128','DEF-WheelBkL_132','DEF-WheelBkR_136'], keywords: [], exclude: [] },
-          'shvan_92_-_low_poly_model.glb':       { exact: ['Shvan92_WheelStock_FL','Shvan92_WheelStock_FR','Shvan92_WheelStock_RL','Shvan92_WheelStock_RL_1'], keywords: [], exclude: [] },
-          'vw_bus.glb':                          { exact: [], keywords: ['felge','plane00'], exclude: [] },
+          // Bel Air: sem rodas ainda — aguardando nomes reais
+          '1956_-_chevrolet_bel_air_nomad.glb': { exact: [], keywords: ['wheel','tire','tyre','rim','pneu'], exclude: ['steering','caliper','brake','light','glass','body','bumper','window'], rotAxis: 'x', maxWheels: 4 },
+          // Challenger: keyword case-insensitive para rtAni_Wheel_*
+          '1970_dodge_challenger_rt.glb':        { exact: [], keywords: ['rtani_wheel_b','rtani_wheel_f'], exclude: ['caliper'], rotAxis: 'x', maxWheels: 4 },
+          // Honda: instância única com as 4 rodas, eixo Y
+          '1999_honda_civic_si.glb':             { exact: ['Wheel1A_3D'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 1 },
+          // Gol: 2 grupos pai que animam as rodas fr/rr, eixo Y
+          '1999_volkswagen_gol_2000_gti_g2.glb': { exact: ['Gol_wheel_R_4','Gol_wheel_F_5'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 2 },
+          // Fiesta: sem rodas separadas — sem animação
+          '2013_ford_fiesta_st.glb':             { exact: [], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 0 },
+          // Fusca: 4 rodas nomeadas, eixo X
+          'beetlefusca_version_2.glb':           { exact: ['Wheel_F_L','Wheel_F_R','Wheel_B_L','Wheel_B_R'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
+          // Chevette: 4 pneus nomeados, eixo X
+          'chevrolet_chevette_sl_76_.glb':       { exact: ['Pneu_D_Back_Pneu_0','Pneu_D_Front_Pneu_0','Pneu_E_Front_Pneu_0','Pneu_E_Back_Pneu_0'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
+          // F-100: instância única, eixo Y
+          'ford_f100_1967.glb':                  { exact: ['Ford_F100__Wheel_0'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 1 },
+          // Sedan: 4 bones de roda, eixo X
+          'generic_sedan_car.glb':               { exact: ['DEF-WheelFtL_124','DEF-WheelFtR_128','DEF-WheelBkL_132','DEF-WheelBkR_136'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
+          // Van: 4 rodas, eixo Z
+          'shvan_92_-_low_poly_model.glb':       { exact: ['Shvan92_WheelStock_FL','Shvan92_WheelStock_FR','Shvan92_WheelStock_RL','Shvan92_WheelStock_RL_1'], keywords: [], exclude: [], rotAxis: 'z', maxWheels: 4 },
+          // VW Bus: felge = aros (4), sem plane00
+          'vw_bus.glb':                          { exact: ['Felge000_2','Felge001_5','Felge002_7','Felge003_9'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
         };
 
         const cfg = wheelMap[modelInfo.file] || { exact: [], keywords: ['wheel'], exclude: ['steering','caliper'] };
@@ -950,22 +961,15 @@ export class OptimizedGarage {
           }
         });
 
-        // Detectar eixo de rotação de cada roda
-        // O eixo mais curto da bounding box é o eixo de rotação (espessura do pneu)
-        this.carWheels = this.carWheels.map(wheel => {
-          const box = new THREE.Box3().setFromObject(wheel);
-          const size = new THREE.Vector3();
-          box.getSize(size);
-          // Qual dimensão é menor? Esse é o eixo de rotação
-          let rotAxis = 'x';
-          if (size.y < size.x && size.y < size.z) rotAxis = 'y';
-          else if (size.z < size.x && size.z < size.y) rotAxis = 'z';
-          wheel.userData.rotAxis = rotAxis;
-          return wheel;
-        });
+        // Aplicar rotAxis e limitar quantidade de rodas
+        const rotAxis = cfg.rotAxis || 'x';
+        if (cfg.maxWheels && this.carWheels.length > cfg.maxWheels) {
+          this.carWheels = this.carWheels.slice(0, cfg.maxWheels);
+        }
+        this.carWheels.forEach(wheel => { wheel.userData.rotAxis = rotAxis; });
 
         console.log(`🚗 Rodas (${modelInfo.name}):`, this.carWheels.length,
-          this.carWheels.map(w => `${w.name}[rot:${w.userData.rotAxis}]`));
+          this.carWheels.map(w => `${w.name}[rot:${rotAxis}]`));
 
         // --- Orientar: frente do carro para -Z (padrão da garagem) ---
         // Modelos do Sketchfab geralmente já vêm orientados, mas garantimos

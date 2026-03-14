@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Car Mechanic Simulator 3D</title>
 
-    <!-- IMPORT MAP -->
     <script type="importmap">
       {
         "imports": {
@@ -15,20 +14,20 @@
       }
     </script>
 
-    <!-- CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="/src/ui/style.css" />
   </head>
   <body>
-    <!-- CONTAINER PRINCIPAL 3D -->
     <div id="game-container"></div>
 
-    <!-- UI OVERLAY -->
     <div id="ui-overlay">
-      <!-- Painel Superior -->
+
+      <!-- ── TOPO ── -->
       <div id="top-panel">
         <div class="stat">
           <span class="stat-label">Dinheiro</span>
-          <span class="stat-value" id="money">R$ 5.000</span>
+          <span class="stat-value" id="money">R$ 500.000</span>
         </div>
         <div class="stat">
           <span class="stat-label">Nível</span>
@@ -36,140 +35,135 @@
         </div>
         <div class="stat">
           <span class="stat-label">Reputação</span>
-          <span class="stat-value" id="reputation">★★★☆☆</span>
+          <span class="stat-value" id="reputation">★★★★★</span>
         </div>
         <div class="stat">
           <span class="stat-label">Clientes</span>
           <span class="stat-value" id="jobs-completed">0</span>
         </div>
         <div class="audio-controls">
-          <button class="audio-btn" id="toggle-music" title="Música">🎵</button>
-          <button class="audio-btn" id="toggle-sfx" title="Efeitos sonoros">🔊</button>
+          <button class="audio-btn" id="toggle-music"      title="Música">🎵</button>
+          <button class="audio-btn" id="toggle-sfx"        title="Efeitos">🔊</button>
           <button class="audio-btn" id="toggle-fullscreen" title="Tela Cheia" onclick="toggleFullscreen()">⛶</button>
         </div>
       </div>
 
-      <!-- Painel de Ferramentas -->
+      <!-- ── FERRAMENTAS (esquerda) ── -->
       <div id="tool-panel">
-        <h3>FERRAMENTAS</h3>
+        <h3>Ferramentas</h3>
         <div class="tool-item" data-tool="wrench">
           <span class="tool-icon">🔧</span>
           <div class="tool-info">
             <div class="tool-name">Chave Inglesa</div>
-            <div class="tool-stats">Nv.1: +10% | R$ 50</div>
+            <div class="tool-stats">Nv.1 · +10% · R$ 50</div>
           </div>
         </div>
         <div class="tool-item" data-tool="screwdriver">
           <span class="tool-icon">🪛</span>
           <div class="tool-info">
             <div class="tool-name">Chave de Fenda</div>
-            <div class="tool-stats">Nv.1: +5% | R$ 25</div>
+            <div class="tool-stats">Nv.1 · +5% · R$ 25</div>
           </div>
         </div>
         <div class="tool-item" data-tool="hammer">
           <span class="tool-icon">🔨</span>
           <div class="tool-info">
             <div class="tool-name">Martelo</div>
-            <div class="tool-stats">Nv.1: +15% | R$ 75</div>
+            <div class="tool-stats">Nv.1 · +15% · R$ 75</div>
           </div>
         </div>
         <div class="tool-item" data-tool="welder">
           <span class="tool-icon">⚡</span>
           <div class="tool-info">
             <div class="tool-name">Maçarico</div>
-            <div class="tool-stats">Nv.1: +25% | R$ 150</div>
+            <div class="tool-stats">Nv.1 · +25% · R$ 150</div>
           </div>
         </div>
         <div class="tool-item" data-tool="diagnostic">
           <span class="tool-icon">📊</span>
           <div class="tool-info">
             <div class="tool-name">Diagnóstico</div>
-            <div class="tool-stats">Inspecionar</div>
+            <div class="tool-stats">Inspecionar peças</div>
           </div>
         </div>
       </div>
 
-      <!-- Painel de Peças -->
+      <!-- ── SERVIÇO / PEÇAS (direita) ── -->
       <div id="car-parts-panel">
-        <h3>SERVIÇO ATUAL</h3>
+        <h3>Serviço Atual</h3>
         <div id="job-info" class="job-info"></div>
-        <h3>PEÇAS DO CARRO</h3>
+        <h3>Peças do Carro</h3>
         <div id="parts-list"></div>
       </div>
 
-      <!-- Painel Inferior -->
+      <!-- ── BARRA INFERIOR ── -->
       <div id="bottom-panel">
+        <!-- Ação principal -->
         <button class="action-btn" id="new-job">🚗 Novo Cliente</button>
-        <button class="action-btn secondary" id="upgrade-shop-btn">🛠️ Upgrades</button>
-        <button class="action-btn" id="equipment-btn">🔧 Equipamentos</button>
-        <button class="action-btn" id="events-btn">📅 Eventos</button>
+
+        <div class="btn-sep"></div>
+
+        <!-- Gestão -->
+        <button class="action-btn" id="upgrade-shop-btn">🛠 Upgrades</button>
+        <button class="action-btn" id="equipment-btn">🔩 Equipamentos</button>
         <button class="action-btn" id="inventory-btn">📦 Estoque</button>
-        <button class="action-btn" id="customers-btn">👥 Clientes</button>
         <button class="action-btn" id="shop-btn">🛒 Loja</button>
+
+        <div class="btn-sep"></div>
+
+        <!-- Informação -->
+        <button class="action-btn" id="events-btn">📅 Eventos</button>
+        <button class="action-btn" id="customers-btn">👥 Clientes</button>
         <button class="action-btn" id="achievements-btn">🏆 Conquistas</button>
+
+        <div class="btn-sep"></div>
+
+        <!-- Garagem -->
         <button class="action-btn" id="garage-btn">🏢 Garagem</button>
-        <button class="action-btn" id="garage-upgrade-btn">🏢 Expandir Garagem</button>
-        <button class="action-btn success" id="deliver-car" disabled>✅ Entregar Carro</button>
+        <button class="action-btn" id="garage-upgrade-btn">➕ Expandir</button>
+
+        <div class="btn-sep"></div>
+
+        <!-- Entregar -->
+        <button class="action-btn" id="deliver-car" disabled>✅ Entregar</button>
       </div>
 
-      <!-- Informação de Interação -->
-      <div id="interaction-info">
-        👆 Clique nas peças do carro para selecionar
-      </div>
+      <!-- ── DICA DE INTERAÇÃO ── -->
+      <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
+
     </div>
 
-    <!-- NOTIFICAÇÕES -->
+    <!-- NOTIFICAÇÃO SIMPLES -->
     <div id="notification"></div>
 
-    <!-- PAINEL DE CONTROLES -->
+    <!-- CONTROLES -->
     <div id="controls-panel">
-      <div class="controls-title">⌨️ Controles</div>
+      <div class="controls-title">Controles</div>
       <div class="controls-grid">
-        <span class="ctrl-key">W / S</span>
-        <span class="ctrl-label">Andar</span>
-        <span class="ctrl-key">A / D</span>
-        <span class="ctrl-label">Girar</span>
-        <span class="ctrl-key">Botão direito + arrastar</span>
-        <span class="ctrl-label">Olhar ao redor</span>
-        <span class="ctrl-key">Scroll</span>
-        <span class="ctrl-label">Zoom</span>
+        <span class="ctrl-key">W / S</span>     <span class="ctrl-label">Andar</span>
+        <span class="ctrl-key">A / D</span>     <span class="ctrl-label">Girar</span>
+        <span class="ctrl-key">Mouse ↔</span>  <span class="ctrl-label">Câmera</span>
+        <span class="ctrl-key">Scroll</span>    <span class="ctrl-label">Zoom</span>
       </div>
+
     </div>
 
-    <!-- CARREGADOR DE MÓDULOS -->
     <script type="module" src="/src/core/Exports.js"></script>
 
-    <!-- FULLSCREEN -->
     <script>
       function toggleFullscreen() {
         const btn = document.getElementById('toggle-fullscreen');
         if (!document.fullscreenElement) {
-          document.documentElement.requestFullscreen().then(() => {
-            btn.textContent = '⛶';
-            btn.title = 'Sair da Tela Cheia';
-            btn.classList.add('active');
-          }).catch(() => {});
+          document.documentElement.requestFullscreen().catch(() => {});
         } else {
-          document.exitFullscreen().then(() => {
-            btn.textContent = '⛶';
-            btn.title = 'Tela Cheia';
-            btn.classList.remove('active');
-          }).catch(() => {});
+          document.exitFullscreen().catch(() => {});
         }
       }
-
       document.addEventListener('fullscreenchange', () => {
         const btn = document.getElementById('toggle-fullscreen');
         if (!btn) return;
-        if (document.fullscreenElement) {
-          btn.innerHTML = '✕&nbsp;FS';
-          btn.title = 'Sair da Tela Cheia';
-          btn.classList.add('active');
-        } else {
-          btn.textContent = '⛶';
-          btn.title = 'Tela Cheia';
-          btn.classList.remove('active');
-        }
+        btn.textContent = document.fullscreenElement ? '✕' : '⛶';
+        btn.classList.toggle('active', !!document.fullscreenElement);
       });
     </script>
   </body>
