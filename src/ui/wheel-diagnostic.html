@@ -1,280 +1,532 @@
 <!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8"/>
-  <title>Wheel Diagnostic</title>
-  <script type="importmap">
-    { "imports": { "three": "https://unpkg.com/three@0.128.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/" } }
-  </script>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { background:#0f1117; color:#e2e8f0; font-family:'DM Mono',monospace; font-size:13px; padding:20px; }
-    h1 { color:#3b82f6; margin-bottom:20px; font-size:18px; }
-    .car-card { background:#181c27; border:1px solid #2a3047; border-radius:12px; padding:16px; margin-bottom:12px; }
-    .car-name { color:#60a5fa; font-size:15px; font-weight:bold; margin-bottom:10px; }
-    .status { display:inline-block; padding:2px 8px; border-radius:100px; font-size:11px; margin-bottom:8px; }
-    .ok    { background:rgba(34,197,94,0.15);  color:#22c55e; border:1px solid rgba(34,197,94,0.3); }
-    .warn  { background:rgba(245,158,11,0.15); color:#f59e0b; border:1px solid rgba(245,158,11,0.3); }
-    .error { background:rgba(239,68,68,0.15);  color:#ef4444; border:1px solid rgba(239,68,68,0.3); }
-    .wheel-row { display:flex; gap:12px; align-items:center; padding:6px 0; border-bottom:1px solid #1f2433; }
-    .wheel-row:last-child { border-bottom:none; }
-    .wheel-name { flex:1; color:#94a3b8; }
-    .axis { padding:2px 8px; border-radius:4px; font-size:11px; font-weight:bold; }
-    .axis-x { background:rgba(239,68,68,0.2);  color:#ef4444; }
-    .axis-y { background:rgba(34,197,94,0.2);  color:#22c55e; }
-    .axis-z { background:rgba(59,130,246,0.2); color:#3b82f6; }
-    .size-info { color:#64748b; font-size:11px; }
-    .progress { color:#64748b; font-style:italic; }
-    #summary { background:#1f2433; border:1px solid #363d55; border-radius:12px; padding:16px; margin-bottom:20px; }
-    #summary h2 { color:#facc15; margin-bottom:10px; font-size:14px; }
-    pre { background:#252b3b; padding:12px; border-radius:8px; overflow-x:auto; font-size:11px; color:#94a3b8; margin-top:8px; }
-    .copy-btn { background:#3b82f6; color:white; border:none; border-radius:6px; padding:6px 14px; cursor:pointer; font-size:12px; margin-top:10px; }
-    .copy-btn:hover { background:#60a5fa; }
-    canvas { display:none; }
-  </style>
-</head>
-<body>
-  <h1>🔧 Wheel Diagnostic Tool</h1>
-  <div id="summary">
-    <h2>⏳ Carregando modelos...</h2>
-    <div id="summary-content"></div>
-  </div>
-  <div id="results"></div>
-
-  <canvas id="c"></canvas>
-
-  <script type="module">
-    import * as THREE from 'three';
-    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-
-    const MODELS = [
-      { file: '1956_-_chevrolet_bel_air_nomad.glb',    name: 'Chevrolet Bel Air Nomad 1956' },
-      { file: '1970_dodge_challenger_rt.glb',           name: 'Dodge Challenger R/T 1970' },
-      { file: '1999_honda_civic_si.glb',                name: 'Honda Civic Si 1999' },
-      { file: '1999_volkswagen_gol_2000_gti_g2.glb',   name: 'VW Gol GTI G2 1999' },
-      { file: '2013_ford_fiesta_st.glb',                name: 'Ford Fiesta ST 2013' },
-      { file: 'beetlefusca_version_2.glb',              name: 'VW Fusca' },
-      { file: 'chevrolet_chevette_sl_76_.glb',          name: 'Chevrolet Chevette SL 1976' },
-      { file: 'ford_f100_1967.glb',                     name: 'Ford F-100 1967' },
-      { file: 'generic_sedan_car.glb',                  name: 'Sedan Genérico' },
-      { file: 'shvan_92_-_low_poly_model.glb',          name: 'Van 1992' },
-      { file: 'vw_bus.glb',                             name: 'VW Bus' },
-    ];
-
-    // Mapeamento sincronizado com OptimizedGarage.js
-    const WHEEL_MAP = {
-      '1956_-_chevrolet_bel_air_nomad.glb': { exact: [], keywords: ['wheel','tire','tyre','rim','pneu'], exclude: ['steering','caliper','brake','light','glass','body','bumper','window'], rotAxis: 'x', maxWheels: 4 },
-      '1970_dodge_challenger_rt.glb':        { exact: [], keywords: ['rtani_wheel_b','rtani_wheel_f'], exclude: ['caliper'], rotAxis: 'x', maxWheels: 4 },
-      '1999_honda_civic_si.glb':             { exact: ['Wheel1A_3D'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 1 },
-      '1999_volkswagen_gol_2000_gti_g2.glb': { exact: ['Gol_wheel_R_4','Gol_wheel_F_5'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 2 },
-      '2013_ford_fiesta_st.glb':             { exact: [], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 0 },
-      'beetlefusca_version_2.glb':           { exact: ['Wheel_F_L','Wheel_F_R','Wheel_B_L','Wheel_B_R'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
-      'chevrolet_chevette_sl_76_.glb':       { exact: ['Pneu_D_Back_Pneu_0','Pneu_D_Front_Pneu_0','Pneu_E_Front_Pneu_0','Pneu_E_Back_Pneu_0'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
-      'ford_f100_1967.glb':                  { exact: ['Ford_F100__Wheel_0'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 1 },
-      'generic_sedan_car.glb':               { exact: ['DEF-WheelFtL_124','DEF-WheelFtR_128','DEF-WheelBkL_132','DEF-WheelBkR_136'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
-      'shvan_92_-_low_poly_model.glb':       { exact: ['Shvan92_WheelStock_FL','Shvan92_WheelStock_FR','Shvan92_WheelStock_RL','Shvan92_WheelStock_RL_1'], keywords: [], exclude: [], rotAxis: 'z', maxWheels: 4 },
-      'vw_bus.glb':                          { exact: ['Felge000_2','Felge001_5','Felge002_7','Felge003_9'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
-    };
-
-    function detectWheels(carGroup, cfg) {
-      const wheels = [];
-      carGroup.traverse((child) => {
-        if (child === carGroup) return;
-        const name = child.name || '';
-        const nameLower = name.toLowerCase();
-        if (cfg.exclude.some(e => nameLower.includes(e))) return;
-        const isExact   = cfg.exact.includes(name);
-        const isKeyword = cfg.keywords.length > 0 && cfg.keywords.some(k => nameLower.includes(k.toLowerCase()));
-        if (isExact || isKeyword) {
-          let ancestor = child.parent;
-          while (ancestor && ancestor !== carGroup) {
-            if (wheels.find(w => w.obj === ancestor)) return;
-            ancestor = ancestor.parent;
-          }
-          if (!wheels.find(w => w.obj === child)) wheels.push({ obj: child, name });
+  <head>
+    <meta charset="UTF-8" />
+    <title>Wheel Diagnostic</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
         }
+      }
+    </script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #0f1117;
+        color: #e2e8f0;
+        font-family: "DM Mono", monospace;
+        font-size: 13px;
+        padding: 20px;
+      }
+      h1 {
+        color: #3b82f6;
+        margin-bottom: 20px;
+        font-size: 18px;
+      }
+      .car-card {
+        background: #181c27;
+        border: 1px solid #2a3047;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 12px;
+      }
+      .car-name {
+        color: #60a5fa;
+        font-size: 15px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+      .status {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 100px;
+        font-size: 11px;
+        margin-bottom: 8px;
+      }
+      .ok {
+        background: rgba(34, 197, 94, 0.15);
+        color: #22c55e;
+        border: 1px solid rgba(34, 197, 94, 0.3);
+      }
+      .warn {
+        background: rgba(245, 158, 11, 0.15);
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+      }
+      .error {
+        background: rgba(239, 68, 68, 0.15);
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+      .wheel-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 6px 0;
+        border-bottom: 1px solid #1f2433;
+      }
+      .wheel-row:last-child {
+        border-bottom: none;
+      }
+      .wheel-name {
+        flex: 1;
+        color: #94a3b8;
+      }
+      .axis {
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: bold;
+      }
+      .axis-x {
+        background: rgba(239, 68, 68, 0.2);
+        color: #ef4444;
+      }
+      .axis-y {
+        background: rgba(34, 197, 94, 0.2);
+        color: #22c55e;
+      }
+      .axis-z {
+        background: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+      }
+      .size-info {
+        color: #64748b;
+        font-size: 11px;
+      }
+      .progress {
+        color: #64748b;
+        font-style: italic;
+      }
+      #summary {
+        background: #1f2433;
+        border: 1px solid #363d55;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+      #summary h2 {
+        color: #facc15;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+      pre {
+        background: #252b3b;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 11px;
+        color: #94a3b8;
+        margin-top: 8px;
+      }
+      .copy-btn {
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 14px;
+        cursor: pointer;
+        font-size: 12px;
+        margin-top: 10px;
+      }
+      .copy-btn:hover {
+        background: #60a5fa;
+      }
+      canvas {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🔧 Wheel Diagnostic Tool</h1>
+    <div id="summary">
+      <h2>⏳ Carregando modelos...</h2>
+      <div id="summary-content"></div>
+    </div>
+    <div id="results"></div>
+
+    <canvas id="c"></canvas>
+
+    <script type="module">
+      import * as THREE from "three";
+      import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+      const MODELS = [
+        {
+          file: "1956_-_chevrolet_bel_air_nomad.glb",
+          name: "Chevrolet Bel Air Nomad 1956",
+        },
+        {
+          file: "1970_dodge_challenger_rt.glb",
+          name: "Dodge Challenger R/T 1970",
+        },
+        { file: "1999_honda_civic_si.glb", name: "Honda Civic Si 1999" },
+        {
+          file: "1999_volkswagen_gol_2000_gti_g2.glb",
+          name: "VW Gol GTI G2 1999",
+        },
+        { file: "2013_ford_fiesta_st.glb", name: "Ford Fiesta ST 2013" },
+        { file: "beetlefusca_version_2.glb", name: "VW Fusca" },
+        {
+          file: "chevrolet_chevette_sl_76_.glb",
+          name: "Chevrolet Chevette SL 1976",
+        },
+        { file: "ford_f100_1967.glb", name: "Ford F-100 1967" },
+        { file: "generic_sedan_car.glb", name: "Sedan Genérico" },
+        { file: "shvan_92_-_low_poly_model.glb", name: "Van 1992" },
+        { file: "vw_bus.glb", name: "VW Bus" },
+      ];
+
+      // Mapeamento sincronizado com OptimizedGarage.js
+      const WHEEL_MAP = {
+        "1956_-_chevrolet_bel_air_nomad.glb": {
+          exact: [],
+          keywords: ["wheel", "tire", "tyre", "rim", "pneu"],
+          exclude: [
+            "steering",
+            "caliper",
+            "brake",
+            "light",
+            "glass",
+            "body",
+            "bumper",
+            "window",
+          ],
+          rotAxis: "x",
+          maxWheels: 4,
+        },
+        "1970_dodge_challenger_rt.glb": {
+          exact: [],
+          keywords: ["rtani_wheel_b", "rtani_wheel_f"],
+          exclude: ["caliper"],
+          rotAxis: "x",
+          maxWheels: 4,
+        },
+        "1999_honda_civic_si.glb": {
+          exact: ["Wheel1A_3D"],
+          keywords: [],
+          exclude: [],
+          rotAxis: "y",
+          maxWheels: 1,
+        },
+        "1999_volkswagen_gol_2000_gti_g2.glb": {
+          exact: ["Gol_wheel_R_4", "Gol_wheel_F_5"],
+          keywords: [],
+          exclude: [],
+          rotAxis: "y",
+          maxWheels: 2,
+        },
+        "2013_ford_fiesta_st.glb": {
+          exact: [],
+          keywords: [],
+          exclude: [],
+          rotAxis: "x",
+          maxWheels: 0,
+        },
+        "beetlefusca_version_2.glb": {
+          exact: ["Wheel_F_L", "Wheel_F_R", "Wheel_B_L", "Wheel_B_R"],
+          keywords: [],
+          exclude: [],
+          rotAxis: "x",
+          maxWheels: 4,
+        },
+        "chevrolet_chevette_sl_76_.glb": {
+          exact: [
+            "Pneu_D_Back_Pneu_0",
+            "Pneu_D_Front_Pneu_0",
+            "Pneu_E_Front_Pneu_0",
+            "Pneu_E_Back_Pneu_0",
+          ],
+          keywords: [],
+          exclude: [],
+          rotAxis: "x",
+          maxWheels: 4,
+        },
+        "ford_f100_1967.glb": {
+          exact: ["Ford_F100__Wheel_0"],
+          keywords: [],
+          exclude: [],
+          rotAxis: "y",
+          maxWheels: 1,
+        },
+        "generic_sedan_car.glb": {
+          exact: [
+            "DEF-WheelFtL_124",
+            "DEF-WheelFtR_128",
+            "DEF-WheelBkL_132",
+            "DEF-WheelBkR_136",
+          ],
+          keywords: [],
+          exclude: [],
+          rotAxis: "x",
+          maxWheels: 4,
+        },
+        "shvan_92_-_low_poly_model.glb": {
+          exact: [
+            "Shvan92_WheelStock_FL",
+            "Shvan92_WheelStock_FR",
+            "Shvan92_WheelStock_RL",
+            "Shvan92_WheelStock_RL_1",
+          ],
+          keywords: [],
+          exclude: [],
+          rotAxis: "z",
+          maxWheels: 4,
+        },
+        "vw_bus.glb": {
+          exact: ["Felge000_2", "Felge001_5", "Felge002_7", "Felge003_9"],
+          keywords: [],
+          exclude: [],
+          rotAxis: "x",
+          maxWheels: 4,
+        },
+      };
+
+      function detectWheels(carGroup, cfg) {
+        const wheels = [];
+        carGroup.traverse((child) => {
+          if (child === carGroup) return;
+          const name = child.name || "";
+          const nameLower = name.toLowerCase();
+          if (cfg.exclude.some((e) => nameLower.includes(e))) return;
+          const isExact = cfg.exact.includes(name);
+          const isKeyword =
+            cfg.keywords.length > 0 &&
+            cfg.keywords.some((k) => nameLower.includes(k.toLowerCase()));
+          if (isExact || isKeyword) {
+            let ancestor = child.parent;
+            while (ancestor && ancestor !== carGroup) {
+              if (wheels.find((w) => w.obj === ancestor)) return;
+              ancestor = ancestor.parent;
+            }
+            if (!wheels.find((w) => w.obj === child))
+              wheels.push({ obj: child, name });
+          }
+        });
+        return wheels;
+      }
+
+      function detectRotAxis(obj) {
+        const box = new THREE.Box3().setFromObject(obj);
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        // O eixo mais curto é a espessura do pneu = eixo de rotação
+        if (size.x <= size.y && size.x <= size.z) return { axis: "x", size };
+        if (size.y <= size.x && size.y <= size.z) return { axis: "y", size };
+        return { axis: "z", size };
+      }
+
+      function getWorldPos(obj) {
+        const wp = new THREE.Vector3();
+        obj.getWorldPosition(wp);
+        return wp;
+      }
+
+      const loader = new GLTFLoader();
+      const results = document.getElementById("results");
+      const summaryEl = document.getElementById("summary-content");
+      const summaryH2 = document.querySelector("#summary h2");
+
+      // Inicializar Three.js mínimo para poder calcular bounding boxes
+      const renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById("c"),
       });
-      return wheels;
-    }
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
 
-    function detectRotAxis(obj) {
-      const box = new THREE.Box3().setFromObject(obj);
-      const size = new THREE.Vector3();
-      box.getSize(size);
-      // O eixo mais curto é a espessura do pneu = eixo de rotação
-      if (size.x <= size.y && size.x <= size.z) return { axis: 'x', size };
-      if (size.y <= size.x && size.y <= size.z) return { axis: 'y', size };
-      return { axis: 'z', size };
-    }
+      let completed = 0;
+      const finalReport = {};
 
-    function getWorldPos(obj) {
-      const wp = new THREE.Vector3();
-      obj.getWorldPosition(wp);
-      return wp;
-    }
+      async function diagnoseCar(model) {
+        return new Promise((resolve) => {
+          const card = document.createElement("div");
+          card.className = "car-card";
+          card.innerHTML = `<div class="car-name">${model.name}</div><div class="progress">⏳ Carregando...</div>`;
+          results.appendChild(card);
 
-    const loader = new GLTFLoader();
-    const results = document.getElementById('results');
-    const summaryEl = document.getElementById('summary-content');
-    const summaryH2 = document.querySelector('#summary h2');
+          loader.load(
+            `/src/public/models/${model.file}`,
+            (gltf) => {
+              const carGroup = gltf.scene;
+              scene.add(carGroup);
 
-    // Inicializar Three.js mínimo para poder calcular bounding boxes
-    const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c') });
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+              // Normalizar escala
+              const box = new THREE.Box3().setFromObject(carGroup);
+              const size = new THREE.Vector3();
+              box.getSize(size);
+              const scale = 4.5 / Math.max(size.x, size.z);
+              carGroup.scale.setScalar(scale);
+              box.setFromObject(carGroup);
+              const min = box.min;
+              carGroup.position.y = -min.y;
+              box.setFromObject(carGroup);
+              const center = new THREE.Vector3();
+              box.getCenter(center);
+              carGroup.position.x -= center.x;
+              carGroup.position.z -= center.z;
 
-    let completed = 0;
-    const finalReport = {};
-
-    async function diagnoseCar(model) {
-      return new Promise((resolve) => {
-        const card = document.createElement('div');
-        card.className = 'car-card';
-        card.innerHTML = `<div class="car-name">${model.name}</div><div class="progress">⏳ Carregando...</div>`;
-        results.appendChild(card);
-
-        loader.load(
-          `/src/public/models/${model.file}`,
-          (gltf) => {
-            const carGroup = gltf.scene;
-            scene.add(carGroup);
-
-            // Normalizar escala
-            const box = new THREE.Box3().setFromObject(carGroup);
-            const size = new THREE.Vector3(); box.getSize(size);
-            const scale = 4.5 / Math.max(size.x, size.z);
-            carGroup.scale.setScalar(scale);
-            box.setFromObject(carGroup);
-            const min = box.min;
-            carGroup.position.y = -min.y;
-            box.setFromObject(carGroup);
-            const center = new THREE.Vector3(); box.getCenter(center);
-            carGroup.position.x -= center.x;
-            carGroup.position.z -= center.z;
-
-            // Detectar rodas
-            const cfg = WHEEL_MAP[model.file] || { exact: [], keywords: ['wheel'], exclude: ['steering','caliper'] };
-            const wheels = detectWheels(carGroup, cfg);
-
-            // Analisar cada roda
-            const wheelData = wheels.map(w => {
-              const { axis, size } = detectRotAxis(w.obj);
-              const pos = getWorldPos(w.obj);
-              return {
-                name: w.name,
-                axis,
-                sizeX: size.x.toFixed(3),
-                sizeY: size.y.toFixed(3),
-                sizeZ: size.z.toFixed(3),
-                posX: pos.x.toFixed(2),
-                posY: pos.y.toFixed(2),
-                posZ: pos.z.toFixed(2),
+              // Detectar rodas
+              const cfg = WHEEL_MAP[model.file] || {
+                exact: [],
+                keywords: ["wheel"],
+                exclude: ["steering", "caliper"],
               };
-            });
+              const wheels = detectWheels(carGroup, cfg);
 
-            scene.remove(carGroup);
+              // Analisar cada roda
+              const wheelData = wheels.map((w) => {
+                const { axis, size } = detectRotAxis(w.obj);
+                const pos = getWorldPos(w.obj);
+                return {
+                  name: w.name,
+                  axis,
+                  sizeX: size.x.toFixed(3),
+                  sizeY: size.y.toFixed(3),
+                  sizeZ: size.z.toFixed(3),
+                  posX: pos.x.toFixed(2),
+                  posY: pos.y.toFixed(2),
+                  posZ: pos.z.toFixed(2),
+                };
+              });
 
-            // Status
-            const count = wheelData.length;
-            const statusClass = count === 4 ? 'ok' : count === 0 ? 'error' : 'warn';
-            const statusText  = count === 4 ? `✓ ${count} rodas` : count === 0 ? '✗ Sem rodas' : `⚠ ${count} rodas`;
+              scene.remove(carGroup);
 
-            // Verificar consistência de eixo
-            const axes = [...new Set(wheelData.map(w => w.axis))];
-            const axisConsistent = axes.length <= 1;
+              // Status
+              const count = wheelData.length;
+              const statusClass =
+                count === 4 ? "ok" : count === 0 ? "error" : "warn";
+              const statusText =
+                count === 4
+                  ? `✓ ${count} rodas`
+                  : count === 0
+                    ? "✗ Sem rodas"
+                    : `⚠ ${count} rodas`;
 
-            let html = `
+              // Verificar consistência de eixo
+              const axes = [...new Set(wheelData.map((w) => w.axis))];
+              const axisConsistent = axes.length <= 1;
+
+              let html = `
               <div class="car-name">${model.name}</div>
               <span class="status ${statusClass}">${statusText}</span>
-              ${!axisConsistent ? '<span class="status warn" style="margin-left:6px">⚠ Eixos inconsistentes</span>' : ''}
+              ${!axisConsistent ? '<span class="status warn" style="margin-left:6px">⚠ Eixos inconsistentes</span>' : ""}
             `;
 
-            if (wheelData.length > 0) {
-              html += wheelData.map(w => `
+              if (wheelData.length > 0) {
+                html += wheelData
+                  .map(
+                    (w) => `
                 <div class="wheel-row">
                   <span class="wheel-name">${w.name}</span>
                   <span class="axis axis-${w.axis}">rot: ${w.axis.toUpperCase()}</span>
                   <span class="size-info">${w.sizeX} × ${w.sizeY} × ${w.sizeZ}</span>
                   <span class="size-info">pos: (${w.posX}, ${w.posY}, ${w.posZ})</span>
                 </div>
-              `).join('');
-            } else {
-              // Listar TODOS os objetos — nomes organizados por tipo
-              const allObjs = [];
-              carGroup.traverse(c => { if (c.name && c !== carGroup) allObjs.push(c.name); });
+              `,
+                  )
+                  .join("");
+              } else {
+                // Listar TODOS os objetos — nomes organizados por tipo
+                const allObjs = [];
+                carGroup.traverse((c) => {
+                  if (c.name && c !== carGroup) allObjs.push(c.name);
+                });
 
-              // Agrupar por padrão
-              const groups = {
-                'Possíveis rodas': allObjs.filter(n => /wheel|tire|tyre|rim|pneu|roda|felge|rueda|aro|pneu/i.test(n)),
-                'Contém números (bones)': allObjs.filter(n => /_\d+$/.test(n) && !/wheel|tire/i.test(n)).slice(0,20),
-                'Outros': allObjs.filter(n => !/wheel|tire|tyre|rim|pneu|roda|felge|_\d+$/i.test(n)).slice(0,20),
-              };
+                // Agrupar por padrão
+                const groups = {
+                  "Possíveis rodas": allObjs.filter((n) =>
+                    /wheel|tire|tyre|rim|pneu|roda|felge|rueda|aro|pneu/i.test(
+                      n,
+                    ),
+                  ),
+                  "Contém números (bones)": allObjs
+                    .filter((n) => /_\d+$/.test(n) && !/wheel|tire/i.test(n))
+                    .slice(0, 20),
+                  Outros: allObjs
+                    .filter(
+                      (n) =>
+                        !/wheel|tire|tyre|rim|pneu|roda|felge|_\d+$/i.test(n),
+                    )
+                    .slice(0, 20),
+                };
 
-              for (const [label, items] of Object.entries(groups)) {
-                if (items.length === 0) continue;
-                html += `<div style="margin-top:6px;font-size:11px">
+                for (const [label, items] of Object.entries(groups)) {
+                  if (items.length === 0) continue;
+                  html += `<div style="margin-top:6px;font-size:11px">
                   <b style="color:#f59e0b">${label} (${items.length}):</b><br>
-                  <div style="margin-top:3px">${items.map(n => `<span style="color:#94a3b8;margin-right:6px;display:inline-block">${n}</span>`).join('')}</div>
+                  <div style="margin-top:3px">${items.map((n) => `<span style="color:#94a3b8;margin-right:6px;display:inline-block">${n}</span>`).join("")}</div>
                 </div>`;
+                }
+
+                html += `<details style="margin-top:8px"><summary style="color:#64748b;cursor:pointer;font-size:11px">📋 Copiar todos os ${allObjs.length} nomes</summary>
+                <pre style="background:#0f1117;padding:8px;border-radius:6px;font-size:10px;max-height:150px;overflow-y:auto;margin-top:4px;color:#64748b;user-select:all">${allObjs.join(", ")}</pre>
+              </details>`;
               }
 
-              html += `<details style="margin-top:8px"><summary style="color:#64748b;cursor:pointer;font-size:11px">📋 Copiar todos os ${allObjs.length} nomes</summary>
-                <pre style="background:#0f1117;padding:8px;border-radius:6px;font-size:10px;max-height:150px;overflow-y:auto;margin-top:4px;color:#64748b;user-select:all">${allObjs.join(', ')}</pre>
-              </details>`;
-            }
+              card.innerHTML = html;
 
-            card.innerHTML = html;
+              finalReport[model.file] = {
+                name: model.name,
+                count,
+                axis: axes[0] || null,
+                consistent: axisConsistent,
+                wheels: wheelData,
+              };
 
-            finalReport[model.file] = {
-              name: model.name,
-              count,
-              axis: axes[0] || null,
-              consistent: axisConsistent,
-              wheels: wheelData,
-            };
-
-            completed++;
-            summaryH2.textContent = `⏳ Carregando... (${completed}/${MODELS.length})`;
-            if (completed === MODELS.length) showSummary();
-            resolve();
-          },
-          null,
-          (err) => {
-            card.innerHTML = `<div class="car-name">${model.name}</div><span class="status error">✗ Erro ao carregar</span>`;
-            finalReport[model.file] = { name: model.name, count: 0, error: true };
-            completed++;
-            if (completed === MODELS.length) showSummary();
-            resolve();
-          }
-        );
-      });
-    }
-
-    function showSummary() {
-      summaryH2.textContent = '✅ Diagnóstico completo';
-
-      // Gerar código wheelMap corrigido
-      let mapCode = 'const wheelMap = {\n';
-      for (const [file, data] of Object.entries(finalReport)) {
-        if (data.error) continue;
-        const cfg = WHEEL_MAP[file];
-        const exacts = cfg?.exact?.length ? JSON.stringify(cfg.exact) : '[]';
-        const keywords = cfg?.keywords?.length ? JSON.stringify(cfg.keywords) : '[]';
-        const axis = data.axis || 'x';
-        mapCode += `  // ${data.name} — ${data.count} rodas — rot: ${axis.toUpperCase()}\n`;
-        mapCode += `  '${file}': { exact: ${exacts}, keywords: ${keywords}, exclude: ${JSON.stringify(cfg?.exclude||[])}, rotAxis: '${axis}' },\n`;
+              completed++;
+              summaryH2.textContent = `⏳ Carregando... (${completed}/${MODELS.length})`;
+              if (completed === MODELS.length) showSummary();
+              resolve();
+            },
+            null,
+            (err) => {
+              card.innerHTML = `<div class="car-name">${model.name}</div><span class="status error">✗ Erro ao carregar</span>`;
+              finalReport[model.file] = {
+                name: model.name,
+                count: 0,
+                error: true,
+              };
+              completed++;
+              if (completed === MODELS.length) showSummary();
+              resolve();
+            },
+          );
+        });
       }
-      mapCode += '};';
 
-      summaryEl.innerHTML = `
+      function showSummary() {
+        summaryH2.textContent = "✅ Diagnóstico completo";
+
+        // Gerar código wheelMap corrigido
+        let mapCode = "const wheelMap = {\n";
+        for (const [file, data] of Object.entries(finalReport)) {
+          if (data.error) continue;
+          const cfg = WHEEL_MAP[file];
+          const exacts = cfg?.exact?.length ? JSON.stringify(cfg.exact) : "[]";
+          const keywords = cfg?.keywords?.length
+            ? JSON.stringify(cfg.keywords)
+            : "[]";
+          const axis = data.axis || "x";
+          mapCode += `  // ${data.name} — ${data.count} rodas — rot: ${axis.toUpperCase()}\n`;
+          mapCode += `  '${file}': { exact: ${exacts}, keywords: ${keywords}, exclude: ${JSON.stringify(cfg?.exclude || [])}, rotAxis: '${axis}' },\n`;
+        }
+        mapCode += "};";
+
+        summaryEl.innerHTML = `
         <p style="color:#94a3b8;margin-bottom:8px">wheelMap com rotAxis detectado automaticamente:</p>
         <pre id="map-code">${mapCode}</pre>
         <button class="copy-btn" onclick="navigator.clipboard.writeText(document.getElementById('map-code').textContent).then(()=>this.textContent='✓ Copiado!')">📋 Copiar código</button>
       `;
-    }
+      }
 
-    // Carregar todos em paralelo
-    Promise.all(MODELS.map(diagnoseCar));
-  </script>
-</body>
+      // Carregar todos em paralelo
+      Promise.all(MODELS.map(diagnoseCar));
+    </script>
+  </body>
 </html>
