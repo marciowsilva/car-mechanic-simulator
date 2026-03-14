@@ -909,84 +909,63 @@ export class OptimizedGarage {
         });
         console.log(`📋 Objetos (${modelInfo.name}):`, allNamed.slice(0, 30));
 
-        // --- Mapeamento manual por modelo (mais confiável) ---
+        // --- Mapeamento EXATO por modelo ---
+        // exact: nomes exatos dos objetos raiz de cada roda
+        // exclude: palavras que invalidam (volante, caliper, etc)
         const wheelMap = {
-          '1956_-_chevrolet_bel_air_nomad.glb': ['wheel', 'Wheel'],
-          '1970_dodge_challenger_rt.glb':        ['wheel', 'Wheel', 'tire', 'Tire'],
-          '1999_honda_civic_si.glb':             ['wheel', 'Wheel', 'tire', 'Tire'],
-          '1999_volkswagen_gol_2000_gti_g2.glb': ['Gol_wheel_R_4', 'Gol_wheel_F_5'],
-          '2013_ford_fiesta_st.glb':             [], // modelo sem rodas separadas
-          'beetlefusca_version_2.glb':           ['wheel', 'Wheel'],
-          'chevrolet_chevette_sl_76_.glb':       ['wheel', 'Wheel'],
-          'ford_f100_1967.glb':                  ['Ford_F100__Wheel_0'],
-          'generic_sedan_car.glb':               ['wheel', 'Wheel'],
-          'shvan_92_-_low_poly_model.glb':       ['wheel', 'Wheel'],
-          'vw_bus.glb':                          ['wheel', 'Wheel'],
+          '1956_-_chevrolet_bel_air_nomad.glb': { exact: [], keywords: ['wheel'], exclude: ['steering','caliper','brake'] },
+          '1970_dodge_challenger_rt.glb':        { exact: ['rtAni_Wheel_FL55','rtAni_Wheel_FR55','rtAni_Wheel_BL58','rtAni_Wheel_BR58'], keywords: [], exclude: [] },
+          '1999_honda_civic_si.glb':             { exact: ['Wheel1A_3D'], keywords: [], exclude: [] },
+          '1999_volkswagen_gol_2000_gti_g2.glb': { exact: ['Gol_wheel_R_4','Gol_wheel_F_5'], keywords: [], exclude: [] },
+          '2013_ford_fiesta_st.glb':             { exact: [], keywords: [], exclude: [] },
+          'beetlefusca_version_2.glb':           { exact: ['Wheel_F_L','Wheel_F_R','Wheel_B_L','Wheel_B_R'], keywords: [], exclude: [] },
+          'chevrolet_chevette_sl_76_.glb':       { exact: ['Pneu_D_Back_Pneu_0','Pneu_D_Front_Pneu_0','Pneu_E_Front_Pneu_0','Pneu_E_Back_Pneu_0'], keywords: [], exclude: [] },
+          'ford_f100_1967.glb':                  { exact: ['Ford_F100__Wheel_0'], keywords: [], exclude: [] },
+          'generic_sedan_car.glb':               { exact: ['DEF-WheelFtL_124','DEF-WheelFtR_128','DEF-WheelBkL_132','DEF-WheelBkR_136'], keywords: [], exclude: [] },
+          'shvan_92_-_low_poly_model.glb':       { exact: ['Shvan92_WheelStock_FL','Shvan92_WheelStock_FR','Shvan92_WheelStock_RL','Shvan92_WheelStock_RL_1'], keywords: [], exclude: [] },
+          'vw_bus.glb':                          { exact: [], keywords: ['felge','plane00'], exclude: [] },
         };
 
-        const manualNames = wheelMap[modelInfo.file] || [];
+        const cfg = wheelMap[modelInfo.file] || { exact: [], keywords: ['wheel'], exclude: ['steering','caliper'] };
 
         carGroup.traverse((child) => {
           if (child === carGroup) return;
           const name = child.name || '';
+          const nameLower = name.toLowerCase();
 
-          // Verificar match exato primeiro, depois parcial
-          const isExact = manualNames.includes(name);
-          const isPartial = manualNames.some(k => name.toLowerCase().includes(k.toLowerCase()));
+          // Checar exclusões primeiro
+          if (cfg.exclude.some(e => nameLower.includes(e))) return;
 
-          if ((isExact || isPartial) && !this.carWheels.includes(child)) {
-            // Evitar pegar filho se o pai já foi pego
+          const isExact = cfg.exact.includes(name);
+          const isKeyword = cfg.keywords.length > 0 && cfg.keywords.some(k => nameLower.includes(k.toLowerCase()));
+
+          if (isExact || isKeyword) {
+            // Não pegar se um ancestral já foi pego
             let ancestor = child.parent;
-            let parentPicked = false;
             while (ancestor && ancestor !== carGroup) {
-              if (this.carWheels.includes(ancestor)) { parentPicked = true; break; }
+              if (this.carWheels.includes(ancestor)) return;
               ancestor = ancestor.parent;
             }
-            if (!parentPicked) this.carWheels.push(child);
+            if (!this.carWheels.includes(child)) this.carWheels.push(child);
           }
         });
 
-        // --- Fallback por posição se ainda vazio ---
-        if (this.carWheels.length === 0) {
-          const carBox = new THREE.Box3().setFromObject(carGroup);
-          const carSize = new THREE.Vector3();
-          carBox.getSize(carSize);
-          const carCenter = new THREE.Vector3();
-          carBox.getCenter(carCenter);
+        // Detectar eixo de rotação de cada roda
+        // O eixo mais curto da bounding box é o eixo de rotação (espessura do pneu)
+        this.carWheels = this.carWheels.map(wheel => {
+          const box = new THREE.Box3().setFromObject(wheel);
+          const size = new THREE.Vector3();
+          box.getSize(size);
+          // Qual dimensão é menor? Esse é o eixo de rotação
+          let rotAxis = 'x';
+          if (size.y < size.x && size.y < size.z) rotAxis = 'y';
+          else if (size.z < size.x && size.z < size.y) rotAxis = 'z';
+          wheel.userData.rotAxis = rotAxis;
+          return wheel;
+        });
 
-          const candidates = [];
-          carGroup.traverse(child => {
-            if (!child.isMesh) return;
-            const wp = new THREE.Vector3();
-            child.getWorldPosition(wp);
-            const cb = new THREE.Box3().setFromObject(child);
-            const cs = new THREE.Vector3();
-            cb.getSize(cs);
-            const diam = Math.max(cs.x, cs.y, cs.z);
-            const isLateral = Math.abs(wp.x - carCenter.x) > carSize.x * 0.3;
-            const isLow = wp.y < carBox.min.y + carSize.y * 0.4;
-            const goodSize = diam > carSize.y * 0.2 && diam < carSize.y * 0.65;
-            if (isLateral && isLow && goodSize) {
-              candidates.push({ obj: child, diam });
-            }
-          });
-          candidates.sort((a, b) => b.diam - a.diam);
-          // Pegar no máximo 4, agrupando por posição similar
-          const picked = [];
-          candidates.forEach(c => {
-            const cp = new THREE.Vector3();
-            c.obj.getWorldPosition(cp);
-            const tooClose = picked.some(p => {
-              const pp = new THREE.Vector3();
-              p.getWorldPosition(pp);
-              return cp.distanceTo(pp) < carSize.y * 0.3;
-            });
-            if (!tooClose && picked.length < 4) picked.push(c.obj);
-          });
-          this.carWheels = picked;
-        }
-
-        console.log(`🚗 Rodas detectadas (${modelInfo.name}):`, this.carWheels.length, this.carWheels.map(w => w.name));
+        console.log(`🚗 Rodas (${modelInfo.name}):`, this.carWheels.length,
+          this.carWheels.map(w => `${w.name}[rot:${w.userData.rotAxis}]`));
 
         // --- Orientar: frente do carro para -Z (padrão da garagem) ---
         // Modelos do Sketchfab geralmente já vêm orientados, mas garantimos
@@ -1149,7 +1128,10 @@ export class OptimizedGarage {
     if (this.carEntering && this.currentCar) {
       // Girar rodas enquanto entra
       if (this.carWheels && this.carWheels.length > 0) {
-        this.carWheels.forEach(w => { w.rotation.x -= 0.08; });
+        this.carWheels.forEach(w => {
+          const ax = w.userData.rotAxis || 'x';
+          w.rotation[ax] -= 0.08;
+        });
       }
       const target = this.carTargetPos;
       const pos = this.currentCar.position;
@@ -1167,7 +1149,10 @@ export class OptimizedGarage {
     // Animação de saída do carro
     if (this.carExiting && this.currentCar) {
       if (this.carWheels && this.carWheels.length > 0) {
-        this.carWheels.forEach(w => { w.rotation.x += 0.08; });
+        this.carWheels.forEach(w => {
+          const ax = w.userData.rotAxis || 'x';
+          w.rotation[ax] += 0.08;
+        });
       }
       const pos = this.currentCar.position;
       const speed = 8 * delta;
