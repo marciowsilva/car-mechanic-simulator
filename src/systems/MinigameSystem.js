@@ -10,11 +10,11 @@ export class MinigameSystem {
 
     // Config por ferramenta
     this.toolConfig = {
-      wrench:      { key: 'F', label: 'F', speed: 1.2, zones: 1, color: '#3b82f6', name: 'Chave Inglesa' },
-      screwdriver: { key: 'F', label: 'F', speed: 0.9, zones: 2, color: '#22c55e', name: 'Chave de Fenda' },
-      hammer:      { key: 'F', label: 'F', speed: 1.8, zones: 1, color: '#f59e0b', name: 'Martelo' },
-      welder:      { key: 'F', label: 'F', speed: 1.4, zones: 3, color: '#ef4444', name: 'Maçarico' },
-      diagnostic:  { key: 'F', label: 'F', speed: 0.6, zones: 1, color: '#a855f7', name: 'Diagnóstico' },
+      wrench:      { key: 'Space', label: 'ESPAÇO', speed: 1.2, zones: 1, color: '#3b82f6', name: 'Chave Inglesa' },
+      screwdriver: { key: 'Space', label: 'ESPAÇO', speed: 0.9, zones: 2, color: '#22c55e', name: 'Chave de Fenda' },
+      hammer:      { key: 'Space', label: 'ESPAÇO', speed: 1.8, zones: 1, color: '#f59e0b', name: 'Martelo' },
+      welder:      { key: 'Space', label: 'ESPAÇO', speed: 1.4, zones: 3, color: '#ef4444', name: 'Maçarico' },
+      diagnostic:  { key: 'Space', label: 'ESPAÇO', speed: 0.6, zones: 1, color: '#a855f7', name: 'Diagnóstico' },
     };
 
     // Config por peça
@@ -59,14 +59,28 @@ export class MinigameSystem {
         <!-- Rounds -->
         <div id="mg-rounds" style="display:flex; gap:8px; justify-content:center; margin-bottom:24px"></div>
 
-        <!-- Instrução -->
-        <div style="font-size:13px; color:#94a3b8; margin-bottom:20px">
-          Pressione e segure <kbd id="mg-key" style="
-            background:#252b3b; border:1px solid #363d55; border-radius:6px;
-            padding:3px 10px; font-family:'DM Mono',monospace; color:#e2e8f0; font-size:14px;
-          ">F</kbd> enquanto o indicador estiver na zona verde
+        <!-- Instrução + Botão de segurar -->
+        <div style="font-size:13px; color:#94a3b8; margin-bottom:12px">
+          Segure o botão abaixo enquanto o cursor estiver na zona verde
         </div>
+        <button id="mg-hold-btn" style="
+          width:100%; padding:18px; margin-bottom:16px;
+          background:#1e2535; border:2px solid #363d55; border-radius:12px;
+          color:#94a3b8; font-size:16px; font-weight:700; cursor:pointer;
+          font-family:sans-serif; user-select:none; -webkit-user-select:none;
+          touch-action:none;
+        ">SEGURAR</button>
 
+        <!-- Progresso do hold -->
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:#64748b;margin-bottom:4px;display:flex;justify-content:space-between">
+            <span id="mg-hold-label">Segure F na zona verde...</span>
+            <span id="mg-hold-pct">0%</span>
+          </div>
+          <div style="background:#0f1117;border-radius:6px;overflow:hidden;height:8px;border:1px solid #2a3047">
+            <div id="mg-hold-bar" style="height:100%;background:#3b82f6;width:0%;transition:width 0.05s;border-radius:6px"></div>
+          </div>
+        </div>
         <!-- Barra de timing -->
         <div id="mg-bar-wrap" style="
           position:relative; height:52px; background:#0f1117;
@@ -109,26 +123,50 @@ export class MinigameSystem {
     `;
 
     document.body.appendChild(this.overlay);
+
+    // Listeners do botão de segurar
+    setTimeout(() => {
+      const btn = document.getElementById('mg-hold-btn');
+      if (!btn) return;
+
+      const startHold = (e) => {
+        e.preventDefault();
+        if (!this.active || this.keyHeld) return;
+        this.keyHeld = true;
+        this._onHoldStart();
+        btn.style.background = '#1e3a5f';
+        btn.style.borderColor = '#3b82f6';
+        btn.style.color = '#60a5fa';
+        btn.textContent = 'SEGURANDO...';
+      };
+
+      const endHold = (e) => {
+        e.preventDefault();
+        if (!this.keyHeld) return;
+        this.keyHeld = false;
+        this._onHoldEnd();
+        btn.style.background = '#252b3b';
+        btn.style.borderColor = '#363d55';
+        btn.style.color = '#94a3b8';
+        btn.textContent = 'SEGURAR';
+      };
+
+      btn.addEventListener('mousedown', startHold);
+      btn.addEventListener('touchstart', startHold, { passive: false });
+      window.addEventListener('mouseup', endHold);
+      window.addEventListener('touchend', endHold);
+    }, 100);
   }
 
   _bindKeys() {
+    // Usar mousedown/mouseup no botão de segurar (mais confiável que teclado)
+    // Os listeners de mouse/touch são adicionados ao botão na UI
+    // Também manter ESC para pular via teclado
     this._onKeyDown = (e) => {
       if (!this.active) return;
       if (e.code === 'Escape') { this._skip(); return; }
-      if (e.code === 'KeyF' && !this.keyHeld) {
-        this.keyHeld = true;
-        this._onHoldStart();
-      }
-    };
-    this._onKeyUp = (e) => {
-      if (!this.active) return;
-      if (e.code === 'KeyF' && this.keyHeld) {
-        this.keyHeld = false;
-        this._onHoldEnd();
-      }
     };
     window.addEventListener('keydown', this._onKeyDown);
-    window.addEventListener('keyup', this._onKeyUp);
   }
 
   // ===== API PÚBLICA =====
@@ -155,7 +193,7 @@ export class MinigameSystem {
     this.barDir      = 1;       // direção
     this.barSpeed    = toolCfg.speed * partCfg.difficulty * 55; // px/s em %
     this.holdTime    = 0;       // tempo segurando na zona
-    this.requiredHold = 0.6;   // segundos necessários na zona
+    this.requiredHold = 0.4;   // segundos necessários na zona
     this.lastTime    = null;
     this.roundDone   = false;
 
@@ -230,18 +268,23 @@ export class MinigameSystem {
   }
 
   _onHoldStart() {
-    // Mudar cursor para azul ao pressionar
-    document.getElementById('mg-cursor').style.background = '#3b82f6';
-    document.getElementById('mg-cursor').style.boxShadow  = '0 0 16px rgba(59,130,246,0.6)';
+    const cur = document.getElementById('mg-cursor');
+    if (cur) { cur.style.background = '#3b82f6'; cur.style.boxShadow = '0 0 16px rgba(59,130,246,0.6)'; }
   }
 
   _onHoldEnd() {
-    document.getElementById('mg-cursor').style.background = '#e2e8f0';
-    document.getElementById('mg-cursor').style.boxShadow  = '0 0 12px rgba(255,255,255,0.4)';
-    document.getElementById('mg-fill').style.width = '0%';
-    // Se não completou o round, penalidade leve
+    const cur = document.getElementById('mg-cursor');
+    if (cur) { cur.style.background = '#e2e8f0'; cur.style.boxShadow = '0 0 12px rgba(255,255,255,0.4)'; }
+    const fill = document.getElementById('mg-fill');
+    if (fill) fill.style.width = '0%';
+    const hb = document.getElementById('mg-hold-bar');
+    const hp = document.getElementById('mg-hold-pct');
+    const hl = document.getElementById('mg-hold-label');
+    if (hb) hb.style.width = '0%';
+    if (hp) hp.textContent = '0%';
+    if (hl) hl.textContent = 'Segure o botão na zona verde...';
     if (!this.roundDone) {
-      this._showFeedback('Solte na hora certa! ⚠️', '#f59e0b');
+      this._showFeedback('Segure mais tempo! ⚠️', '#f59e0b');
       this.holdTime = 0;
     }
   }
@@ -271,6 +314,13 @@ export class MinigameSystem {
         document.getElementById('mg-fill').style.background = `rgba(34,197,94,${0.1 + fillPct/200})`;
         document.getElementById('mg-cursor').style.background = '#22c55e';
         document.getElementById('mg-cursor').style.boxShadow  = '0 0 16px rgba(34,197,94,0.8)';
+        // Atualizar barra de progresso do hold
+        const holdBar = document.getElementById('mg-hold-bar');
+        const holdPct = document.getElementById('mg-hold-pct');
+        const holdLbl = document.getElementById('mg-hold-label');
+        if (holdBar) { holdBar.style.width = fillPct + '%'; holdBar.style.background = fillPct > 66 ? '#22c55e' : '#3b82f6'; }
+        if (holdPct) holdPct.textContent = Math.round(fillPct) + '%';
+        if (holdLbl) holdLbl.textContent = fillPct >= 100 ? '✅ Solte!' : 'Segurando... ' + Math.round(fillPct) + '%';
 
         if (this.holdTime >= this.requiredHold) {
           this._completeRound(true);
@@ -335,6 +385,10 @@ export class MinigameSystem {
         this._randomizeZone();
         this._updateZoneUI();
         document.getElementById('mg-fill').style.width = '0%';
+        const hbr = document.getElementById('mg-hold-bar');
+        const hpr = document.getElementById('mg-hold-pct');
+        if (hbr) hbr.style.width = '0%';
+        if (hpr) hpr.textContent = '0%';
         this._showFeedback('Próxima peça...', '#64748b');
         setTimeout(() => {
           document.getElementById('mg-feedback').textContent = '';

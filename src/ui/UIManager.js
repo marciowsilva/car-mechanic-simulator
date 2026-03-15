@@ -867,7 +867,40 @@ export class UIManager {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const partName = btn.dataset.part;
-        if (window.repairPart) {
+        console.log('🖱️ Botão Reparar clicado:', partName, '| window.repairPart:', typeof window.repairPart);
+
+        // Chamar diretamente o minigame sem depender de window.repairPart
+        const mgSystem = window.uiManager?.minigame;
+        const toolId   = window.gameState?.selectedTool || 'wrench';
+        console.log('🎮 minigame:', !!mgSystem, '| tool:', toolId);
+
+        if (mgSystem && !mgSystem.active) {
+          mgSystem.start(partName, toolId, (quality) => {
+            const result = window.gameState?.repairPart(partName);
+            if (result?.success) {
+              // Aplicar bônus de qualidade
+              const bonus = Math.round((quality - 50) / 10);
+              if (bonus > 0 && window.gameState.currentCar?.parts?.[partName]) {
+                window.gameState.currentCar.parts[partName].condition = Math.min(
+                  100,
+                  window.gameState.currentCar.parts[partName].condition + bonus
+                );
+              }
+              const label = quality >= 90 ? '🎯 Perfeito!' : quality >= 70 ? '✅ Bom reparo!' : '🔧 Reparo básico';
+              window.uiManager?.showNotification(`${label} (${quality}%)`, quality >= 70 ? 'success' : 'info');
+              window.uiManager?.updatePartsList();
+              window.uiManager?.updateMoney();
+              window.createRepairEffect?.(partName);
+              const status = window.gameState.checkCarReady?.();
+              if (status?.ready) {
+                document.getElementById("deliver-car").disabled = false;
+                window.uiManager?.showNotification("🎉 Carro pronto para entrega!", "success");
+              }
+            } else {
+              window.uiManager?.showNotification(result?.message || "❌ Erro ao reparar", "error");
+            }
+          });
+        } else if (window.repairPart) {
           window.repairPart(partName);
         }
       });
