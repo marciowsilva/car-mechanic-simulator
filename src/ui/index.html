@@ -146,12 +146,36 @@
         <span class="ctrl-key">Scroll</span>    <span class="ctrl-label">Zoom</span>
         <span class="ctrl-key">C</span>         <span class="ctrl-label">Câmera orbital</span>
       </div>
-
+      <button id="btn-minigame" class="ctrl-toggle active" onclick="toggleMinigame()">
+        🎮 Minigame: ON
+      </button>
     </div>
 
     <script type="module" src="/src/core/Exports.js"></script>
 
     <script>
+      function toggleMinigame() {
+        const enabled = localStorage.getItem('minigame_enabled') !== 'false';
+        const newVal = !enabled;
+        localStorage.setItem('minigame_enabled', newVal);
+        const btn = document.getElementById('btn-minigame');
+        if (btn) {
+          btn.textContent = '🎮 Minigame: ' + (newVal ? 'ON' : 'OFF');
+          btn.classList.toggle('active', newVal);
+        }
+        window.uiManager?.showNotification('🎮 Minigame ' + (newVal ? 'ativado' : 'desativado'), 'info');
+      }
+
+      // Inicializar estado do botão
+      document.addEventListener('DOMContentLoaded', () => {
+        const enabled = localStorage.getItem('minigame_enabled') !== 'false';
+        const btn = document.getElementById('btn-minigame');
+        if (btn) {
+          btn.textContent = '🎮 Minigame: ' + (enabled ? 'ON' : 'OFF');
+          btn.classList.toggle('active', enabled);
+        }
+      });
+
       function toggleFullscreen() {
         const btn = document.getElementById('toggle-fullscreen');
         if (!document.fullscreenElement) {

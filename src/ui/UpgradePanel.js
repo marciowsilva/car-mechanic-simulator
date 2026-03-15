@@ -1,465 +1,393 @@
-// src/ui/UpgradePanel.js - Painel de upgrades melhorado
+// src/ui/UpgradePanel.js — Redesign flat moderno
 
 export class UpgradePanel {
-    constructor(upgradeManager) {
-        this.manager = upgradeManager;
-        this.isVisible = false;
-        this.createPanel();
-    }
+  constructor(upgradeManager) {
+    this.manager = upgradeManager;
+    this.isVisible = false;
+    this.activeTab = 'tools';
+    this._createPanel();
+  }
 
-    createPanel() {
-        this.panel = document.createElement('div');
-        this.panel.id = 'upgrade-panel';
-        this.panel.className = 'upgrade-panel';
-        this.panel.style.display = 'none';
-        
-        this.panel.innerHTML = `
-            <div class="upgrade-header">
-                <h2>🛠️ UPGRADES</h2>
-                <div class="header-stats">
-                    <span class="money">💰 R$ <span id="upgrade-money">0</span></span>
-                    <button class="close-btn">×</button>
-                </div>
-            </div>
-            
-            <div class="upgrade-tabs">
-                <button class="tab-btn active" data-tab="tools">🔧 Ferramentas</button>
-                <button class="tab-btn" data-tab="garage">🏢 Garagem</button>
-                <button class="tab-btn" data-tab="stats">📊 Estatísticas</button>
-            </div>
-            
-            <div class="tab-content active" id="tools-tab">
-                <div class="upgrade-grid" id="tool-upgrades"></div>
-            </div>
-            
-            <div class="tab-content" id="garage-tab">
-                <div class="upgrade-grid" id="garage-upgrades"></div>
-            </div>
-            
-            <div class="tab-content" id="stats-tab">
-                <div class="stats-panel" id="stats-content"></div>
-            </div>
-        `;
-        
-        document.body.appendChild(this.panel);
-        this.addStyles();
-        this.initEventListeners();
-    }
-
-    addStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .upgrade-panel {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 700px;
-                max-width: 90%;
-                max-height: 80vh;
-                background: rgba(30, 30, 30, 0.98);
-                border: 2px solid #ff6b00;
-                border-radius: 15px;
-                color: white;
-                z-index: 1000;
-                overflow: hidden;
-                backdrop-filter: blur(10px);
-                box-shadow: 0 0 30px rgba(0,0,0,0.5);
-            }
-            
-            .upgrade-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 15px 20px;
-                background: #1a1a1a;
-                border-bottom: 1px solid #ff6b00;
-            }
-            
-            .upgrade-header h2 {
-                margin: 0;
-                color: #ff6b00;
-                font-size: 20px;
-            }
-            
-            .header-stats {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-            }
-            
-            .header-stats .money {
-                color: #ffd700;
-                font-weight: bold;
-                font-size: 16px;
-            }
-            
-            .close-btn {
-                background: none;
-                border: none;
-                color: #888;
-                font-size: 24px;
-                cursor: pointer;
-                padding: 0 10px;
-                transition: color 0.3s;
-            }
-            
-            .close-btn:hover {
-                color: #ff6b00;
-            }
-            
-            .upgrade-tabs {
-                display: flex;
-                gap: 10px;
-                padding: 15px 20px;
-                background: #222;
-                border-bottom: 1px solid #444;
-            }
-            
-            .tab-btn {
-                flex: 1;
-                padding: 10px;
-                background: #333;
-                border: none;
-                color: white;
-                cursor: pointer;
-                border-radius: 5px;
-                font-weight: bold;
-                transition: all 0.3s;
-            }
-            
-            .tab-btn:hover {
-                background: #444;
-            }
-            
-            .tab-btn.active {
-                background: #ff6b00;
-                color: white;
-            }
-            
-            .tab-content {
-                display: none;
-                padding: 20px;
-                max-height: 400px;
-                overflow-y: auto;
-            }
-            
-            .tab-content.active {
-                display: block;
-            }
-            
-            .upgrade-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 15px;
-            }
-            
-            .upgrade-item {
-                background: #2a2a2a;
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px solid #444;
-                transition: all 0.3s;
-            }
-            
-            .upgrade-item:hover {
-                border-color: #ff6b00;
-                transform: translateY(-2px);
-            }
-            
-            .upgrade-item.maxed {
-                opacity: 0.6;
-                border-color: #4CAF50;
-            }
-            
-            .upgrade-icon {
-                font-size: 24px;
-                margin-bottom: 10px;
-            }
-            
-            .upgrade-name {
-                font-size: 16px;
-                font-weight: bold;
-                color: #ff6b00;
-                margin-bottom: 5px;
-            }
-            
-            .upgrade-desc {
-                font-size: 12px;
-                color: #888;
-                margin-bottom: 10px;
-            }
-            
-            .upgrade-level {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 10px;
-            }
-            
-            .level-bar {
-                flex: 1;
-                height: 4px;
-                background: #444;
-                border-radius: 2px;
-                margin: 0 10px;
-                overflow: hidden;
-            }
-            
-            .level-progress {
-                height: 100%;
-                background: #ff6b00;
-                transition: width 0.3s;
-            }
-            
-            .level-text {
-                font-size: 12px;
-                color: #ffd700;
-                min-width: 60px;
-                text-align: right;
-            }
-            
-            .upgrade-effect {
-                font-size: 13px;
-                color: #4CAF50;
-                margin: 10px 0;
-                padding: 5px;
-                background: rgba(76, 175, 80, 0.1);
-                border-radius: 4px;
-                text-align: center;
-            }
-            
-            .upgrade-price {
-                font-size: 14px;
-                color: #ffd700;
-                font-weight: bold;
-                margin: 10px 0;
-                text-align: right;
-            }
-            
-            .upgrade-btn {
-                width: 100%;
-                padding: 10px;
-                background: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                font-weight: bold;
-                transition: all 0.3s;
-            }
-            
-            .upgrade-btn:hover:not(:disabled) {
-                background: #45a049;
-                transform: scale(1.02);
-            }
-            
-            .upgrade-btn:disabled {
-                background: #666;
-                cursor: not-allowed;
-                opacity: 0.5;
-            }
-            
-            .upgrade-btn.maxed-btn {
-                background: #333;
-                color: #888;
-                cursor: default;
-            }
-            
-            .stats-panel {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 15px;
-            }
-            
-            .stat-card {
-                background: #2a2a2a;
-                padding: 15px;
-                border-radius: 8px;
-                text-align: center;
-            }
-            
-            .stat-value {
-                font-size: 24px;
-                font-weight: bold;
-                color: #ff6b00;
-                margin: 10px 0;
-            }
-            
-            .stat-label {
-                font-size: 12px;
-                color: #888;
-            }
-        `;
-        
-        document.head.appendChild(style);
-    }
-
-    initEventListeners() {
-        // Fechar
-        this.panel.querySelector('.close-btn').addEventListener('click', () => this.hide());
-        
-        // Abas
-        this.panel.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                this.panel.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                const tabId = btn.dataset.tab;
-                this.panel.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-                this.panel.getElementById(`${tabId}-tab`).classList.add('active');
-            });
-        });
-        
-        // Fechar com ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isVisible) {
-                this.hide();
-            }
-        });
-    }
-
-    show() {
-        this.isVisible = true;
-        this.panel.style.display = 'block';
-        this.update();
-    }
-
-    hide() {
-        this.isVisible = false;
-        this.panel.style.display = 'none';
-    }
-
-    toggle() {
-        if (this.isVisible) {
-            this.hide();
-        } else {
-            this.show();
+  _createPanel() {
+    // Injetar fonte se necessário
+    if (!document.getElementById('upgrade-panel-styles')) {
+      const style = document.createElement('style');
+      style.id = 'upgrade-panel-styles';
+      style.textContent = `
+        #upgrade-panel {
+          position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+          z-index: 2000; display: none; align-items: center; justify-content: center;
+          background: rgba(10,12,20,0.75); backdrop-filter: blur(6px);
+          font-family: 'DM Sans', sans-serif;
         }
-    }
+        #upgrade-panel.show { display: flex; }
 
-    update() {
-        // Atualizar dinheiro
-        const moneyEl = document.getElementById('upgrade-money');
-        if (moneyEl && window.gameState) {
-            moneyEl.textContent = window.gameState.money;
+        .up-modal {
+          background: #181c27; border: 1px solid #2a3047;
+          border-radius: 20px; width: 780px; max-width: 95vw;
+          max-height: 88vh; display: flex; flex-direction: column;
+          box-shadow: 0 24px 80px rgba(0,0,0,0.6); overflow: hidden;
         }
-        
-        const stats = this.manager.getStats();
-        
-        // Atualizar ferramentas
-        this.updateTools(stats.tools);
-        
-        // Atualizar garagem
-        this.updateGarage(stats.garage);
-        
-        // Atualizar estatísticas
-        this.updateStats(stats);
+
+        /* Header */
+        .up-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 20px 24px; border-bottom: 1px solid #2a3047; flex-shrink: 0;
+        }
+        .up-header-left { display: flex; align-items: center; gap: 12px; }
+        .up-title { font-size: 17px; font-weight: 700; color: #e2e8f0; }
+        .up-money {
+          display: flex; align-items: center; gap: 6px;
+          background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.2);
+          border-radius: 100px; padding: 6px 14px;
+          font-size: 14px; font-weight: 700; color: #facc15;
+          font-family: 'DM Mono', monospace;
+        }
+        .up-close {
+          width: 32px; height: 32px; border-radius: 8px;
+          background: transparent; border: 1px solid #2a3047;
+          color: #64748b; cursor: pointer; font-size: 18px; line-height: 1;
+          display: flex; align-items: center; justify-content: center;
+          transition: all 0.15s;
+        }
+        .up-close:hover { background: #252b3b; color: #e2e8f0; }
+
+        /* Tabs */
+        .up-tabs {
+          display: flex; gap: 4px; padding: 12px 24px;
+          border-bottom: 1px solid #2a3047; flex-shrink: 0;
+          background: #181c27;
+        }
+        .up-tab {
+          padding: 8px 18px; border-radius: 100px; font-size: 13px;
+          font-weight: 600; cursor: pointer; border: 1px solid transparent;
+          color: #64748b; background: transparent; transition: all 0.15s;
+          font-family: 'DM Sans', sans-serif;
+        }
+        .up-tab:hover { background: #1f2433; color: #94a3b8; }
+        .up-tab.active {
+          background: rgba(59,130,246,0.12); border-color: #3b82f6;
+          color: #60a5fa;
+        }
+
+        /* Body */
+        .up-body { overflow-y: auto; padding: 20px 24px; flex: 1; }
+        .up-body::-webkit-scrollbar { width: 4px; }
+        .up-body::-webkit-scrollbar-track { background: transparent; }
+        .up-body::-webkit-scrollbar-thumb { background: #2a3047; border-radius: 100px; }
+
+        /* Grid */
+        .up-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: 12px;
+        }
+
+        /* Card de upgrade */
+        .up-card {
+          background: #1f2433; border: 1px solid #2a3047;
+          border-radius: 14px; padding: 18px; transition: all 0.15s;
+        }
+        .up-card:hover { border-color: #363d55; }
+        .up-card.maxed { opacity: 0.6; }
+
+        .up-card-top {
+          display: flex; align-items: flex-start;
+          justify-content: space-between; margin-bottom: 14px;
+        }
+        .up-card-icon {
+          width: 44px; height: 44px; border-radius: 10px;
+          background: #252b3b; display: flex; align-items: center;
+          justify-content: center; font-size: 22px; flex-shrink: 0;
+        }
+        .up-card-info { flex: 1; margin: 0 12px; }
+        .up-card-name { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 3px; }
+        .up-card-desc { font-size: 11px; color: #64748b; line-height: 1.4; }
+
+        .up-level-badge {
+          font-size: 11px; font-weight: 700; padding: 3px 8px;
+          border-radius: 100px; white-space: nowrap; flex-shrink: 0;
+        }
+        .up-level-badge.normal {
+          background: rgba(59,130,246,0.12); color: #60a5fa;
+          border: 1px solid rgba(59,130,246,0.25);
+        }
+        .up-level-badge.maxed {
+          background: rgba(34,197,94,0.12); color: #22c55e;
+          border: 1px solid rgba(34,197,94,0.25);
+        }
+
+        /* Barra de nível */
+        .up-level-bar-wrap { margin-bottom: 12px; }
+        .up-level-bar-labels {
+          display: flex; justify-content: space-between;
+          font-size: 11px; color: #64748b; margin-bottom: 5px;
+        }
+        .up-level-bar-bg {
+          height: 4px; background: #252b3b; border-radius: 100px;
+          overflow: hidden;
+        }
+        .up-level-bar-fill {
+          height: 100%; border-radius: 100px; background: #3b82f6;
+          transition: width 0.4s ease;
+        }
+        .up-card.maxed .up-level-bar-fill { background: #22c55e; }
+
+        /* Efeitos */
+        .up-effects {
+          display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+        }
+        .up-effect-tag {
+          font-size: 11px; font-weight: 600; padding: 3px 9px;
+          border-radius: 100px; background: rgba(34,197,94,0.08);
+          color: #22c55e; border: 1px solid rgba(34,197,94,0.2);
+        }
+        .up-effect-tag.cost {
+          background: rgba(250,204,21,0.08); color: #facc15;
+          border-color: rgba(250,204,21,0.2);
+        }
+
+        /* Botão de upgrade */
+        .up-btn {
+          width: 100%; padding: 10px; border-radius: 10px;
+          font-size: 13px; font-weight: 700; cursor: pointer;
+          border: none; transition: all 0.15s; font-family: 'DM Sans', sans-serif;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .up-btn.buy {
+          background: #22c55e; color: white;
+        }
+        .up-btn.buy:hover:not(:disabled) { filter: brightness(1.1); transform: scale(1.01); }
+        .up-btn.buy:disabled {
+          background: #252b3b; color: #64748b; cursor: not-allowed;
+        }
+        .up-btn.maxed-btn {
+          background: transparent; color: #22c55e;
+          border: 1px solid rgba(34,197,94,0.25); cursor: default;
+        }
+
+        /* Stats tab */
+        .up-stats-grid {
+          display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+        }
+        .up-stat-card {
+          background: #1f2433; border: 1px solid #2a3047;
+          border-radius: 14px; padding: 20px; text-align: center;
+        }
+        .up-stat-icon { font-size: 28px; margin-bottom: 8px; }
+        .up-stat-value {
+          font-size: 28px; font-weight: 700; color: #3b82f6;
+          font-family: 'DM Mono', monospace; margin-bottom: 4px;
+        }
+        .up-stat-label { font-size: 12px; color: #64748b; }
+      `;
+      document.head.appendChild(style);
     }
 
-    updateTools(tools) {
-        const container = this.panel.querySelector('#tool-upgrades');
-        container.innerHTML = '';
-        
-        Object.entries(tools).forEach(([toolId, data]) => {
-            const efficiency = data.efficiency;
-            const isMaxed = data.level >= 5;
-            
-            const item = document.createElement('div');
-            item.className = `upgrade-item ${isMaxed ? 'maxed' : ''}`;
-            
-            let buttonHtml = '';
-            if (isMaxed) {
-                buttonHtml = `<button class="upgrade-btn maxed-btn" disabled>⭐ NÍVEL MÁXIMO</button>`;
-            } else {
-                buttonHtml = `<button class="upgrade-btn" onclick="window.upgradeTool('${toolId}')">
-                    🔧 Upgradar (R$ ${data.nextPrice})
-                </button>`;
-            }
-            
-            item.innerHTML = `
-                <div class="upgrade-name">${this.manager.getToolName(toolId)}</div>
-                <div class="upgrade-level">
-                    <span>Nível ${data.level}/5</span>
-                    <div class="level-bar">
-                        <div class="level-progress" style="width: ${(data.level/5)*100}%"></div>
-                    </div>
-                </div>
-                <div class="upgrade-effect">
-                    ⚡ Reparo: +${efficiency.repairAmount}% | 💰 Custo: R$ ${efficiency.cost}
-                </div>
-                ${buttonHtml}
-            `;
-            
-            container.appendChild(item);
-        });
-    }
+    this.panel = document.createElement('div');
+    this.panel.id = 'upgrade-panel';
 
-    updateGarage(garage) {
-        const container = this.panel.querySelector('#garage-upgrades');
-        container.innerHTML = '';
-        
-        Object.entries(garage).forEach(([upgradeId, data]) => {
-            const isMaxed = data.level >= data.maxLevel;
-            const progress = (data.level / data.maxLevel) * 100;
-            
-            const item = document.createElement('div');
-            item.className = `upgrade-item ${isMaxed ? 'maxed' : ''}`;
-            
-            let buttonHtml = '';
-            if (isMaxed) {
-                buttonHtml = `<button class="upgrade-btn maxed-btn" disabled>⭐ NÍVEL MÁXIMO</button>`;
-            } else {
-                buttonHtml = `<button class="upgrade-btn" onclick="window.upgradeGarage('${upgradeId}')">
-                    🏢 Upgradar (R$ ${data.nextPrice})
-                </button>`;
-            }
-            
-            item.innerHTML = `
-                <div class="upgrade-icon">${data.icon}</div>
-                <div class="upgrade-name">${data.name}</div>
-                <div class="upgrade-desc">${data.description}</div>
-                <div class="upgrade-level">
-                    <span>Nível ${data.level}/${data.maxLevel}</span>
-                    <div class="level-bar">
-                        <div class="level-progress" style="width: ${progress}%"></div>
-                    </div>
-                </div>
-                <div class="upgrade-effect">
-                    ✨ Efeito: +${data.effect}%
-                </div>
-                ${buttonHtml}
-            `;
-            
-            container.appendChild(item);
-        });
-    }
+    this.panel.innerHTML = `
+      <div class="up-modal">
+        <div class="up-header">
+          <div class="up-header-left">
+            <div class="up-title">Upgrades</div>
+            <div class="up-money" id="up-money">R$ 0</div>
+          </div>
+          <button class="up-close" id="up-close">✕</button>
+        </div>
 
-    updateStats(stats) {
-        const container = this.panel.querySelector('#stats-content');
-        
-        container.innerHTML = `
-            <div class="stat-card">
-                <div class="stat-label">💰 Desconto em Peças</div>
-                <div class="stat-value">${stats.partsDiscount}%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">⭐ Bônus de Experiência</div>
-                <div class="stat-value">+${stats.experienceBonus}%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">🔍 Precisão de Diagnóstico</div>
-                <div class="stat-value">+${stats.diagnosticBonus}%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">⬆️ Velocidade de Reparo</div>
-                <div class="stat-value">+${stats.repairSpeed}%</div>
-            </div>
-        `;
+        <div class="up-tabs">
+          <button class="up-tab active" data-tab="tools">Ferramentas</button>
+          <button class="up-tab" data-tab="garage">Oficina</button>
+          <button class="up-tab" data-tab="stats">Estatísticas</button>
+        </div>
+
+        <div class="up-body" id="up-body">
+          <div id="up-content"></div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(this.panel);
+    this._bindEvents();
+  }
+
+  _bindEvents() {
+    document.getElementById('up-close').addEventListener('click', () => this.hide());
+
+    this.panel.querySelectorAll('.up-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        this.panel.querySelectorAll('.up-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        this.activeTab = tab.dataset.tab;
+        this._renderTab();
+      });
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.isVisible) this.hide();
+    });
+  }
+
+  show() {
+    this.isVisible = true;
+    this.panel.classList.add('show');
+    this.update();
+  }
+
+  hide() {
+    this.isVisible = false;
+    this.panel.classList.remove('show');
+  }
+
+  toggle() { this.isVisible ? this.hide() : this.show(); }
+
+  update() {
+    // Dinheiro
+    const moneyEl = document.getElementById('up-money');
+    if (moneyEl && window.gameState) {
+      moneyEl.textContent = `R$ ${(window.gameState.money || 0).toLocaleString('pt-BR')}`;
     }
+    this._renderTab();
+  }
+
+  _renderTab() {
+    const stats = this.manager.getStats();
+    const content = document.getElementById('up-content');
+    if (!content) return;
+
+    if (this.activeTab === 'tools')  content.innerHTML = this._renderTools(stats.tools);
+    if (this.activeTab === 'garage') content.innerHTML = this._renderGarage(stats.garage);
+    if (this.activeTab === 'stats')  content.innerHTML = this._renderStats(stats);
+  }
+
+  _renderTools(tools) {
+    const money = window.gameState?.money || 0;
+    let html = '<div class="up-grid">';
+
+    const icons = { wrench:'🔧', screwdriver:'🪛', hammer:'🔨', welder:'⚡', diagnostic:'📊' };
+    const descs = {
+      wrench:      'Reparo básico eficiente e versátil',
+      screwdriver: 'Alta precisão para ajustes finos',
+      hammer:      'Força bruta para reparos pesados',
+      welder:      'Soldagem e reparos avançados',
+      diagnostic:  'Identificação precisa de falhas',
+    };
+
+    Object.entries(tools).forEach(([id, data]) => {
+      const isMaxed  = data.level >= 5;
+      const canBuy   = !isMaxed && money >= (data.nextPrice || 0);
+      const pct      = (data.level / 5) * 100;
+      const eff      = data.efficiency;
+
+      html += `
+        <div class="up-card ${isMaxed ? 'maxed' : ''}">
+          <div class="up-card-top">
+            <div class="up-card-icon">${icons[id] || '🔧'}</div>
+            <div class="up-card-info">
+              <div class="up-card-name">${this.manager.getToolName(id)}</div>
+              <div class="up-card-desc">${descs[id] || ''}</div>
+            </div>
+            <span class="up-level-badge ${isMaxed ? 'maxed' : 'normal'}">
+              ${isMaxed ? 'MAX' : `Nv ${data.level}`}
+            </span>
+          </div>
+
+          <div class="up-level-bar-wrap">
+            <div class="up-level-bar-labels">
+              <span>Nível ${data.level} / 5</span>
+              ${!isMaxed ? `<span style="color:#facc15">Próximo: R$ ${(data.nextPrice||0).toLocaleString('pt-BR')}</span>` : '<span style="color:#22c55e">Nível máximo</span>'}
+            </div>
+            <div class="up-level-bar-bg">
+              <div class="up-level-bar-fill" style="width:${pct}%"></div>
+            </div>
+          </div>
+
+          <div class="up-effects">
+            <span class="up-effect-tag">+${eff.repairAmount}% reparo</span>
+            <span class="up-effect-tag cost">R$ ${eff.cost} / uso</span>
+          </div>
+
+          ${isMaxed
+            ? `<button class="up-btn maxed-btn">✓ Nível máximo</button>`
+            : `<button class="up-btn buy" onclick="window.upgradeTool('${id}'); window.uiManager?.upgradePanel?.update()"
+                ${canBuy ? '' : 'disabled'}>
+                ${canBuy ? `Melhorar — R$ ${(data.nextPrice||0).toLocaleString('pt-BR')}` : 'Dinheiro insuficiente'}
+              </button>`
+          }
+        </div>`;
+    });
+
+    return html + '</div>';
+  }
+
+  _renderGarage(garage) {
+    const money = window.gameState?.money || 0;
+    let html = '<div class="up-grid">';
+
+    Object.entries(garage).forEach(([id, data]) => {
+      const isMaxed = data.level >= data.maxLevel;
+      const canBuy  = !isMaxed && money >= (data.nextPrice || 0);
+      const pct     = (data.level / data.maxLevel) * 100;
+
+      html += `
+        <div class="up-card ${isMaxed ? 'maxed' : ''}">
+          <div class="up-card-top">
+            <div class="up-card-icon">${data.icon}</div>
+            <div class="up-card-info">
+              <div class="up-card-name">${data.name}</div>
+              <div class="up-card-desc">${data.description}</div>
+            </div>
+            <span class="up-level-badge ${isMaxed ? 'maxed' : 'normal'}">
+              ${isMaxed ? 'MAX' : `Nv ${data.level}`}
+            </span>
+          </div>
+
+          <div class="up-level-bar-wrap">
+            <div class="up-level-bar-labels">
+              <span>Nível ${data.level} / ${data.maxLevel}</span>
+              ${!isMaxed ? `<span style="color:#facc15">Próximo: R$ ${(data.nextPrice||0).toLocaleString('pt-BR')}</span>` : '<span style="color:#22c55e">Nível máximo</span>'}
+            </div>
+            <div class="up-level-bar-bg">
+              <div class="up-level-bar-fill" style="width:${pct}%"></div>
+            </div>
+          </div>
+
+          <div class="up-effects">
+            <span class="up-effect-tag">+${data.effect}% bônus</span>
+          </div>
+
+          ${isMaxed
+            ? `<button class="up-btn maxed-btn">✓ Nível máximo</button>`
+            : `<button class="up-btn buy" onclick="window.upgradeGarage('${id}'); window.uiManager?.upgradePanel?.update()"
+                ${canBuy ? '' : 'disabled'}>
+                ${canBuy ? `Melhorar — R$ ${(data.nextPrice||0).toLocaleString('pt-BR')}` : 'Dinheiro insuficiente'}
+              </button>`
+          }
+        </div>`;
+    });
+
+    return html + '</div>';
+  }
+
+  _renderStats(stats) {
+    const items = [
+      { icon: '💰', value: stats.partsDiscount + '%',   label: 'Desconto em Peças' },
+      { icon: '⭐', value: '+' + stats.experienceBonus + '%', label: 'Bônus de Experiência' },
+      { icon: '🔍', value: '+' + stats.diagnosticBonus + '%', label: 'Precisão de Diagnóstico' },
+      { icon: '⬆️', value: '+' + stats.repairSpeed + '%',     label: 'Velocidade de Reparo' },
+    ];
+
+    return `<div class="up-stats-grid">
+      ${items.map(i => `
+        <div class="up-stat-card">
+          <div class="up-stat-icon">${i.icon}</div>
+          <div class="up-stat-value">${i.value}</div>
+          <div class="up-stat-label">${i.label}</div>
+        </div>
+      `).join('')}
+    </div>`;
+  }
 }
 
-// Expor globalmente
-if (typeof window !== 'undefined') {
-    window.UpgradePanel = UpgradePanel;
-}
+if (typeof window !== 'undefined') window.UpgradePanel = UpgradePanel;

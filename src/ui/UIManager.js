@@ -798,14 +798,21 @@ export class UIManager {
     const averageCondition =
       totalParts > 0 ? Math.round(totalCondition / totalParts) : 0;
 
+    const overallState = averageCondition >= 70 ? { label: 'Bom estado', color: 'var(--green)', icon: '✅' }
+                      : averageCondition >= 40 ? { label: 'Precisa atenção', color: 'var(--amber)', icon: '⚠️' }
+                      : { label: 'Estado crítico', color: 'var(--red)', icon: '🚨' };
+
     let html = `
             <div class="car-status">
                 <div class="progress-info">
-                    <span>Progresso: ${averageCondition}%</span>
-                    <span>Peças perfeitas: ${perfectCount}/${totalParts}</span>
+                    <span style="display:flex;align-items:center;gap:6px">
+                      ${overallState.icon}
+                      <span style="color:${overallState.color};font-weight:600">${overallState.label}</span>
+                    </span>
+                    <span>${perfectCount}/${totalParts} perfeitas</span>
                 </div>
                 <div class="overall-progress">
-                    <div class="progress-bar" style="width: ${averageCondition}%"></div>
+                    <div class="progress-bar" style="width:${averageCondition}%;background:${overallState.color}"></div>
                 </div>
             </div>
             <div class="parts-list">
@@ -838,15 +845,22 @@ export class UIManager {
         canRepair = gameState.money >= repairCost && condition < 100;
       }
 
+      // Ícone e label de dano baseado na condição
+      const dmgIcon  = condition >= 70 ? '' : condition >= 40 ? '🔴' : '💀';
+      const oilDrip  = condition < 30  ? '<span style="color:#f59e0b;font-size:10px">🛢 Vazamento</span>' : '';
+      const rustBadge= condition < 50  ? '<span style="color:#ef4444;font-size:10px">⚠ Desgaste</span>' : '';
+      const barColor = condition >= 70 ? 'var(--green)' : condition >= 40 ? 'var(--amber)' : 'var(--red)';
+
       html += `
                 <div class="part-item ${gameState.selectedPart === name ? "selected" : ""}" 
                      data-part="${name}">
                     <div class="part-header">
-                        <span class="part-name">${this.getPartDisplayName(name)}</span>
-                        <span class="part-condition ${conditionClass}">${condition}% - ${conditionText}</span>
+                        <span class="part-name">${dmgIcon} ${this.getPartDisplayName(name)}</span>
+                        <span class="part-condition ${conditionClass}">${condition}%</span>
                     </div>
+                    ${oilDrip || rustBadge ? `<div style="display:flex;gap:8px;margin-bottom:6px">${rustBadge}${oilDrip}</div>` : ''}
                     <div class="part-progress">
-                        <div class="progress-bar" style="width: ${condition}%"></div>
+                        <div class="progress-bar" style="width:${condition}%;background:${barColor}"></div>
                     </div>
                     <div class="part-actions">
                         <button class="part-btn repair-btn" data-part="${name}">
@@ -874,7 +888,10 @@ export class UIManager {
         const toolId   = window.gameState?.selectedTool || 'wrench';
         console.log('🎮 minigame:', !!mgSystem, '| tool:', toolId);
 
-        if (mgSystem && !mgSystem.active) {
+        // Verificar se minigame está habilitado
+        const minigameEnabled = localStorage.getItem('minigame_enabled') !== 'false';
+
+        if (mgSystem && !mgSystem.active && minigameEnabled) {
           mgSystem.start(partName, toolId, (quality) => {
             const result = window.gameState?.repairPart(partName);
             if (result?.success) {

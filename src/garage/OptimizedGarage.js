@@ -16,6 +16,8 @@ export class OptimizedGarage {
 
     this.currentCar = null;
     this.particles = [];
+    this.damageParticles = [];  // Partículas contínuas de dano
+    this.damageEmitters = [];   // Emissores ativos
     this.equipmentSystem = null;
     this.clickableObjects = [];
     this.raycaster = new THREE.Raycaster();
@@ -933,6 +935,10 @@ export class OptimizedGarage {
               mats.forEach(m => {
                 m.envMapIntensity = 1.2;
                 if (m.roughness !== undefined && m.roughness === 0) m.roughness = 0.15;
+                // Salvar valores originais para sistema de danos
+                m.userData.originalColor     = m.color ? m.color.getHex() : 0xffffff;
+                m.userData.originalRoughness = m.roughness || 0.3;
+                m.userData.originalMetalness = m.metalness || 0.5;
               });
             }
           }
@@ -1061,6 +1067,7 @@ export class OptimizedGarage {
 
   removeCar() {
     if (this.currentCar) {
+      this._clearDamageEmitters?.();
       // Abrir porta, depois sair
       this.openGarageDoor();
       window.uiManager?.showNotification("🚗 Carro saindo da garagem...", "info");
@@ -1073,6 +1080,202 @@ export class OptimizedGarage {
 
   preloadCarModels() {
     return Promise.resolve();
+  }
+
+  // ===== SISTEMA DE DANOS VISUAIS =====
+
+  applyCarDamage(parts) {
+    if (!this.currentCar) return;
+
+    // Calcular condição média
+    const conditions = Object.values(parts).map(p => p.condition || 100);
+    const avgCondition = conditions.reduce((a, b) => a + b, 0) / conditions.length;
+
+    // Aplicar tint de dano em todos os meshes do carro
+    this.currentCar.traverse(child => {
+      if (!child.isMesh || !child.material) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(mat => {
+        if (!mat.userData.originalColor) {
+          mat.userData.originalColor = mat.color ? mat.color.getHex() : 0xffffff;
+        }
+        const orig = new THREE.Color(mat.userData.originalColor);
+
+        if (avgCondition >= 70) {
+          // Condição boa — cor original
+          mat.color.copy(orig);
+          mat.roughness = Math.max(0.2, mat.userData.originalRoughness || 0.3);
+        } else if (avgCondition >= 40) {
+          // Condição média — leve tint enferrujado
+          const rust = new THREE.Color(0x8B4513);
+          mat.color.copy(orig).lerp(rust, (70 - avgCondition) / 60);
+          mat.roughness = 0.7;
+        } else {
+          // Condição ruim — fortemente enferrujado/deteriorado
+          const rust = new THREE.Color(0x5C2A00);
+          const dirt = new THREE.Color(0x2a1f0a);
+          mat.color.copy(orig).lerp(rust, 0.5).lerp(dirt, (40 - avgCondition) / 60);
+          mat.roughness = 0.95;
+          mat.metalness = Math.max(0, (mat.userData.originalMetalness || 0.5) - 0.3);
+        }
+      });
+    });
+
+    // Remover emissores antigos
+    this._clearDamageEmitters();
+
+    // Criar emissores baseados na condição
+    if (avgCondition < 60) {
+      this._addOilEmitter(avgCondition);
+    }
+    if (avgCondition < 25) {
+      this._addSmokeEmitter(avgCondition);
+    }
+  }
+
+  _clearDamageEmitters() {
+    this.damageEmitters.forEach(e => clearInterval(e));
+    this.damageEmitters = [];
+    // Remover partículas de dano existentes
+    this.damageParticles.forEach(p => this.scene.remove(p));
+    this.damageParticles = [];
+  }
+
+  _addOilEmitter(condition) {
+    if (!this.currentCar) return;
+    const intensity = Math.max(0, (60 - condition) / 60); // 0–1
+
+    const emitter = setInterval(() => {
+      if (!this.currentCar) { clearInterval(emitter); return; }
+
+      const carPos = this.currentCar.position;
+      // Número de gotículas baseado na intensidade
+      const count = Math.ceil(intensity * 3);
+
+      for (let i = 0; i < count; i++) {
+        const geo  = new THREE.SphereGeometry(0.025 + Math.random() * 0.02, 5, 5);
+        const mat  = new THREE.MeshStandardMaterial({
+          color: 0x1a0a00, roughness: 0.1, metalness: 0.8,
+          transparent: true, opacity: 0.85,
+        });
+        const drop = new THREE.Mesh(geo, mat);
+
+        // Posição aleatória embaixo do carro
+        drop.position.set(
+          carPos.x + (Math.random() - 0.5) * 2.5,
+          carPos.y + 0.25 + Math.random() * 0.3,
+          carPos.z + (Math.random() - 0.5) * 3.5
+        );
+
+        drop.userData = {
+          velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.008,
+            -0.015 - Math.random() * 0.01,
+            (Math.random() - 0.5) * 0.008
+          ),
+          life: 1.0,
+          type: 'oil'
+        };
+
+        this.scene.add(drop);
+        this.damageParticles.push(drop);
+      }
+    }, 300 - intensity * 200); // Mais frequente quanto pior a condição
+
+    this.damageEmitters.push(emitter);
+  }
+
+  _addSmokeEmitter(condition) {
+    if (!this.currentCar) return;
+    const intensity = Math.max(0, (25 - condition) / 25);
+
+    const emitter = setInterval(() => {
+      if (!this.currentCar) { clearInterval(emitter); return; }
+
+      const carPos = this.currentCar.position;
+      const box = new THREE.Box3().setFromObject(this.currentCar);
+
+      for (let i = 0; i < 2; i++) {
+        const size = 0.08 + Math.random() * 0.1;
+        const geo  = new THREE.SphereGeometry(size, 6, 6);
+        const gray = 0.3 + Math.random() * 0.2;
+        const mat  = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(gray, gray, gray),
+          roughness: 1, transparent: true, opacity: 0.4 + Math.random() * 0.2,
+        });
+        const smoke = new THREE.Mesh(geo, mat);
+
+        // Fumaça sobe do capô/motor (frente do carro)
+        smoke.position.set(
+          carPos.x + (Math.random() - 0.5) * 1.5,
+          box.max.y + Math.random() * 0.3,
+          carPos.z - 1.5 + (Math.random() - 0.5) * 0.8
+        );
+
+        smoke.userData = {
+          velocity: new THREE.Vector3(
+            (Math.random() - 0.5) * 0.01,
+            0.02 + Math.random() * 0.015,
+            (Math.random() - 0.5) * 0.01
+          ),
+          life: 1.0,
+          type: 'smoke'
+        };
+
+        this.scene.add(smoke);
+        this.damageParticles.push(smoke);
+      }
+    }, 400 - intensity * 250);
+
+    this.damageEmitters.push(emitter);
+  }
+
+  updateDamageParticles() {
+    for (let i = this.damageParticles.length - 1; i >= 0; i--) {
+      const p = this.damageParticles[i];
+      p.userData.life -= p.userData.type === 'smoke' ? 0.008 : 0.018;
+
+      if (p.userData.life <= 0) {
+        this.scene.remove(p);
+        this.damageParticles.splice(i, 1);
+        continue;
+      }
+
+      p.position.add(p.userData.velocity);
+
+      if (p.userData.type === 'oil') {
+        // Óleo para ao tocar o chão
+        if (p.position.y <= 0.01) {
+          p.position.y = 0.01;
+          p.userData.velocity.set(0, 0, 0);
+          // Espalha no chão
+          p.scale.set(1 + (1 - p.userData.life) * 3, 0.1, 1 + (1 - p.userData.life) * 3);
+        }
+        p.material.opacity = p.userData.life * 0.85;
+      } else {
+        // Fumaça expande e some
+        const s = 1 + (1 - p.userData.life) * 2;
+        p.scale.setScalar(s);
+        p.material.opacity = p.userData.life * 0.35;
+      }
+    }
+  }
+
+  resetCarDamage() {
+    this._clearDamageEmitters();
+    if (!this.currentCar) return;
+    // Restaurar cores originais
+    this.currentCar.traverse(child => {
+      if (!child.isMesh || !child.material) return;
+      const mats = Array.isArray(child.material) ? child.material : [child.material];
+      mats.forEach(mat => {
+        if (mat.userData.originalColor !== undefined) {
+          mat.color.setHex(mat.userData.originalColor);
+          mat.roughness = mat.userData.originalRoughness || 0.3;
+          mat.metalness = mat.userData.originalMetalness || 0.5;
+        }
+      });
+    });
   }
 
   createRepairEffect(position) {
