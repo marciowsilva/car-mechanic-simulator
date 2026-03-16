@@ -59,8 +59,11 @@ export class OptimizedGarage {
     this.setupInteraction();
     this.animate();
 
-    // Acender luzes ao iniciar com flicker
-    setTimeout(() => this.flickerLightsOn(), 800);
+    // Acender com flicker e depois baixar para standby
+    setTimeout(() => {
+      this.flickerLightsOn();
+      setTimeout(() => this.lightsDown(), 1500);
+    }, 800);
 
     this.fpsCounter = 0;
     this.lastFpsUpdate = performance.now();
@@ -569,18 +572,105 @@ export class OptimizedGarage {
   }
 
   setupLights() {
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 0.8);
-    this.scene.add(hemiLight);
+    this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x666666, 0.8);
+    this.scene.add(this.hemiLight);
 
-    const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    mainLight.position.set(10, 20, 10);
-    mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 2048;
-    mainLight.shadow.mapSize.height = 2048;
-    mainLight.shadow.camera.near = 0.5;
-    mainLight.shadow.camera.far = 50;
-    mainLight.shadow.bias = -0.001;
-    this.scene.add(mainLight);
+    this.mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    this.mainLight.position.set(10, 20, 10);
+    this.mainLight.castShadow = true;
+    this.mainLight.shadow.mapSize.width = 2048;
+    this.mainLight.shadow.mapSize.height = 2048;
+    this.mainLight.shadow.camera.near = 0.5;
+    this.mainLight.shadow.camera.far = 50;
+    this.mainLight.shadow.bias = -0.001;
+    this.scene.add(this.mainLight);
+
+    this._initDayNightCycle();
+  }
+
+  _initDayNightCycle() {
+    this.timeProfiles = [
+      { h:  0, bg: 0x04060f, sky: 0x0a0e1a, gnd: 0x020408, hi: 0.08, mc: 0x1a2a4a, mi: 0.1,  fog: 0x04060f, fd: 0.012, label: 'Madrugada' },
+      { h:  5, bg: 0x1a1020, sky: 0x2a1530, gnd: 0x0a0810, hi: 0.12, mc: 0x8a4a6a, mi: 0.2,  fog: 0x1a1020, fd: 0.010, label: 'Antes do amanhecer' },
+      { h:  6, bg: 0x3a2040, sky: 0x6a3060, gnd: 0x1a0e20, hi: 0.25, mc: 0xff8844, mi: 0.5,  fog: 0x3a2040, fd: 0.008, label: 'Amanhecer' },
+      { h:  7, bg: 0x6a4060, sky: 0xffaa66, gnd: 0x3a2030, hi: 0.45, mc: 0xffcc88, mi: 0.8,  fog: 0x6a4060, fd: 0.006, label: 'Nascer do sol' },
+      { h:  8, bg: 0x2a3a5a, sky: 0x87ceeb, gnd: 0x3a4a2a, hi: 0.65, mc: 0xfff4e0, mi: 1.0,  fog: 0x2a3a5a, fd: 0.004, label: 'Manhã' },
+      { h: 10, bg: 0x1a2a4a, sky: 0xadd8f0, gnd: 0x3a4a2a, hi: 0.80, mc: 0xffffff, mi: 1.2,  fog: 0x1a2a4a, fd: 0.003, label: 'Manhã clara' },
+      { h: 12, bg: 0x111828, sky: 0xc8e8ff, gnd: 0x2a3a1a, hi: 0.90, mc: 0xffffff, mi: 1.4,  fog: 0x111828, fd: 0.002, label: 'Meio-dia' },
+      { h: 14, bg: 0x111828, sky: 0xb8d8f8, gnd: 0x2a3a1a, hi: 0.85, mc: 0xfff8f0, mi: 1.3,  fog: 0x111828, fd: 0.002, label: 'Tarde' },
+      { h: 16, bg: 0x1a2030, sky: 0xf0c080, gnd: 0x302010, hi: 0.70, mc: 0xffcc66, mi: 1.0,  fog: 0x1a2030, fd: 0.004, label: 'Final da tarde' },
+      { h: 18, bg: 0x2a1820, sky: 0xff6633, gnd: 0x200c08, hi: 0.45, mc: 0xff8844, mi: 0.7,  fog: 0x2a1820, fd: 0.006, label: 'Pôr do sol' },
+      { h: 19, bg: 0x1a1020, sky: 0x4a2040, gnd: 0x100810, hi: 0.25, mc: 0x8a4a6a, mi: 0.3,  fog: 0x1a1020, fd: 0.009, label: 'Crepúsculo' },
+      { h: 20, bg: 0x080c18, sky: 0x141e2e, gnd: 0x040608, hi: 0.12, mc: 0x2a3a6a, mi: 0.15, fog: 0x080c18, fd: 0.011, label: 'Noite' },
+      { h: 22, bg: 0x04060f, sky: 0x0a0e1a, gnd: 0x020408, hi: 0.08, mc: 0x1a2a4a, mi: 0.1,  fog: 0x04060f, fd: 0.012, label: 'Noite fechada' },
+    ];
+    this._lastTimeLabel = '';
+    this._updateDayNight();
+    setInterval(() => this._updateDayNight(), 60000);
+  }
+
+  _getTimeProfile() {
+    const now = new Date();
+    const h = now.getHours() + now.getMinutes() / 60;
+    const profiles = this.timeProfiles;
+    let prev = profiles[profiles.length - 1];
+    let next = profiles[0];
+    for (let i = 0; i < profiles.length; i++) {
+      if (profiles[i].h <= h) prev = profiles[i];
+      if (profiles[i].h > h) { next = profiles[i]; break; }
+    }
+    const range = next.h > prev.h ? next.h - prev.h : 24 - prev.h + next.h;
+    const elapsed = h >= prev.h ? h - prev.h : 24 - prev.h + h;
+    const t = range > 0 ? Math.min(1, elapsed / range) : 0;
+    return { prev, next, t };
+  }
+
+  _lerpColor(c1, c2, t) {
+    const r1 = (c1 >> 16) & 0xff, g1 = (c1 >> 8) & 0xff, b1 = c1 & 0xff;
+    const r2 = (c2 >> 16) & 0xff, g2 = (c2 >> 8) & 0xff, b2 = c2 & 0xff;
+    return (
+      (Math.round(r1 + (r2 - r1) * t) << 16) |
+      (Math.round(g1 + (g2 - g1) * t) << 8)  |
+       Math.round(b1 + (b2 - b1) * t)
+    );
+  }
+
+  _updateDayNight() {
+    const { prev, next, t } = this._getTimeProfile();
+    const bg  = this._lerpColor(prev.bg,  next.bg,  t);
+    const sky = this._lerpColor(prev.sky, next.sky, t);
+    const gnd = this._lerpColor(prev.gnd, next.gnd, t);
+    const mc  = this._lerpColor(prev.mc,  next.mc,  t);
+    const fog = this._lerpColor(prev.fog, next.fog, t);
+    const hi  = prev.hi + (next.hi - prev.hi) * t;
+    const mi  = prev.mi + (next.mi - prev.mi) * t;
+    const fd  = prev.fd + (next.fd - prev.fd) * t;
+
+    this.scene.background = new THREE.Color(bg);
+    if (this.hemiLight) {
+      this.hemiLight.color.setHex(sky);
+      this.hemiLight.groundColor.setHex(gnd);
+      this.hemiLight.intensity = hi;
+    }
+    if (this.mainLight) {
+      this.mainLight.color.setHex(mc);
+      this.mainLight.intensity = mi;
+    }
+    if (!this.scene.fog) {
+      this.scene.fog = new THREE.FogExp2(fog, fd);
+    } else {
+      this.scene.fog.color.setHex(fog);
+      this.scene.fog.density = fd;
+    }
+
+    const label = t < 0.5 ? prev.label : next.label;
+    if (label !== this._lastTimeLabel) {
+      this._lastTimeLabel = label;
+      const now = new Date();
+      const hr  = now.getHours();
+      const min = now.getMinutes().toString().padStart(2, '0');
+      window.uiManager?.showNotification(`🕐 ${hr}:${min} — ${label}`, 'info');
+    }
   }
 
   createGarage() {
@@ -814,54 +904,74 @@ export class OptimizedGarage {
 
   // ===== CONTROLE DE ILUMINAÇÃO =====
 
-  setLightsOn(on) {
-    this.lightsOn = on;
+  // Definir intensidade das luzes (0.0 = apagada, 1.0 = plena)
+  setLightsIntensity(level) {
+    this.lightsOn = level > 0;
     this.ceilingLights.forEach(({ light, fillLight, bulbMat }) => {
-      if (on) {
-        light.intensity     = light.userData.targetIntensity || 2.5;
-        fillLight.intensity = 0.6;
-        bulbMat.emissiveIntensity = 1;
-        bulbMat.opacity = 0.95;
-      } else {
-        light.intensity     = 0;
-        fillLight.intensity = 0;
-        bulbMat.emissiveIntensity = 0;
-        bulbMat.opacity = 0.3;
-      }
+      light.intensity           = level * 2.5;
+      fillLight.intensity       = level * 0.6;
+      bulbMat.emissiveIntensity = level;
+      bulbMat.opacity           = 0.3 + level * 0.65;
     });
   }
 
-  // Efeito de acender as luzes (flicker ao ligar)
+  setLightsOn(on) {
+    this.setLightsIntensity(on ? 1.0 : 0.0);
+  }
+
+  // Intensificar suavemente (usado ao chamar Novo Cliente)
+  lightsUp() {
+    const steps  = 20;
+    const start  = this._currentLightLevel || 0.15;
+    let   frame  = 0;
+    clearInterval(this._lightAnimInterval);
+    this._lightAnimInterval = setInterval(() => {
+      frame++;
+      const level = start + (1.0 - start) * (frame / steps);
+      this.setLightsIntensity(level);
+      if (frame >= steps) {
+        clearInterval(this._lightAnimInterval);
+        this.lightsOn = true;
+        this._currentLightLevel = 1.0;
+      }
+    }, 30);
+  }
+
+  // Baixar suavemente para nível baixo (usado ao sair o carro)
+  lightsDown() {
+    const target = 0.15;
+    const steps  = 20;
+    const start  = this._currentLightLevel || 1.0;
+    let   frame  = 0;
+    clearInterval(this._lightAnimInterval);
+    this._lightAnimInterval = setInterval(() => {
+      frame++;
+      const level = start + (target - start) * (frame / steps);
+      this.setLightsIntensity(level);
+      if (frame >= steps) {
+        clearInterval(this._lightAnimInterval);
+        this._currentLightLevel = target;
+      }
+    }, 30);
+  }
+
+  // Efeito de flicker (mantido para uso inicial)
   flickerLightsOn() {
-    this.setLightsOn(false);
+    this.setLightsIntensity(0);
     const steps = [0.1, 0, 0.4, 0, 0.8, 0.3, 1.0];
     steps.forEach((intensity, i) => {
       setTimeout(() => {
-        this.ceilingLights.forEach(({ light, fillLight, bulbMat }) => {
-          light.intensity      = intensity * 2.5;
-          fillLight.intensity  = intensity * 0.6;
-          bulbMat.emissiveIntensity = intensity;
-          bulbMat.opacity = 0.3 + intensity * 0.65;
-        });
-        if (i === steps.length - 1) this.lightsOn = true;
+        this.setLightsIntensity(intensity);
+        if (i === steps.length - 1) {
+          this.lightsOn = true;
+          this._currentLightLevel = 1.0;
+        }
       }, i * 80 + Math.random() * 30);
     });
   }
 
-  // Efeito de apagar as luzes (fade out)
   flickerLightsOff() {
-    const steps = [0.7, 0.9, 0.4, 0.6, 0.1, 0];
-    steps.forEach((intensity, i) => {
-      setTimeout(() => {
-        this.ceilingLights.forEach(({ light, fillLight, bulbMat }) => {
-          light.intensity     = intensity * 2.5;
-          fillLight.intensity = intensity * 0.6;
-          bulbMat.emissiveIntensity = intensity;
-          bulbMat.opacity = 0.3 + intensity * 0.65;
-        });
-        if (i === steps.length - 1) this.lightsOn = false;
-      }, i * 60);
-    });
+    this.lightsDown();
   }
 
   // Animação de pulso suave (hum da fluorescente)
@@ -1158,6 +1268,9 @@ export class OptimizedGarage {
     const modelInfo = models[Math.floor(Math.random() * models.length)];
     const url = `/src/public/models/${modelInfo.file}`;
 
+    // Intensificar luzes imediatamente ao receber cliente
+    this.lightsUp();
+
     window.uiManager?.showNotification(`🔧 Carregando ${modelInfo.name}...`, 'info');
 
     this.liftHeight = 0;
@@ -1344,7 +1457,7 @@ export class OptimizedGarage {
     if (this.currentCar) {
       // Abrir porta, depois sair
       this.hidePartLabels();
-      this.flickerLightsOff();
+      this.lightsDown();
       this.openGarageDoor();
       window.uiManager?.showNotification("🚗 Carro saindo da garagem...", "info");
       setTimeout(() => {
@@ -1665,8 +1778,6 @@ export class OptimizedGarage {
         pos.z = target.z;
         this.carEntering = false;
         this.closeGarageDoor();
-        // Acender luzes com flicker ao carro chegar
-        this.flickerLightsOn();
         // Mostrar labels de peças quando carro chega
         const parts = window.gameState?.currentCar?.parts;
         if (parts) {
