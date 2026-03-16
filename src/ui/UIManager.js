@@ -616,6 +616,9 @@ export class UIManager {
           ? partsArr.reduce((a, p) => a + (p.condition || 0), 0) / partsArr.length
           : 80;
 
+        // Parar timer antes de mostrar resultado
+        this.stopJobTimer();
+
         // Mostrar tela de resultado
         this.showJobResult({
           payment:      payment,
@@ -636,6 +639,9 @@ export class UIManager {
       const avgQ2 = partsArr2.length
         ? partsArr2.reduce((a, p) => a + (p.condition || 0), 0) / partsArr2.length
         : 80;
+
+      // Parar timer antes de mostrar resultado
+      this.stopJobTimer();
 
       this.showJobResult({
         payment:      payment,
@@ -919,12 +925,11 @@ export class UIManager {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const partName = btn.dataset.part;
-        console.log('🖱️ Botão Reparar clicado:', partName, '| window.repairPart:', typeof window.repairPart);
-
-        // Chamar diretamente o minigame sem depender de window.repairPart
         const mgSystem = window.uiManager?.minigame;
         const toolId   = window.gameState?.selectedTool || 'wrench';
-        console.log('🎮 minigame:', !!mgSystem, '| tool:', toolId);
+
+        // Tocar som da ferramenta
+        window.uiManager?.sounds?.playToolSound?.(toolId);
 
         // Verificar se minigame está habilitado
         const minigameEnabled = localStorage.getItem('minigame_enabled') !== 'false';

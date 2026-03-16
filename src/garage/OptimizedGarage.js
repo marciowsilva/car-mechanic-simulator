@@ -31,6 +31,8 @@ export class OptimizedGarage {
     this._orbitTarget = null;
     this.partLabels = [];        // Labels 3D das peças
     this.partLabelsVisible = false;
+    this.ceilingLights = [];     // Luzes do teto para animação dinâmica
+    this.lightsOn = true;        // Estado das luzes
     this.liftArms = []; // Braços do elevador ativo
 
     // Movimentação FPS
@@ -55,8 +57,10 @@ export class OptimizedGarage {
     this.setupLights();
     this.createGarage();
     this.setupInteraction();
-
     this.animate();
+
+    // Acender luzes ao iniciar com flicker
+    setTimeout(() => this.flickerLightsOn(), 800);
 
     this.fpsCounter = 0;
     this.lastFpsUpdate = performance.now();
@@ -772,24 +776,105 @@ export class OptimizedGarage {
 
   addCeilingLight(pos, color, group) {
     const lightGroup = new THREE.Group();
+
+    // Calha da luminária
     const frame = new THREE.Mesh(
       new THREE.BoxGeometry(2.2, 0.15, 0.6),
-      new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 }),
+      new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6, metalness: 0.4 }),
     );
     lightGroup.add(frame);
-    const bulb = new THREE.Mesh(
-      new THREE.BoxGeometry(2, 0.05, 0.4),
-      new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1 }),
-    );
+
+    // Difusor (painel emissivo)
+    const bulbMat = new THREE.MeshStandardMaterial({
+      color, emissive: color, emissiveIntensity: 1,
+      transparent: true, opacity: 0.95,
+    });
+    const bulb = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.04, 0.38), bulbMat);
     bulb.position.y = -0.08;
     lightGroup.add(bulb);
-    const light = new THREE.PointLight(color, 2, 15);
+
+    // Luz pontual principal
+    const light = new THREE.PointLight(color, 2.5, 18);
     light.position.y = -0.5;
     light.castShadow = true;
     light.shadow.bias = -0.01;
     lightGroup.add(light);
+
+    // Luz secundária suave (spread)
+    const fillLight = new THREE.PointLight(color, 0.6, 8);
+    fillLight.position.y = -0.3;
+    lightGroup.add(fillLight);
+
     lightGroup.position.set(pos[0], pos[1], pos[2]);
     group.add(lightGroup);
+
+    // Registrar para animação dinâmica
+    this.ceilingLights.push({ light, fillLight, bulbMat, baseIntensity: 2.5, color });
+  }
+
+  // ===== CONTROLE DE ILUMINAÇÃO =====
+
+  setLightsOn(on) {
+    this.lightsOn = on;
+    this.ceilingLights.forEach(({ light, fillLight, bulbMat }) => {
+      if (on) {
+        light.intensity     = light.userData.targetIntensity || 2.5;
+        fillLight.intensity = 0.6;
+        bulbMat.emissiveIntensity = 1;
+        bulbMat.opacity = 0.95;
+      } else {
+        light.intensity     = 0;
+        fillLight.intensity = 0;
+        bulbMat.emissiveIntensity = 0;
+        bulbMat.opacity = 0.3;
+      }
+    });
+  }
+
+  // Efeito de acender as luzes (flicker ao ligar)
+  flickerLightsOn() {
+    this.setLightsOn(false);
+    const steps = [0.1, 0, 0.4, 0, 0.8, 0.3, 1.0];
+    steps.forEach((intensity, i) => {
+      setTimeout(() => {
+        this.ceilingLights.forEach(({ light, fillLight, bulbMat }) => {
+          light.intensity      = intensity * 2.5;
+          fillLight.intensity  = intensity * 0.6;
+          bulbMat.emissiveIntensity = intensity;
+          bulbMat.opacity = 0.3 + intensity * 0.65;
+        });
+        if (i === steps.length - 1) this.lightsOn = true;
+      }, i * 80 + Math.random() * 30);
+    });
+  }
+
+  // Efeito de apagar as luzes (fade out)
+  flickerLightsOff() {
+    const steps = [0.7, 0.9, 0.4, 0.6, 0.1, 0];
+    steps.forEach((intensity, i) => {
+      setTimeout(() => {
+        this.ceilingLights.forEach(({ light, fillLight, bulbMat }) => {
+          light.intensity     = intensity * 2.5;
+          fillLight.intensity = intensity * 0.6;
+          bulbMat.emissiveIntensity = intensity;
+          bulbMat.opacity = 0.3 + intensity * 0.65;
+        });
+        if (i === steps.length - 1) this.lightsOn = false;
+      }, i * 60);
+    });
+  }
+
+  // Animação de pulso suave (hum da fluorescente)
+  updateLightFlicker(time) {
+    if (!this.lightsOn || !this.ceilingLights.length) return;
+    this.ceilingLights.forEach(({ light, fillLight, bulbMat }, i) => {
+      // Pulso muito sutil — simula hum de fluorescente
+      const flicker = 1 + Math.sin(time * 120 + i * 1.5) * 0.012
+                        + Math.sin(time * 73  + i * 2.3) * 0.006;
+      light.intensity     = 2.5 * flicker;
+      fillLight.intensity = 0.6 * flicker;
+      bulbMat.emissiveIntensity = flicker;
+    });
   }
 
   addPoster(pos, color, group, side = "back") {
@@ -1259,6 +1344,7 @@ export class OptimizedGarage {
     if (this.currentCar) {
       // Abrir porta, depois sair
       this.hidePartLabels();
+      this.flickerLightsOff();
       this.openGarageDoor();
       window.uiManager?.showNotification("🚗 Carro saindo da garagem...", "info");
       setTimeout(() => {
@@ -1579,10 +1665,12 @@ export class OptimizedGarage {
         pos.z = target.z;
         this.carEntering = false;
         this.closeGarageDoor();
+        // Acender luzes com flicker ao carro chegar
+        this.flickerLightsOn();
         // Mostrar labels de peças quando carro chega
         const parts = window.gameState?.currentCar?.parts;
         if (parts) {
-          setTimeout(() => this.showPartLabels(parts), 500);
+          setTimeout(() => this.showPartLabels(parts), 600);
         }
         window.uiManager?.showNotification("✅ Carro pronto para serviço!", "success");
       }
