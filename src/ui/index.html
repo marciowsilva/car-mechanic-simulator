@@ -509,6 +509,51 @@
     <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
   </div>
 
+  <!-- ===== TELA DE RESULTADO ===== -->
+  <div id="job-result-overlay">
+    <div class="job-result-modal">
+      <div class="result-icon" id="result-icon">🎉</div>
+      <div class="result-title" id="result-title">Serviço Concluído!</div>
+      <div class="result-subtitle" id="result-subtitle">Cliente satisfeito</div>
+
+      <div class="result-stars" id="result-stars">
+        <span class="result-star">⭐</span>
+        <span class="result-star">⭐</span>
+        <span class="result-star">⭐</span>
+        <span class="result-star">⭐</span>
+        <span class="result-star">⭐</span>
+      </div>
+
+      <div class="result-stats">
+        <div class="result-stat">
+          <div class="result-stat-value money" id="result-payment">R$ 0</div>
+          <div class="result-stat-label">Pagamento</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value green" id="result-quality">0%</div>
+          <div class="result-stat-label">Qualidade</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value" id="result-satisfaction">0%</div>
+          <div class="result-stat-label">Satisfação</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-value" id="result-bonus">+R$ 0</div>
+          <div class="result-stat-label">Bônus Tempo</div>
+        </div>
+      </div>
+
+      <div class="result-comment" id="result-comment">
+        "Excelente trabalho!"
+        <div class="result-comment-author" id="result-comment-author">— Cliente</div>
+      </div>
+
+      <button class="result-btn" onclick="window.uiManager?.closeJobResult()">
+        Continuar →
+      </button>
+    </div>
+  </div>
+
   <div id="notification"></div>
 
   <div id="controls-panel" style="display:none">

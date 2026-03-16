@@ -557,6 +557,17 @@ export class UIManager {
 
     let result = null; // VARIÁVEL DEFINIDA AQUI
 
+    // Capturar dados do job ANTES de completar (serão zerados depois)
+    const currentJob = window.gameState.currentJob;
+    const jobCustomerName = this.customerSystem?.currentJob?.customer?.name
+      || currentJob?.customer?.name
+      || currentJob?.customerName
+      || 'Cliente';
+    const jobCar = this.customerSystem?.currentJob?.car || currentJob?.car;
+    const jobCarModel = jobCar
+      ? `${jobCar.brand} ${jobCar.model} (${jobCar.year})`
+      : currentJob?.carModel || 'Veículo';
+
     if (this.customerSystem && this.customerSystem.currentJob) {
       const parts = window.gameState.currentCar.parts;
       let totalCondition = 0;
@@ -597,28 +608,45 @@ export class UIManager {
           }
         }
 
-        const bonusText =
-          result.timeBonus > 0 ? ` (bônus R$ ${result.timeBonus})` : "";
-        this.showNotification(
-          `💰 Serviço concluído! R$ ${payment}${bonusText}`,
-          "money",
-        );
         this.sounds?.play("money");
 
-        if (result.satisfaction >= 80) {
-          this.showNotification(`😊 Cliente satisfeito!`, "success");
-        } else if (result.satisfaction < 50) {
-          this.showNotification(`😞 Cliente insatisfeito...`, "error");
-        }
+        // Calcular qualidade média das peças
+        const partsArr = Object.values(window.gameState.currentCar?.parts || {});
+        const avgQuality = partsArr.length
+          ? partsArr.reduce((a, p) => a + (p.condition || 0), 0) / partsArr.length
+          : 80;
+
+        // Mostrar tela de resultado
+        this.showJobResult({
+          payment:      payment,
+          satisfaction: result.satisfaction || 80,
+          quality:      avgQuality,
+          timeBonus:    result.timeBonus || 0,
+          customerName: jobCustomerName,
+          carModel:     jobCarModel,
+        });
       }
     } else {
       const payment = window.gameState.currentJob.payment || 1000;
       window.gameState.money += payment;
       window.gameState.jobsCompleted++;
-      this.showNotification(`💰 Serviço concluído! R$ ${payment}`, "money");
       this.sounds?.play("money");
 
-      result = { payment, satisfaction: 100 }; // Resultado fake para não quebrar
+      const partsArr2 = Object.values(window.gameState.currentCar?.parts || {});
+      const avgQ2 = partsArr2.length
+        ? partsArr2.reduce((a, p) => a + (p.condition || 0), 0) / partsArr2.length
+        : 80;
+
+      this.showJobResult({
+        payment:      payment,
+        satisfaction: 85,
+        quality:      avgQ2,
+        timeBonus:    0,
+        customerName: jobCustomerName,
+        carModel:     jobCarModel,
+      });
+
+      result = { payment, satisfaction: 85 };
     }
 
     window.gameState.currentJob = null;
@@ -1065,6 +1093,69 @@ export class UIManager {
   }
 
   // ===== NOTIFICAÇÕES =====
+  showJobResult(data) {
+    // data: { payment, satisfaction, quality, timeBonus, customerName, carModel }
+    const overlay = document.getElementById('job-result-overlay');
+    if (!overlay) return;
+
+    const { payment, satisfaction, quality, timeBonus, customerName, carModel } = data;
+
+    // Calcular estrelas (1–5)
+    const stars = satisfaction >= 90 ? 5
+                : satisfaction >= 75 ? 4
+                : satisfaction >= 55 ? 3
+                : satisfaction >= 35 ? 2 : 1;
+
+    // Ícone e título baseado nas estrelas
+    const configs = {
+      5: { icon: '🏆', title: 'Serviço Perfeito!',   subtitle: `${customerName} adorou!` },
+      4: { icon: '🎉', title: 'Ótimo Serviço!',       subtitle: `${customerName} ficou satisfeito` },
+      3: { icon: '👍', title: 'Bom Serviço',          subtitle: `${customerName} aprovou` },
+      2: { icon: '😐', title: 'Serviço Regular',      subtitle: `${customerName} esperava mais` },
+      1: { icon: '😞', title: 'Serviço Insatisfatório', subtitle: `${customerName} ficou decepcionado` },
+    };
+    const cfg = configs[stars];
+
+    // Comentário aleatório
+    const commentPool = satisfaction >= 90 ? 'perfect'
+                      : satisfaction >= 70 ? 'good'
+                      : satisfaction >= 45 ? 'ok' : 'bad';
+    const comments = {'perfect': ['Melhor mecânico da cidade! Voltarei sempre aqui.', 'Perfeito! O carro nunca rodou tão bem.', 'Trabalho impecável. Recomendo a todos!', 'Incrível! Superou todas as minhas expectativas.'], 'good': ['Fiquei bem satisfeito com o serviço.', 'Bom trabalho! O carro está funcionando bem.', 'Serviço de qualidade, valeu o preço.', 'Gostei do resultado. Com certeza volto.'], 'ok': ['Razoável. Esperava um pouco mais.', 'O carro melhorou, mas ainda tem uns barulhos...', 'Foi ok. Nada de especial.', 'Deu pra resolver, mas levou mais tempo que o esperado.'], 'bad': ['Decepcionante. O problema não foi resolvido direito.', 'Não fiquei satisfeito. Esperava mais.', 'Vou ter que voltar em breve com o mesmo problema.', 'O serviço deixou a desejar.']};
+    const pool = comments[commentPool] || comments.ok;
+    const comment = pool[Math.floor(Math.random() * pool.length)];
+
+    // Cor da satisfação
+    const satColor = satisfaction >= 70 ? 'green' : satisfaction >= 45 ? 'amber' : 'red';
+
+    // Preencher UI
+    document.getElementById('result-icon').textContent      = cfg.icon;
+    document.getElementById('result-title').textContent     = cfg.title;
+    document.getElementById('result-subtitle').textContent  = cfg.subtitle;
+    document.getElementById('result-payment').textContent   = `R$ ${payment.toLocaleString("pt-BR")}`;
+    document.getElementById('result-quality').textContent   = `${Math.round(quality)}%`;
+    document.getElementById('result-satisfaction').textContent = `${Math.round(satisfaction)}%`;
+    document.getElementById('result-satisfaction').className = `result-stat-value ${satColor}`;
+    document.getElementById('result-bonus').textContent     = timeBonus > 0 ? `+R$ ${timeBonus}` : "—";
+    document.getElementById('result-bonus').className       = `result-stat-value ${timeBonus > 0 ? "green" : ""}`;
+    document.getElementById('result-comment').innerHTML     = `"${comment}"<div class="result-comment-author">— ${customerName}, ${carModel}</div>`;
+
+    // Acender estrelas com delay escalonado
+    const starEls = document.querySelectorAll('.result-star');
+    starEls.forEach((el, i) => {
+      el.classList.remove('lit');
+      if (i < stars) {
+        setTimeout(() => el.classList.add('lit'), 200 + i * 120);
+      }
+    });
+
+    overlay.classList.add('show');
+  }
+
+  closeJobResult() {
+    const overlay = document.getElementById('job-result-overlay');
+    if (overlay) overlay.classList.remove('show');
+  }
+
   _getSaveKey() {
     return localStorage.getItem('cms_active_save_key') || 'cms_save_default';
   }
