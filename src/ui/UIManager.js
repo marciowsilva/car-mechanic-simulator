@@ -26,6 +26,7 @@ export class UIManager {
     this.loadSystems();
     this.updateAllDisplays();
     this.initTooltips();
+    this._timerInterval = null;
 
     setInterval(() => this.updateTimer(), 1000);
   }
@@ -264,6 +265,13 @@ export class UIManager {
       } catch (err) {
         console.error("❌ Erro ao carregar MinigameSystem:", err);
       }
+
+      // 11. Carregar progresso salvo
+      setTimeout(() => {
+        this._loadProgress();
+        // Auto-save a cada 60s
+        setInterval(() => this._saveProgress(), 60000);
+      }, 1000);
     } catch (err) {
       console.error("❌ Erro ao carregar sistemas:", err);
     }
@@ -529,6 +537,12 @@ export class UIManager {
     this.updatePartsList();
     this.getElement("deliver-car").disabled = false;
 
+    // Iniciar timer visual
+    const timeLimit = window.gameState.currentJob?.timeLimit
+      || this.customerSystem?.currentJob?.timeLimit
+      || 5 * 60 * 1000;
+    this.startJobTimer(timeLimit);
+
     const deliverBtn = this.getElement("deliver-car");
     if (this.animations) {
       this.animations.pulse(deliverBtn);
@@ -749,10 +763,6 @@ export class UIManager {
                     <span>Personalidade:</span>
                     <span>${customer.name || "Normal"}</span>
                 </div>
-                <div class="job-info-item">
-                    <span>Tempo:</span>
-                    <span class="${isUrgent}">⏰ ${timeStr}</span>
-                </div>
                 <div class="job-payment">
                     Pagamento: R$ ${job.payment}
                 </div>
@@ -969,31 +979,126 @@ export class UIManager {
     return names[partName] || partName;
   }
 
-  // ===== TIMER =====
-  updateTimer() {
-    if (window.gameState?.currentJob && this.customerSystem?.currentJob) {
-      this.updateJobInfo();
+  // ===== TIMER VISUAL =====
+  startJobTimer(timeLimit) {
+    this.stopJobTimer();
+    const timerEl    = document.getElementById('job-timer');
+    const display    = document.getElementById('timer-display');
+    const text       = document.getElementById('timer-text');
+    const bar        = document.getElementById('timer-bar-fill');
+    const label      = document.getElementById('timer-label');
 
-      if (this.customerSystem.getTimeRemaining() <= 0) {
-        const customer = this.customerSystem.cancelJob();
-        window.gameState.currentJob = null;
-        window.gameState.currentCar = null;
-        this.updateJobInfo();
-        this.updatePartsList();
-        this.getElement("deliver-car").disabled = true;
+    if (!timerEl) return;
+    timerEl.classList.add('show');
 
-        if (customer) {
-          this.showNotification(`⏰ ${customer.name} foi embora!`, "error");
-          this.sounds?.play("error");
-        } else {
-          this.showNotification("⏰ Tempo esgotado!", "error");
-          this.sounds?.play("error");
-        }
+    const startTime = Date.now();
+
+    this._timerInterval = setInterval(() => {
+      const elapsed   = Date.now() - startTime;
+      const remaining = Math.max(0, timeLimit - elapsed);
+      const pct       = (remaining / timeLimit) * 100;
+
+      // Atualizar texto
+      const mins = Math.floor(remaining / 60000);
+      const secs = Math.floor((remaining % 60000) / 1000);
+      if (text) text.textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+
+      // Atualizar barra
+      if (bar) {
+        bar.style.width = pct + '%';
+        bar.style.background = pct > 50
+          ? 'var(--green)'
+          : pct > 25
+          ? 'var(--amber)'
+          : 'var(--red)';
       }
+
+      // Classes de estado
+      if (display) {
+        display.classList.remove('warning', 'critical');
+        if (pct <= 25) display.classList.add('critical');
+        else if (pct <= 50) display.classList.add('warning');
+      }
+
+      // Label
+      if (label) {
+        label.textContent = pct <= 25
+          ? '⚠️ Urgente!'
+          : pct <= 50
+          ? 'Atenção'
+          : 'Tempo restante';
+      }
+
+      // Tempo esgotado
+      if (remaining <= 0) {
+        this.stopJobTimer();
+        this._onTimerExpired();
+      }
+    }, 500);
+  }
+
+  stopJobTimer() {
+    if (this._timerInterval) {
+      clearInterval(this._timerInterval);
+      this._timerInterval = null;
     }
+    const timerEl = document.getElementById('job-timer');
+    if (timerEl) timerEl.classList.remove('show');
+  }
+
+  _onTimerExpired() {
+    if (!window.gameState?.currentJob) return;
+    const customer = this.customerSystem?.cancelJob?.();
+    window.gameState.currentJob = null;
+    window.gameState.currentCar = null;
+    if (window.scene3D) window.scene3D.removeCar?.();
+    this.updateJobInfo();
+    this.updatePartsList();
+    this.getElement('deliver-car').disabled = true;
+    const name = customer?.name || 'Cliente';
+    this.showNotification(`⏰ ${name} foi embora!`, 'error');
+    this.sounds?.play('error');
+  }
+
+  updateTimer() {
+    // Mantido para compatibilidade — lógica movida para startJobTimer
   }
 
   // ===== NOTIFICAÇÕES =====
+  _getSaveKey() {
+    return localStorage.getItem('cms_active_save_key') || 'cms_save_default';
+  }
+
+  _saveProgress() {
+    if (!window.gameState) return;
+    try {
+      const save = {
+        money:         window.gameState.money,
+        level:         window.gameState.level,
+        experience:    window.gameState.experience,
+        reputation:    window.gameState.reputation,
+        jobsCompleted: window.gameState.jobsCompleted,
+        savedAt:       new Date().toISOString(),
+      };
+      localStorage.setItem(this._getSaveKey(), JSON.stringify(save));
+    } catch(e) { console.warn('Erro ao salvar:', e); }
+  }
+
+  _loadProgress() {
+    try {
+      const raw = localStorage.getItem(this._getSaveKey());
+      if (!raw || !window.gameState) return;
+      const save = JSON.parse(raw);
+      window.gameState.money         = save.money         ?? window.gameState.money;
+      window.gameState.level         = save.level         ?? window.gameState.level;
+      window.gameState.experience    = save.experience    ?? 0;
+      window.gameState.reputation    = save.reputation    ?? 3;
+      window.gameState.jobsCompleted = save.jobsCompleted ?? 0;
+      this.updateAllDisplays();
+      console.log('✅ Progresso carregado do perfil:', this._getSaveKey());
+    } catch(e) { console.warn('Erro ao carregar save:', e); }
+  }
+
   showNotification(message, type = "info", duration = 3000) {
     if (this.notifications) {
       this.notifications.show(message, type, duration);
