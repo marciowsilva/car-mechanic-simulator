@@ -509,6 +509,29 @@
     <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
   </div>
 
+  <!-- ===== HISTÓRICO DE JOBS ===== -->
+  <div id="history-panel">
+    <div class="history-modal">
+      <div class="history-header">
+        <div class="history-title">Histórico de Serviços</div>
+        <button class="history-close" onclick="window.uiManager?.hideHistory()">✕</button>
+      </div>
+      <div class="history-summary" id="history-summary"></div>
+      <div class="history-list" id="history-list"></div>
+    </div>
+  </div>
+
+  <!-- ===== LEVEL UP ===== -->
+  <div id="levelup-overlay">
+    <div class="levelup-card" id="levelup-card">
+      <div class="levelup-label">Nível alcançado</div>
+      <div class="levelup-number">N<span id="levelup-num">2</span></div>
+      <div class="levelup-title" id="levelup-title">Mecânico Experiente</div>
+      <div class="levelup-subtitle" id="levelup-subtitle">Continue assim!</div>
+      <div class="levelup-rewards" id="levelup-rewards"></div>
+    </div>
+  </div>
+
   <!-- ===== TELA DE RESULTADO ===== -->
   <div id="job-result-overlay">
     <div class="job-result-modal">

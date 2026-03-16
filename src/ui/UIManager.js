@@ -27,6 +27,7 @@ export class UIManager {
     this.updateAllDisplays();
     this.initTooltips();
     this._timerInterval = null;
+    this.jobHistory = this._loadHistory();
 
     setInterval(() => this.updateTimer(), 1000);
   }
@@ -269,6 +270,7 @@ export class UIManager {
       // 11. Carregar progresso salvo
       setTimeout(() => {
         this._loadProgress();
+        this.jobHistory = this._loadHistory();
         // Auto-save a cada 60s
         setInterval(() => this._saveProgress(), 60000);
       }, 1000);
@@ -1074,6 +1076,7 @@ export class UIManager {
     if (this._timerInterval) {
       clearInterval(this._timerInterval);
       this._timerInterval = null;
+    this.jobHistory = this._loadHistory();
     }
     const timerEl = document.getElementById('job-timer');
     if (timerEl) timerEl.classList.remove('show');
@@ -1099,6 +1102,9 @@ export class UIManager {
 
   // ===== NOTIFICAÇÕES =====
   showJobResult(data) {
+    // Registrar no histórico
+    this._addJobToHistory(data);
+
     // data: { payment, satisfaction, quality, timeBonus, customerName, carModel }
     const overlay = document.getElementById('job-result-overlay');
     if (!overlay) return;
@@ -1161,6 +1167,178 @@ export class UIManager {
     if (overlay) overlay.classList.remove('show');
   }
 
+  showLevelUp(level) {
+    const overlay = document.getElementById('levelup-overlay');
+    const numEl   = document.getElementById('levelup-num');
+    const titleEl = document.getElementById('levelup-title');
+    const subEl   = document.getElementById('levelup-subtitle');
+    const rewEl   = document.getElementById('levelup-rewards');
+    const card    = document.getElementById('levelup-card');
+    if (!overlay) return;
+
+    const titles = {2: ('Aprendiz de Mecânico', 'Você está pegando o jeito!'), 3: ('Mecânico Iniciante', 'Suas mãos já conhecem as ferramentas.'), 4: ('Mecânico Treinado', 'Clientes já confiam no seu trabalho.'), 5: ('Mecânico Experiente', 'Você resolve problemas com facilidade.'), 6: ('Técnico Especialista', 'Diagnósticos precisos e reparos eficientes.'), 7: ('Mestre Mecânico', 'Poucos chegam onde você chegou.'), 8: ('Engenheiro Automotivo', 'Sua oficina é referência na cidade.'), 9: ('Lenda da Mecânica', 'Carros difíceis? Não pra você.'), 10: ('Mito da Oficina', 'Uma lenda viva do mundo automotivo!')};
+    const [title, subtitle] = titles[level] || [`Nível ${level}`, 'Continue melhorando!'];
+
+    if (numEl)   numEl.textContent   = level;
+    if (titleEl) titleEl.textContent = title;
+    if (subEl)   subEl.textContent   = subtitle;
+
+    // Recompensas por nível
+    const rewards = [];
+    if (level % 2 === 0) rewards.push(`<div class="levelup-reward-tag gold">+R$ ${level * 500} bônus</div>`);
+    rewards.push(`<div class="levelup-reward-tag">Novos upgrades disponíveis</div>`);
+    if (rewEl) rewEl.innerHTML = rewards.join('');
+
+    // Confetti
+    if (card) {
+      const colors = ['#facc15','#3b82f6','#22c55e','#f59e0b','#e2e8f0'];
+      for (let i = 0; i < 18; i++) {
+        const p = document.createElement('div');
+        p.className = 'levelup-confetti';
+        p.style.cssText = `
+          left: ${10 + Math.random() * 80}%;
+          top: ${Math.random() * 30}%;
+          background: ${colors[Math.floor(Math.random() * colors.length)]};
+          width: ${6 + Math.random() * 6}px;
+          height: ${6 + Math.random() * 6}px;
+          animation-duration: ${0.8 + Math.random() * 0.8}s;
+          animation-delay: ${Math.random() * 0.4}s;
+        `;
+        card.appendChild(p);
+        setTimeout(() => p.remove(), 1600);
+      }
+    }
+
+    overlay.classList.add('show');
+
+    // Tocar som de level up
+    this.sounds?.play('unlock');
+
+    // Auto-fechar após 3.5s
+    setTimeout(() => {
+      overlay.classList.remove('show');
+    }, 3500);
+  }
+
+  // ===== HISTÓRICO DE JOBS =====
+
+  _loadHistory() {
+    try {
+      const key = `cms_history_${this._getSaveKey?.() || 'default'}`;
+      return JSON.parse(localStorage.getItem(key) || '[]');
+    } catch(e) { return []; }
+  }
+
+  _saveHistory() {
+    try {
+      const key = `cms_history_${this._getSaveKey?.() || 'default'}`;
+      // Manter apenas os últimos 100 jobs
+      localStorage.setItem(key, JSON.stringify(this.jobHistory.slice(-100)));
+    } catch(e) {}
+  }
+
+  _addJobToHistory(data) {
+    const entry = {
+      id:           Date.now(),
+      car:          data.carModel,
+      customer:     data.customerName,
+      payment:      data.payment,
+      satisfaction: data.satisfaction,
+      quality:      Math.round(data.quality),
+      timeBonus:    data.timeBonus || 0,
+      stars:        data.satisfaction >= 90 ? 5
+                  : data.satisfaction >= 75 ? 4
+                  : data.satisfaction >= 55 ? 3
+                  : data.satisfaction >= 35 ? 2 : 1,
+      date:         new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit' }),
+    };
+    this.jobHistory.unshift(entry); // mais recente primeiro
+    this._saveHistory();
+  }
+
+  showHistory() {
+    const panel = document.getElementById('history-panel');
+    if (!panel) return;
+
+    this._renderHistorySummary();
+    this._renderHistoryList();
+    panel.classList.add('show');
+
+    document.addEventListener('keydown', this._historyEscHandler = (e) => {
+      if (e.key === 'Escape') this.hideHistory();
+    });
+  }
+
+  hideHistory() {
+    const panel = document.getElementById('history-panel');
+    if (panel) panel.classList.remove('show');
+    if (this._historyEscHandler) {
+      document.removeEventListener('keydown', this._historyEscHandler);
+      this._historyEscHandler = null;
+    }
+  }
+
+  _renderHistorySummary() {
+    const el = document.getElementById('history-summary');
+    if (!el || !this.jobHistory.length) {
+      if (el) el.innerHTML = '';
+      return;
+    }
+
+    const total    = this.jobHistory.length;
+    const earnings = this.jobHistory.reduce((s, j) => s + (j.payment || 0), 0);
+    const avgSat   = Math.round(this.jobHistory.reduce((s, j) => s + (j.satisfaction || 0), 0) / total);
+    const perfect  = this.jobHistory.filter(j => j.stars === 5).length;
+
+    el.innerHTML = `
+      <div class="history-sum-item">
+        <div class="history-sum-value">${total}</div>
+        <div class="history-sum-label">Jobs</div>
+      </div>
+      <div class="history-sum-item">
+        <div class="history-sum-value money">R$ ${earnings.toLocaleString('pt-BR')}</div>
+        <div class="history-sum-label">Total ganho</div>
+      </div>
+      <div class="history-sum-item">
+        <div class="history-sum-value">${avgSat}%</div>
+        <div class="history-sum-label">Satisfação média</div>
+      </div>
+      <div class="history-sum-item">
+        <div class="history-sum-value">${perfect}</div>
+        <div class="history-sum-label">⭐ Perfeitos</div>
+      </div>`;
+  }
+
+  _renderHistoryList() {
+    const el = document.getElementById('history-list');
+    if (!el) return;
+
+    if (!this.jobHistory.length) {
+      el.innerHTML = '<div class="history-empty"><span style="font-size:32px">📋</span>Nenhum serviço realizado ainda</div>';
+      return;
+    }
+
+    el.innerHTML = this.jobHistory.map((job, i) => {
+      const stars = '⭐'.repeat(job.stars) + '☆'.repeat(5 - job.stars);
+      const bonus = job.timeBonus > 0 ? ` <span style="color:var(--green);font-size:10px">+R$ ${job.timeBonus}</span>` : '';
+      return `
+        <div class="history-item">
+          <div class="history-item-num">${i + 1}</div>
+          <div class="history-item-info">
+            <div class="history-item-car">${job.car}</div>
+            <div class="history-item-meta">
+              <span class="history-item-customer">👤 ${job.customer}</span>
+              <span class="history-item-date">${job.date}</span>
+            </div>
+          </div>
+          <div class="history-item-right">
+            <div class="history-item-payment">R$ ${(job.payment).toLocaleString('pt-BR')}${bonus}</div>
+            <div class="history-item-stars">${stars}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
   _getSaveKey() {
     return localStorage.getItem('cms_active_save_key') || 'cms_save_default';
   }
@@ -1196,6 +1374,15 @@ export class UIManager {
   }
 
   showNotification(message, type = "info", duration = 3000) {
+    // Detectar mensagem de level up do Game.js
+    if (message && message.includes('Nível') && message.includes('alcançado')) {
+      const match = message.match(/Nível (\d+)/);
+      if (match) {
+        const level = parseInt(match[1]);
+        setTimeout(() => this.showLevelUp(level), 300);
+      }
+    }
+
     if (this.notifications) {
       this.notifications.show(message, type, duration);
 

@@ -1,487 +1,369 @@
-// src/ui/AchievementsPanel.js - Painel de conquistas
+// src/ui/AchievementsPanel.js — Redesign flat moderno
 
 export class AchievementsPanel {
-    constructor(achievementSystem) {
-        this.achievementSystem = achievementSystem;
-        this.isVisible = false;
-        this.currentCategory = 'all';
-        this.createPanel();
-    }
+  constructor(achievementSystem) {
+    this.achievementSystem = achievementSystem;
+    this.isVisible = false;
+    this.currentCategory = 'all';
+    this._createPanel();
+  }
 
-    createPanel() {
-        this.panel = document.createElement('div');
-        this.panel.id = 'achievements-panel';
-        this.panel.className = 'achievements-panel';
-        this.panel.style.display = 'none';
-        
-        this.panel.innerHTML = `
-            <div class="achievements-header">
-                <h2>🏆 CONQUISTAS</h2>
-                <div class="header-stats">
-                    <span class="progress" id="achievement-progress">0/0 (0%)</span>
-                    <button class="close-btn">×</button>
-                </div>
-            </div>
-            
-            <div class="achievements-categories">
-                <button class="category-btn active" data-category="all">Todas</button>
-                <button class="category-btn" data-category="service">🚗 Serviços</button>
-                <button class="category-btn" data-category="money">💰 Dinheiro</button>
-                <button class="category-btn" data-category="quality">✨ Qualidade</button>
-                <button class="category-btn" data-category="customer">👥 Clientes</button>
-                <button class="category-btn" data-category="tools">🔧 Ferramentas</button>
-                <button class="category-btn" data-category="parts">🛒 Peças</button>
-                <button class="category-btn" data-category="time">⏰ Tempo</button>
-                <button class="category-btn" data-category="secret">🕵️ Secretas</button>
-            </div>
-            
-            <div class="achievements-stats" id="achievements-stats">
-                <!-- Estatísticas serão inseridas aqui -->
-            </div>
-            
-            <div class="achievements-grid" id="achievements-grid">
-                <!-- Conquistas serão inseridas aqui -->
-            </div>
-        `;
-        
-        document.body.appendChild(this.panel);
-        this.addStyles();
-        this.initEventListeners();
-    }
-
-    addStyles() {
-        const style = document.createElement('style');
-        style.textContent = `
-            .achievements-panel {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
-                width: 900px;
-                max-width: 90%;
-                max-height: 80vh;
-                background: rgba(30, 30, 30, 0.98);
-                border: 2px solid #ff6b00;
-                border-radius: 15px;
-                color: white;
-                z-index: 1000;
-                overflow: hidden;
-                backdrop-filter: blur(10px);
-            }
-            
-            .achievements-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 15px 20px;
-                background: #1a1a1a;
-                border-bottom: 1px solid #ff6b00;
-            }
-            
-            .achievements-header h2 {
-                margin: 0;
-                color: #ff6b00;
-            }
-            
-            .header-stats {
-                display: flex;
-                align-items: center;
-                gap: 20px;
-            }
-            
-            .header-stats .progress {
-                color: #ffd700;
-                font-weight: bold;
-            }
-            
-            .close-btn {
-                background: none;
-                border: none;
-                color: #888;
-                font-size: 24px;
-                cursor: pointer;
-                padding: 0 10px;
-                transition: color 0.3s;
-            }
-            
-            .close-btn:hover {
-                color: #ff6b00;
-            }
-            
-            .achievements-categories {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 5px;
-                padding: 15px 20px;
-                background: #222;
-                border-bottom: 1px solid #444;
-            }
-            
-            .category-btn {
-                padding: 6px 12px;
-                background: #333;
-                color: white;
-                border: none;
-                border-radius: 15px;
-                cursor: pointer;
-                font-size: 12px;
-                transition: all 0.3s;
-            }
-            
-            .category-btn:hover {
-                background: #444;
-            }
-            
-            .category-btn.active {
-                background: #ff6b00;
-                color: white;
-            }
-            
-            .achievements-stats {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
-                padding: 15px;
-                background: #2a2a2a;
-                border-bottom: 1px solid #444;
-            }
-            
-            .stat-card {
-                text-align: center;
-                padding: 10px;
-                background: #333;
-                border-radius: 5px;
-            }
-            
-            .stat-card .value {
-                font-size: 20px;
-                font-weight: bold;
-                color: #ff6b00;
-            }
-            
-            .stat-card .label {
-                font-size: 11px;
-                color: #888;
-                margin-top: 5px;
-            }
-            
-            .achievements-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-                gap: 15px;
-                padding: 20px;
-                max-height: 400px;
-                overflow-y: auto;
-            }
-            
-            .achievement-card {
-                background: #2a2a2a;
-                padding: 15px;
-                border-radius: 8px;
-                border: 1px solid #444;
-                transition: all 0.3s;
-                position: relative;
-            }
-            
-            .achievement-card.unlocked {
-                border-color: gold;
-                background: #2a2a2a;
-            }
-            
-            .achievement-card.hidden {
-                opacity: 0.5;
-            }
-            
-            .achievement-card:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            }
-            
-            .achievement-icon {
-                font-size: 32px;
-                margin-bottom: 10px;
-            }
-            
-            .achievement-name {
-                font-size: 16px;
-                font-weight: bold;
-                color: #ff6b00;
-                margin-bottom: 5px;
-            }
-            
-            .achievement-desc {
-                font-size: 12px;
-                color: #888;
-                margin-bottom: 10px;
-            }
-            
-            .achievement-reward {
-                display: flex;
-                gap: 10px;
-                font-size: 11px;
-                color: #ffd700;
-                margin-bottom: 10px;
-            }
-            
-            .achievement-status {
-                font-size: 12px;
-                padding: 4px 8px;
-                border-radius: 12px;
-                display: inline-block;
-            }
-            
-            .status-unlocked {
-                background: #4CAF50;
-                color: white;
-            }
-            
-            .status-locked {
-                background: #666;
-                color: white;
-            }
-            
-            .secret-badge {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background: gold;
-                color: black;
-                padding: 2px 6px;
-                border-radius: 10px;
-                font-size: 10px;
-                font-weight: bold;
-            }
-            
-            .recent-unlocked {
-                margin-top: 5px;
-                font-size: 10px;
-                color: #4CAF50;
-                animation: pulse 2s infinite;
-            }
-            
-            @keyframes pulse {
-                0% { opacity: 1; }
-                50% { opacity: 0.5; }
-                100% { opacity: 1; }
-            }
-        `;
-        
-        document.head.appendChild(style);
-    }
-
-    initEventListeners() {
-        // Fechar
-        const closeBtn = this.panel.querySelector('.close-btn');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hide());
+  _createPanel() {
+    if (!document.getElementById('ach-panel-styles')) {
+      const style = document.createElement('style');
+      style.id = 'ach-panel-styles';
+      style.textContent = `
+        #achievements-panel {
+          position: fixed; inset: 0; z-index: 2000;
+          display: none; align-items: center; justify-content: center;
+          background: rgba(10,12,20,0.78); backdrop-filter: blur(6px);
+          font-family: 'DM Sans', sans-serif;
         }
-        
-        // Categorias
-        const categoryBtns = this.panel.querySelectorAll('.category-btn');
-        categoryBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                categoryBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                
-                this.currentCategory = btn.dataset.category;
-                this.update();
-            });
-        });
-        
-        // ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && this.isVisible) {
-                this.hide();
-            }
-        });
-    }
+        #achievements-panel.show { display: flex; }
 
-    show() {
-        this.isVisible = true;
-        this.panel.style.display = 'block';
-        this.update();
-    }
-
-    hide() {
-        this.isVisible = false;
-        this.panel.style.display = 'none';
-    }
-
-    toggle() {
-        if (this.isVisible) {
-            this.hide();
-        } else {
-            this.show();
+        .ach-modal {
+          background: #181c27; border: 1px solid #2a3047;
+          border-radius: 20px; width: 860px; max-width: 95vw;
+          max-height: 88vh; display: flex; flex-direction: column;
+          box-shadow: 0 24px 80px rgba(0,0,0,0.6); overflow: hidden;
         }
-    }
 
-    update() {
-        this.updateProgress();
-        this.updateStats();
-        this.updateAchievements();
-    }
-
-    updateProgress() {
-        const progress = this.achievementSystem.getProgress();
-        const progressEl = this.panel.querySelector('#achievement-progress');
-        if (progressEl) {
-            progressEl.textContent = `${progress.unlocked}/${progress.total} (${progress.percentage}%)`;
+        .ach-header {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 20px 24px; border-bottom: 1px solid #2a3047; flex-shrink: 0;
         }
+        .ach-header-left { display: flex; align-items: center; gap: 12px; }
+        .ach-title { font-size: 17px; font-weight: 700; color: #e2e8f0; }
+        .ach-progress-badge {
+          font-size: 12px; font-weight: 600; padding: 4px 10px;
+          border-radius: 100px; background: rgba(59,130,246,0.12);
+          color: #60a5fa; border: 1px solid rgba(59,130,246,0.25);
+          font-family: 'DM Mono', monospace;
+        }
+        .ach-close {
+          width: 32px; height: 32px; border-radius: 8px;
+          background: transparent; border: 1px solid #2a3047;
+          color: #64748b; cursor: pointer; font-size: 16px;
+          display: flex; align-items: center; justify-content: center;
+          transition: all 0.15s;
+        }
+        .ach-close:hover { background: #252b3b; color: #e2e8f0; }
+
+        /* Stats */
+        .ach-stats {
+          display: grid; grid-template-columns: repeat(6,1fr);
+          border-bottom: 1px solid #2a3047; flex-shrink: 0;
+        }
+        .ach-stat {
+          text-align: center; padding: 14px 8px;
+          border-right: 1px solid #2a3047;
+        }
+        .ach-stat:last-child { border-right: none; }
+        .ach-stat-value {
+          font-size: 20px; font-weight: 700; color: #3b82f6;
+          font-family: 'DM Mono', monospace; margin-bottom: 3px;
+        }
+        .ach-stat-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; }
+
+        /* Barra de progresso geral */
+        .ach-overall-bar {
+          padding: 12px 24px; border-bottom: 1px solid #2a3047;
+          display: flex; align-items: center; gap: 12px; flex-shrink: 0;
+        }
+        .ach-bar-bg {
+          flex: 1; height: 6px; background: #1f2433;
+          border-radius: 100px; overflow: hidden;
+        }
+        .ach-bar-fill {
+          height: 100%; border-radius: 100px; background: #3b82f6;
+          transition: width 0.6s ease;
+        }
+        .ach-bar-label { font-size: 12px; color: #64748b; white-space: nowrap; font-family: 'DM Mono', monospace; }
+
+        /* Categorias */
+        .ach-cats {
+          display: flex; gap: 6px; padding: 12px 24px;
+          border-bottom: 1px solid #2a3047; flex-wrap: wrap; flex-shrink: 0;
+          background: #181c27;
+        }
+        .ach-cat {
+          padding: 6px 14px; border-radius: 100px; font-size: 12px;
+          font-weight: 600; cursor: pointer; border: 1px solid transparent;
+          color: #64748b; background: transparent; transition: all 0.15s;
+          font-family: 'DM Sans', sans-serif;
+        }
+        .ach-cat:hover { background: #1f2433; color: #94a3b8; }
+        .ach-cat.active {
+          background: rgba(59,130,246,0.12); border-color: #3b82f6; color: #60a5fa;
+        }
+
+        /* Grid */
+        .ach-grid {
+          display: grid; grid-template-columns: repeat(auto-fill, minmax(240px,1fr));
+          gap: 10px; padding: 16px 24px; overflow-y: auto; flex: 1;
+        }
+        .ach-grid::-webkit-scrollbar { width: 4px; }
+        .ach-grid::-webkit-scrollbar-track { background: transparent; }
+        .ach-grid::-webkit-scrollbar-thumb { background: #2a3047; border-radius: 100px; }
+
+        /* Card */
+        .ach-card {
+          background: #1f2433; border: 1px solid #2a3047;
+          border-radius: 14px; padding: 16px; transition: all 0.15s;
+          position: relative;
+        }
+        .ach-card:hover { border-color: #363d55; }
+        .ach-card.unlocked { border-color: rgba(250,204,21,0.3); background: rgba(250,204,21,0.03); }
+        .ach-card.hidden-card { opacity: 0.45; }
+
+        .ach-card-top { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+        .ach-card-icon {
+          width: 44px; height: 44px; border-radius: 10px;
+          background: #252b3b; display: flex; align-items: center;
+          justify-content: center; font-size: 22px; flex-shrink: 0;
+        }
+        .ach-card.unlocked .ach-card-icon { background: rgba(250,204,21,0.1); }
+
+        .ach-card-info { flex: 1; min-width: 0; }
+        .ach-card-name {
+          font-size: 13px; font-weight: 700; color: #e2e8f0; margin-bottom: 3px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .ach-card.unlocked .ach-card-name { color: #facc15; }
+        .ach-card-desc { font-size: 11px; color: #64748b; line-height: 1.4; }
+
+        .ach-badge {
+          position: absolute; top: 10px; right: 10px;
+          font-size: 10px; font-weight: 700; padding: 2px 7px;
+          border-radius: 100px;
+        }
+        .ach-badge.secret { background: rgba(168,85,247,0.15); color: #a855f7; border: 1px solid rgba(168,85,247,0.3); }
+        .ach-badge.unlocked-badge { background: rgba(250,204,21,0.12); color: #facc15; border: 1px solid rgba(250,204,21,0.25); }
+
+        .ach-reward {
+          display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+        }
+        .ach-reward-tag {
+          font-size: 10px; font-weight: 600; padding: 2px 7px;
+          border-radius: 100px;
+        }
+        .ach-reward-tag.money  { background: rgba(250,204,21,0.1); color: #facc15; border: 1px solid rgba(250,204,21,0.2); }
+        .ach-reward-tag.xp     { background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); }
+
+        .ach-status {
+          font-size: 11px; font-weight: 600; padding: 3px 9px;
+          border-radius: 100px; display: inline-block;
+        }
+        .ach-status.done   { background: rgba(34,197,94,0.12); color: #22c55e; border: 1px solid rgba(34,197,94,0.25); }
+        .ach-status.locked { background: rgba(100,116,139,0.12); color: #64748b; border: 1px solid rgba(100,116,139,0.2); }
+
+        /* Notificação de conquista */
+        .ach-notif {
+          position: fixed; bottom: 88px; right: 16px;
+          background: #181c27; border: 1px solid rgba(250,204,21,0.3);
+          border-left: 3px solid #facc15;
+          border-radius: 14px; padding: 14px 16px;
+          display: flex; align-items: center; gap: 12px;
+          min-width: 280px; max-width: 340px;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+          z-index: 9999;
+          transform: translateX(calc(100% + 24px));
+          transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+          font-family: 'DM Sans', sans-serif;
+        }
+        .ach-notif.show { transform: translateX(0); }
+        .ach-notif-icon { font-size: 32px; flex-shrink: 0; }
+        .ach-notif-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+        .ach-notif-name { font-size: 14px; font-weight: 700; color: #facc15; margin-bottom: 4px; }
+        .ach-notif-reward { font-size: 11px; color: #94a3b8; }
+      `;
+      document.head.appendChild(style);
     }
 
-    updateStats() {
-        const stats = this.achievementSystem.getStats();
-        const statsEl = this.panel.querySelector('#achievements-stats');
-        
-        statsEl.innerHTML = `
-            <div class="stat-card">
-                <div class="value">${stats.jobsCompleted}</div>
-                <div class="label">Serviços</div>
-            </div>
-            <div class="stat-card">
-                <div class="value">${stats.perfectJobs}</div>
-                <div class="label">Perfeitos</div>
-            </div>
-            <div class="stat-card">
-                <div class="value">${stats.vipCustomers}</div>
-                <div class="label">VIPs</div>
-            </div>
-            <div class="stat-card">
-                <div class="value">${stats.upgradesDone}</div>
-                <div class="label">Upgrades</div>
-            </div>
-            <div class="stat-card">
-                <div class="value">${stats.partsBought}</div>
-                <div class="label">Peças</div>
-            </div>
-            <div class="stat-card">
-                <div class="value">${stats.fastJobs}</div>
-                <div class="label">Rápidos</div>
-            </div>
-        `;
+    this.panel = document.createElement('div');
+    this.panel.id = 'achievements-panel';
+
+    this.panel.innerHTML = `
+      <div class="ach-modal">
+        <div class="ach-header">
+          <div class="ach-header-left">
+            <div class="ach-title">Conquistas</div>
+            <div class="ach-progress-badge" id="ach-progress">0 / 0</div>
+          </div>
+          <button class="ach-close" id="ach-close">✕</button>
+        </div>
+
+        <div class="ach-stats" id="ach-stats"></div>
+
+        <div class="ach-overall-bar">
+          <div class="ach-bar-bg"><div class="ach-bar-fill" id="ach-bar" style="width:0%"></div></div>
+          <div class="ach-bar-label" id="ach-bar-label">0%</div>
+        </div>
+
+        <div class="ach-cats">
+          <button class="ach-cat active" data-category="all">Todas</button>
+          <button class="ach-cat" data-category="service">🚗 Serviços</button>
+          <button class="ach-cat" data-category="money">💰 Dinheiro</button>
+          <button class="ach-cat" data-category="quality">✨ Qualidade</button>
+          <button class="ach-cat" data-category="customer">👥 Clientes</button>
+          <button class="ach-cat" data-category="tools">🔧 Ferramentas</button>
+          <button class="ach-cat" data-category="parts">🛒 Peças</button>
+          <button class="ach-cat" data-category="time">⏰ Tempo</button>
+          <button class="ach-cat" data-category="secret">🔮 Secretas</button>
+        </div>
+
+        <div class="ach-grid" id="ach-grid"></div>
+      </div>
+    `;
+
+    document.body.appendChild(this.panel);
+    this._bindEvents();
+  }
+
+  _bindEvents() {
+    document.getElementById('ach-close').addEventListener('click', () => this.hide());
+
+    this.panel.querySelectorAll('.ach-cat').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.panel.querySelectorAll('.ach-cat').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.currentCategory = btn.dataset.category;
+        this._renderGrid();
+      });
+    });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && this.isVisible) this.hide();
+    });
+  }
+
+  show()   { this.isVisible = true;  this.panel.classList.add('show');    this.update(); }
+  hide()   { this.isVisible = false; this.panel.classList.remove('show'); }
+  toggle() { this.isVisible ? this.hide() : this.show(); }
+
+  update() {
+    this._renderProgress();
+    this._renderStats();
+    this._renderGrid();
+  }
+
+  _renderProgress() {
+    const p = this.achievementSystem.getProgress?.() || { unlocked: 0, total: 0, percentage: 0 };
+    const badge = document.getElementById('ach-progress');
+    const bar   = document.getElementById('ach-bar');
+    const label = document.getElementById('ach-bar-label');
+    if (badge) badge.textContent = `${p.unlocked} / ${p.total}`;
+    if (bar)   bar.style.width  = p.percentage + '%';
+    if (label) label.textContent = p.percentage + '%';
+  }
+
+  _renderStats() {
+    const s = this.achievementSystem.getStats?.() || {};
+    const el = document.getElementById('ach-stats');
+    if (!el) return;
+    const items = [
+      { v: s.jobsCompleted  || 0, l: 'Serviços' },
+      { v: s.perfectJobs    || 0, l: 'Perfeitos' },
+      { v: s.fastJobs       || 0, l: 'Rápidos' },
+      { v: s.vipCustomers   || 0, l: 'VIPs' },
+      { v: s.upgradesDone   || 0, l: 'Upgrades' },
+      { v: s.partsBought    || 0, l: 'Peças' },
+    ];
+    el.innerHTML = items.map(i => `
+      <div class="ach-stat">
+        <div class="ach-stat-value">${i.v}</div>
+        <div class="ach-stat-label">${i.l}</div>
+      </div>`).join('');
+  }
+
+  _renderGrid() {
+    const grid = document.getElementById('ach-grid');
+    if (!grid) return;
+
+    const list = this.currentCategory === 'all'
+      ? this.achievementSystem.getAllAchievements?.() || []
+      : this.achievementSystem.getAchievementsByCategory?.(this.currentCategory) || [];
+
+    if (!list.length) {
+      grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:#64748b;font-size:14px">Nenhuma conquista nesta categoria</div>';
+      return;
     }
 
-    updateAchievements() {
-        const grid = this.panel.querySelector('#achievements-grid');
-        const achievements = this.currentCategory === 'all' 
-            ? this.achievementSystem.getAllAchievements()
-            : this.achievementSystem.getAchievementsByCategory(this.currentCategory);
-        
-        grid.innerHTML = '';
-        
-        achievements.forEach(ach => {
-            const card = document.createElement('div');
-            card.className = `achievement-card ${ach.unlocked ? 'unlocked' : ''} ${ach.hidden && !ach.unlocked ? 'hidden' : ''}`;
-            
-            let statusHtml = '';
-            if (ach.unlocked) {
-                statusHtml = '<span class="achievement-status status-unlocked">✅ Desbloqueada</span>';
-            } else {
-                statusHtml = '<span class="achievement-status status-locked">🔒 Bloqueada</span>';
-            }
-            
-            let secretHtml = '';
-            if (ach.secret && !ach.unlocked) {
-                secretHtml = '<div class="secret-badge">🔮 Secreta</div>';
-            } else if (ach.secret && ach.unlocked) {
-                secretHtml = `<div class="secret-badge">✨ ${ach.secret}</div>`;
-            }
-            
-            card.innerHTML = `
-                ${secretHtml}
-                <div class="achievement-icon">${ach.icon}</div>
-                <div class="achievement-name">${ach.name}</div>
-                <div class="achievement-desc">${ach.description}</div>
-                <div class="achievement-reward">
-                    ${ach.reward.money ? `💰 ${ach.reward.money}` : ''}
-                    ${ach.reward.experience ? ` ⭐ ${ach.reward.experience} XP` : ''}
-                </div>
-                ${statusHtml}
-            `;
-            
-            grid.appendChild(card);
-        });
-    }
+    // Ordenar: desbloqueadas primeiro, depois secretas por último
+    const sorted = [...list].sort((a, b) => {
+      if (a.unlocked && !b.unlocked) return -1;
+      if (!a.unlocked && b.unlocked) return 1;
+      if (a.secret && !b.secret) return 1;
+      if (!a.secret && b.secret) return -1;
+      return 0;
+    });
 
-    showUnlockedNotification(achievement) {
-        const notification = document.createElement('div');
-        notification.className = 'achievement-notification';
-        notification.innerHTML = `
-            <div class="achievement-notif-icon">${achievement.icon}</div>
-            <div class="achievement-notif-content">
-                <div class="achievement-notif-title">🏆 Conquista Desbloqueada!</div>
-                <div class="achievement-notif-name">${achievement.name}</div>
-                <div class="achievement-notif-reward">
-                    ${achievement.reward.money ? `💰 +${achievement.reward.money}` : ''}
-                    ${achievement.reward.experience ? ` ⭐ +${achievement.reward.experience} XP` : ''}
-                </div>
+    grid.innerHTML = sorted.map(ach => {
+      const isHidden = ach.hidden && !ach.unlocked;
+      const name  = isHidden ? '???' : ach.name;
+      const desc  = isHidden ? 'Complete condições especiais para revelar' : ach.description;
+      const icon  = isHidden ? '🔒' : ach.icon;
+
+      const badge = ach.unlocked
+        ? '<div class="ach-badge unlocked-badge">✓ Obtida</div>'
+        : ach.secret && !ach.unlocked
+        ? '<div class="ach-badge secret">Secreta</div>'
+        : '';
+
+      const rewards = [];
+      if (ach.reward?.money)      rewards.push(`<span class="ach-reward-tag money">+R$ ${ach.reward.money}</span>`);
+      if (ach.reward?.experience) rewards.push(`<span class="ach-reward-tag xp">+${ach.reward.experience} XP</span>`);
+
+      const status = ach.unlocked
+        ? '<span class="ach-status done">✓ Desbloqueada</span>'
+        : '<span class="ach-status locked">🔒 Bloqueada</span>';
+
+      return `
+        <div class="ach-card ${ach.unlocked ? 'unlocked' : ''} ${isHidden ? 'hidden-card' : ''}">
+          ${badge}
+          <div class="ach-card-top">
+            <div class="ach-card-icon">${icon}</div>
+            <div class="ach-card-info">
+              <div class="ach-card-name">${name}</div>
+              <div class="ach-card-desc">${desc}</div>
             </div>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        setTimeout(() => {
-            notification.classList.add('show');
-        }, 100);
-        
-        setTimeout(() => {
-            notification.classList.remove('show');
-            setTimeout(() => notification.remove(), 300);
-        }, 5000);
-        
-        // Adicionar estilo
-        const style = document.createElement('style');
-        style.textContent = `
-            .achievement-notification {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                width: 300px;
-                background: linear-gradient(135deg, #ff6b00, #ff8c00);
-                color: white;
-                padding: 15px;
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                transform: translateX(400px);
-                transition: transform 0.3s ease;
-                z-index: 2000;
-                box-shadow: 0 0 20px rgba(0,0,0,0.5);
-                border-left: 4px solid gold;
-            }
-            
-            .achievement-notification.show {
-                transform: translateX(0);
-            }
-            
-            .achievement-notif-icon {
-                font-size: 32px;
-            }
-            
-            .achievement-notif-title {
-                font-size: 14px;
-                font-weight: bold;
-                margin-bottom: 5px;
-            }
-            
-            .achievement-notif-name {
-                font-size: 16px;
-                font-weight: bold;
-                margin-bottom: 5px;
-            }
-            
-            .achievement-notif-reward {
-                font-size: 12px;
-                color: gold;
-            }
-        `;
-        
-        document.head.appendChild(style);
-    }
+          </div>
+          ${rewards.length ? `<div class="ach-reward">${rewards.join('')}</div>` : ''}
+          ${status}
+        </div>`;
+    }).join('');
+  }
+
+  showUnlockedNotification(achievement) {
+    // Remover notif anterior se existir
+    document.querySelector('.ach-notif')?.remove();
+
+    const notif = document.createElement('div');
+    notif.className = 'ach-notif';
+
+    const rewardParts = [];
+    if (achievement.reward?.money)      rewardParts.push(`+R$ ${achievement.reward.money}`);
+    if (achievement.reward?.experience) rewardParts.push(`+${achievement.reward.experience} XP`);
+
+    notif.innerHTML = `
+      <div class="ach-notif-icon">${achievement.icon}</div>
+      <div>
+        <div class="ach-notif-label">Conquista desbloqueada</div>
+        <div class="ach-notif-name">${achievement.name}</div>
+        ${rewardParts.length ? `<div class="ach-notif-reward">${rewardParts.join(' · ')}</div>` : ''}
+      </div>
+    `;
+
+    document.body.appendChild(notif);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => notif.classList.add('show'));
+    });
+
+    setTimeout(() => {
+      notif.classList.remove('show');
+      setTimeout(() => notif.remove(), 400);
+    }, 5000);
+  }
 }
 
-// Expor globalmente
-if (typeof window !== 'undefined') {
-    window.AchievementsPanel = AchievementsPanel;
-}
+if (typeof window !== 'undefined') window.AchievementsPanel = AchievementsPanel;
