@@ -27,9 +27,9 @@ export class UIManager {
     this.updateAllDisplays();
     this.initTooltips();
     this._timerInterval = null;
-    this.jobHistory = this._loadHistory();
+    this.jobHistory = this._loadHistory() || [];
 
-    setInterval(() => this.updateTimer(), 1000);
+    this._timerDisplayInterval = setInterval(() => this.updateTimer(), 1000);
   }
 
   // ===== SISTEMA DE CACHE DE ELEMENTOS =====
@@ -262,7 +262,6 @@ export class UIManager {
       try {
         const { MinigameSystem } = await import("/src/systems/MinigameSystem.js");
         this.minigame = new MinigameSystem();
-        console.log("✅ MinigameSystem carregado");
       } catch (err) {
         console.error("❌ Erro ao carregar MinigameSystem:", err);
       }
@@ -270,9 +269,9 @@ export class UIManager {
       // 11. Carregar progresso salvo
       setTimeout(() => {
         this._loadProgress();
-        this.jobHistory = this._loadHistory();
+        this.jobHistory = this._loadHistory() || [];
         // Auto-save a cada 60s
-        setInterval(() => this._saveProgress(), 60000);
+        this._autoSaveInterval = setInterval(() => this._saveProgress(), 60000);
       }, 1000);
     } catch (err) {
       console.error("❌ Erro ao carregar sistemas:", err);
@@ -571,7 +570,7 @@ export class UIManager {
       : currentJob?.carModel || 'Veículo';
 
     if (this.customerSystem && this.customerSystem.currentJob) {
-      const parts = window.gameState.currentCar.parts;
+      const parts = window.gameState.currentCar?.parts || {};
       let totalCondition = 0;
       let count = 0;
 
@@ -828,7 +827,7 @@ export class UIManager {
       return;
     }
 
-    const parts = window.gameState.currentCar.parts;
+    const parts = window.gameState.currentCar?.parts || {};
     const gameState = window.gameState;
 
     let totalCondition = 0;
@@ -929,8 +928,6 @@ export class UIManager {
         const partName = btn.dataset.part;
         const mgSystem = window.uiManager?.minigame;
         const toolId   = window.gameState?.selectedTool || 'wrench';
-
-        // Tocar som da ferramenta
         window.uiManager?.sounds?.playToolSound?.(toolId);
 
         // Verificar se minigame está habilitado
@@ -1076,7 +1073,7 @@ export class UIManager {
     if (this._timerInterval) {
       clearInterval(this._timerInterval);
       this._timerInterval = null;
-    this.jobHistory = this._loadHistory();
+    this.jobHistory = this._loadHistory() || [];
     }
     const timerEl = document.getElementById('job-timer');
     if (timerEl) timerEl.classList.remove('show');
@@ -1085,12 +1082,22 @@ export class UIManager {
   _onTimerExpired() {
     if (!window.gameState?.currentJob) return;
     const customer = this.customerSystem?.cancelJob?.();
+
+    this.stopJobTimer();
+
+    // Remover carro da cena
+    if (window.scene3D) window.scene3D.removeCar?.();
+
     window.gameState.currentJob = null;
     window.gameState.currentCar = null;
-    if (window.scene3D) window.scene3D.removeCar?.();
+
     this.updateJobInfo();
     this.updatePartsList();
     this.getElement('deliver-car').disabled = true;
+
+    // Salvar progresso
+    this._saveProgress();
+
     const name = customer?.name || 'Cliente';
     this.showNotification(`⏰ ${name} foi embora!`, 'error');
     this.sounds?.play('error');
@@ -1370,17 +1377,29 @@ export class UIManager {
       window.gameState.reputation    = save.reputation    ?? 3;
       window.gameState.jobsCompleted = save.jobsCompleted ?? 0;
       this.updateAllDisplays();
-      console.log('✅ Progresso carregado do perfil:', this._getSaveKey());
     } catch(e) { console.warn('Erro ao carregar save:', e); }
   }
 
+  destroy() {
+    if (this._timerDisplayInterval) clearInterval(this._timerDisplayInterval);
+    if (this._autoSaveInterval)     clearInterval(this._autoSaveInterval);
+    if (this._timerInterval)        clearInterval(this._timerInterval);
+    if (this.challengesInterval)    clearInterval(this.challengesInterval);
+    if (this.marketInterval)        clearInterval(this.marketInterval);
+    if (this.tournamentInterval)    clearInterval(this.tournamentInterval);
+  }
+
   showNotification(message, type = "info", duration = 3000) {
-    // Detectar mensagem de level up do Game.js
-    if (message && message.includes('Nível') && message.includes('alcançado')) {
+    // Detectar mensagem de level up do Game.js (sem loop)
+    if (!this._showingLevelUp && message && message.includes('Nível') && message.includes('alcançado')) {
       const match = message.match(/Nível (\d+)/);
       if (match) {
         const level = parseInt(match[1]);
-        setTimeout(() => this.showLevelUp(level), 300);
+        this._showingLevelUp = true;
+        setTimeout(() => {
+          this.showLevelUp(level);
+          setTimeout(() => { this._showingLevelUp = false; }, 4000);
+        }, 300);
       }
     }
 
@@ -1470,13 +1489,8 @@ export class UIManager {
 window.selectPart = (partName) => {
   if (window.gameState) {
     window.gameState.selectedPart = partName;
-    if (window.uiManager) {
-      window.uiManager.updatePartsList();
-      window.uiManager.showNotification(
-        `🔧 Peça selecionada: ${partName}`,
-        "info",
-      );
-    }
+    window.uiManager?.updatePartsList();
+    window.uiManager?.showNotification(`🔧 Peça selecionada: ${partName}`, "info");
   }
 };
 
@@ -1489,10 +1503,7 @@ window.repairPart = (partName) => {
   const mgSystem = window.uiManager?.minigame;
   const toolId   = window.gameState?.selectedTool || 'wrench';
 
-  console.log('🔧 repairPart chamado:', partName, '| tool:', toolId, '| minigame:', !!mgSystem);
-
   if (mgSystem) {
-    console.log('🎮 Abrindo minigame...');
     mgSystem.start(partName, toolId, (quality) => {
       // quality: 0–100
       const result = window.gameState.repairPart(partName);
@@ -1580,20 +1591,15 @@ window.buyPart = (partType, quantity = 1, rarity = "comum") => {
     return;
   }
 
-  const result = window.uiManager.economySystem.buyPart(
-    partType,
-    quantity,
-    rarity,
-  );
+  const result = window.uiManager?.economySystem?.buyPart(partType, quantity, rarity);
+  if (!result) return;
 
   if (result.success) {
-    window.uiManager.showNotification(result.message, "money");
-    window.uiManager.updateMoney();
-    if (window.uiManager.shopPanel) {
-      window.uiManager.shopPanel.update();
-    }
+    window.uiManager?.showNotification(result.message, "money");
+    window.uiManager?.updateMoney();
+    window.uiManager?.shopPanel?.update();
   } else {
-    window.uiManager.showNotification(result.message, "error");
+    window.uiManager?.showNotification(result.message, "error");
   }
 };
 

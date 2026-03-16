@@ -33,6 +33,8 @@ export class OptimizedGarage {
     this.partLabelsVisible = false;
     this.ceilingLights = [];     // Luzes do teto para animação dinâmica
     this.lightsOn = true;        // Estado das luzes
+    this._currentLightLevel = 0; // Nível atual de intensidade (0-1)
+    this._lightAnimInterval = null;
     this.liftArms = []; // Braços do elevador ativo
 
     // Movimentação FPS
@@ -333,7 +335,6 @@ export class OptimizedGarage {
 
     if (!this.equipmentSystem) return;
     const eqId = this.hoveredObject.userData.equipmentId;
-    console.warn(`Interagindo com: ${eqId}`);
     this.equipmentSystem.interactWithEquipment(eqId);
   }
 
@@ -606,7 +607,7 @@ export class OptimizedGarage {
     ];
     this._lastTimeLabel = '';
     this._updateDayNight();
-    setInterval(() => this._updateDayNight(), 60000);
+    this._dayNightInterval = setInterval(() => this._updateDayNight(), 60000);
   }
 
   _getTimeProfile() {
@@ -907,6 +908,7 @@ export class OptimizedGarage {
   // Definir intensidade das luzes (0.0 = apagada, 1.0 = plena)
   setLightsIntensity(level) {
     this.lightsOn = level > 0;
+    this._currentLightLevel = level;
     this.ceilingLights.forEach(({ light, fillLight, bulbMat }) => {
       light.intensity           = level * 2.5;
       fillLight.intensity       = level * 0.6;
@@ -957,11 +959,14 @@ export class OptimizedGarage {
 
   // Efeito de flicker (mantido para uso inicial)
   flickerLightsOn() {
+    clearInterval(this._lightAnimInterval);
     this.setLightsIntensity(0);
+    this._currentLightLevel = 0;
     const steps = [0.1, 0, 0.4, 0, 0.8, 0.3, 1.0];
     steps.forEach((intensity, i) => {
       setTimeout(() => {
         this.setLightsIntensity(intensity);
+        this._currentLightLevel = intensity;
         if (i === steps.length - 1) {
           this.lightsOn = true;
           this._currentLightLevel = 1.0;
@@ -1390,8 +1395,6 @@ export class OptimizedGarage {
         }
         this.carWheels.forEach(wheel => { wheel.userData.rotAxis = rotAxis; });
 
-        console.log(`🚗 Rodas (${modelInfo.name}):`, this.carWheels.length,
-          this.carWheels.map(w => `${w.name}[rot:${rotAxis}]`));
 
         // --- Orientar: frente do carro para -Z (padrão da garagem) ---
         // Modelos do Sketchfab geralmente já vêm orientados, mas garantimos
@@ -1465,6 +1468,11 @@ export class OptimizedGarage {
         this.carExitTarget = 16;
       }, 800);
     }
+  }
+
+  destroy() {
+    if (this._lightAnimInterval) clearInterval(this._lightAnimInterval);
+    if (this._dayNightInterval)  clearInterval(this._dayNightInterval);
   }
 
   preloadCarModels() {

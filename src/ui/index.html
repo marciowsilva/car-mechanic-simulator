@@ -735,14 +735,23 @@
       activeProfileId = localStorage.getItem('cms_active_profile');
 
       if (activeProfileId) {
-        updateMenuForProfile(activeProfileId);
-      } else {
-        // Sem perfil ativo — mostrar tela de perfis
+        // Verificar se perfil ainda existe
+        const profiles = getProfiles();
+        if (!profiles.find(p => p.id === activeProfileId)) {
+          activeProfileId = null;
+          localStorage.removeItem('cms_active_profile');
+        } else {
+          updateMenuForProfile(activeProfileId);
+        }
+      }
+
+      if (!activeProfileId) {
         const profiles = getProfiles();
         if (profiles.length > 0) {
-          // Tem perfis mas nenhum selecionado
+          // Tem perfis mas nenhum selecionado — mostrar tela de seleção
           showProfileScreen();
         }
+        // Se não tem nenhum perfil, deixa o menu principal com btn-new-game
       }
 
       loadSettings();
@@ -859,8 +868,20 @@
 
     function returnToMenu() {
       if (!confirm('Voltar ao menu? O progresso foi salvo automaticamente.')) return;
-      // Salvar antes de sair
-      if (window.uiManager?._saveProgress) window.uiManager._saveProgress();
+
+      // Salvar progresso
+      window.uiManager?._saveProgress?.();
+
+      // Parar timer
+      window.uiManager?.stopJobTimer?.();
+
+      // Limpar cena 3D
+      window.scene3D?.hidePartLabels?.();
+
+      // Fechar painéis abertos
+      window.uiManager?.closeJobResult?.();
+      window.uiManager?.hideHistory?.();
+
       // Fade
       const transition = document.getElementById('menu-transition');
       transition.classList.add('fade-in');
