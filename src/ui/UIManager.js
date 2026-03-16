@@ -1224,15 +1224,16 @@ export class UIManager {
 
   _loadHistory() {
     try {
-      const key = `cms_history_${this._getSaveKey?.() || 'default'}`;
+      const saveKey = localStorage.getItem('cms_active_save_key') || 'cms_save_default';
+      const key = `cms_history_${saveKey}`;
       return JSON.parse(localStorage.getItem(key) || '[]');
     } catch(e) { return []; }
   }
 
   _saveHistory() {
     try {
-      const key = `cms_history_${this._getSaveKey?.() || 'default'}`;
-      // Manter apenas os últimos 100 jobs
+      const saveKey = localStorage.getItem('cms_active_save_key') || 'cms_save_default';
+      const key = `cms_history_${saveKey}`;
       localStorage.setItem(key, JSON.stringify(this.jobHistory.slice(-100)));
     } catch(e) {}
   }

@@ -496,7 +496,8 @@
       <div class="btn-sep"></div>
       <button class="action-btn" id="events-btn">📅 Eventos</button>
       <button class="action-btn" id="customers-btn">👥 Clientes</button>
-      <button class="action-btn" id="achievements-btn">🏆 Conquistas</button>
+        <button class="action-btn" id="history-btn" onclick="window.uiManager?.showHistory()">📋 Histórico</button>
+        <button class="action-btn" id="achievements-btn">🏆 Conquistas</button>
       <div class="btn-sep"></div>
       <button class="action-btn" id="garage-btn">🏢 Garagem</button>
       <button class="action-btn" id="garage-upgrade-btn">➕ Expandir</button>
@@ -785,6 +786,7 @@
           if (!confirm('Isso vai apagar o progresso deste perfil. Tem certeza?')) return;
         }
         localStorage.removeItem(saveKey);
+        localStorage.removeItem(`cms_history_${saveKey}`);
       }
 
       // Guardar perfil ativo para o UIManager saber qual chave usar
@@ -800,6 +802,34 @@
         document.getElementById('game-container').style.display = 'block';
         document.getElementById('ui-overlay').style.display = 'block';
         document.getElementById('controls-panel').style.display = 'block';
+
+        // Resetar gameState se novo jogo
+        if (!continueGame && window.gameState) {
+          window.gameState.money         = 500000;
+          window.gameState.level         = 1;
+          window.gameState.experience    = 0;
+          window.gameState.experienceToNextLevel = 1000;
+          window.gameState.reputation    = 1;
+          window.gameState.jobsCompleted = 0;
+          window.gameState.currentJob    = null;
+          window.gameState.currentCar    = null;
+          window.gameState.selectedTool  = 'wrench';
+          window.gameState.selectedPart  = null;
+          // Atualizar displays
+          window.uiManager?.updateAllDisplays?.();
+          // Resetar histórico
+          if (window.uiManager) {
+            window.uiManager.jobHistory = [];
+          }
+          // Remover carro da cena se houver
+          window.scene3D?.removeCar?.();
+          // Parar timer se estiver rodando
+          window.uiManager?.stopJobTimer?.();
+        } else if (continueGame && window.uiManager) {
+          // Carregar save
+          window.uiManager._loadProgress?.();
+          window.uiManager.jobHistory = window.uiManager._loadHistory?.() || [];
+        }
 
         // Fade in do jogo
         transition.classList.remove('fade-in');
