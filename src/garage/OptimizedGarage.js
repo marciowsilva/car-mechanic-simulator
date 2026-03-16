@@ -29,6 +29,8 @@ export class OptimizedGarage {
     this.liftHeight = 0;
     this._orbitActive = false;
     this._orbitTarget = null;
+    this.partLabels = [];        // Labels 3D das peças
+    this.partLabelsVisible = false;
     this.liftArms = []; // Braços do elevador ativo
 
     // Movimentação FPS
@@ -260,10 +262,33 @@ export class OptimizedGarage {
 
     if (intersects.length > 0) {
       let obj = intersects[0].object;
+
+      // Verificar se é label de peça primeiro
+      if (obj.userData.isPartLabel) {
+        if (this.hoveredObject !== obj) {
+          if (this.hoveredObject && !this.hoveredObject.userData.isPartLabel) {
+            this.highlightObject(this.hoveredObject, false);
+          }
+          this.hoveredObject = obj;
+          this.container.style.cursor = "pointer";
+          this.showInteractionTooltip(obj.userData.partName);
+          // Pulsar levemente o sprite
+          obj.scale.set(1.0, 0.5, 1);
+        }
+        return;
+      }
+
+      // Resetar escala de label anterior se necessário
+      if (this.hoveredObject?.userData.isPartLabel) {
+        this.hoveredObject.scale.set(0.9, 0.45, 1);
+      }
+
       while (obj && !obj.userData.equipmentId) obj = obj.parent;
 
       if (obj && this.hoveredObject !== obj) {
-        if (this.hoveredObject) this.highlightObject(this.hoveredObject, false);
+        if (this.hoveredObject && !this.hoveredObject.userData.isPartLabel) {
+          this.highlightObject(this.hoveredObject, false);
+        }
         this.hoveredObject = obj;
         this.highlightObject(this.hoveredObject, true);
         this.container.style.cursor = "pointer";
@@ -271,7 +296,11 @@ export class OptimizedGarage {
       }
     } else {
       if (this.hoveredObject) {
-        this.highlightObject(this.hoveredObject, false);
+        if (this.hoveredObject.userData.isPartLabel) {
+          this.hoveredObject.scale.set(0.9, 0.45, 1);
+        } else {
+          this.highlightObject(this.hoveredObject, false);
+        }
         this.hoveredObject = null;
         this.container.style.cursor = "default";
         this.hideInteractionTooltip();
@@ -280,7 +309,22 @@ export class OptimizedGarage {
   }
 
   onClick(event) {
-    if (!this.hoveredObject || !this.equipmentSystem) return;
+    if (!this.hoveredObject) return;
+
+    // Clique em label de peça
+    if (this.hoveredObject.userData.isPartLabel) {
+      const partName = this.hoveredObject.userData.partName;
+      window.uiManager?.showNotification(`🔧 ${partName} selecionada`, 'info');
+      // Selecionar a peça no painel e destacar
+      if (window.selectPart) window.selectPart(partName);
+      // Destacar o card no painel
+      document.querySelectorAll('.part-item').forEach(el => {
+        el.classList.toggle('selected', el.dataset.part === partName);
+      });
+      return;
+    }
+
+    if (!this.equipmentSystem) return;
     const eqId = this.hoveredObject.userData.equipmentId;
     console.warn(`Interagindo com: ${eqId}`);
     this.equipmentSystem.interactWithEquipment(eqId);
@@ -314,6 +358,152 @@ export class OptimizedGarage {
     this.cameraYaw = 0;
     this.cameraPitch = 0;
     window.uiManager?.showNotification('📷 Câmera livre', 'info');
+  }
+
+  // ===== LABELS 3D DE PEÇAS =====
+
+  showPartLabels(parts) {
+    this.hidePartLabels();
+    if (!this.currentCar || !parts) return;
+
+    // Posições relativas ao centro do carro (x, y, z)
+    // y é relativo à base do carro — quando elevado ficam visíveis embaixo
+    const partPositions = {
+      motor:       { x:  0.0, y: 0.55, z: -1.6, label: '⚙️', name: 'Motor' },
+      transmissao: { x:  0.0, y: 0.35, z: -0.4, label: '🔩', name: 'Transmissão' },
+      freios:      { x:  1.0, y: 0.38, z: -1.3, label: '🛑', name: 'Freios' },
+      suspensao:   { x: -1.0, y: 0.38, z:  0.8, label: '🔧', name: 'Suspensão' },
+      bateria:     { x: -0.6, y: 0.55, z: -1.5, label: '🔋', name: 'Bateria' },
+      alternador:  { x:  0.6, y: 0.55, z: -1.3, label: '⚡', name: 'Alternador' },
+      radiador:    { x:  0.0, y: 0.55, z: -1.9, label: '💧', name: 'Radiador' },
+      escapamento: { x:  0.5, y: 0.25, z:  1.8, label: '💨', name: 'Escapamento' },
+      turbo:       { x:  0.3, y: 0.65, z: -1.2, label: '🌪️', name: 'Turbo' },
+      embreagem:   { x:  0.0, y: 0.32, z:  0.2, label: '🔄', name: 'Embreagem' },
+      diferencial: { x:  0.0, y: 0.28, z:  1.4, label: '⚙️', name: 'Diferencial' },
+      sensor:      { x:  0.4, y: 0.45, z: -0.9, label: '📡', name: 'Sensor' },
+      eletronica:  { x: -0.4, y: 0.52, z: -1.0, label: '💻', name: 'Eletrônica' },
+    };
+
+    const carPos = this.currentCar.position;
+    const carBox = new THREE.Box3().setFromObject(this.currentCar);
+    const carSize = new THREE.Vector3();
+    carBox.getSize(carSize);
+
+    Object.entries(parts).forEach(([partName, partData]) => {
+      const pos = partPositions[partName];
+      if (!pos) return;
+
+      const condition = Math.round(partData.condition || 0);
+      const condColor = condition >= 70 ? '#22c55e' : condition >= 40 ? '#f59e0b' : '#ef4444';
+
+      // Criar canvas para a textura do label
+      const canvas = document.createElement('canvas');
+      canvas.width = 256; canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+
+      // Fundo
+      ctx.fillStyle = 'rgba(15, 17, 23, 0.92)';
+      this._roundRect(ctx, 0, 0, 256, 128, 18);
+      ctx.fill();
+
+      // Borda colorida
+      ctx.strokeStyle = condColor;
+      ctx.lineWidth = 4;
+      this._roundRect(ctx, 2, 2, 252, 124, 16);
+      ctx.stroke();
+
+      // Ícone
+      ctx.font = '40px serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(pos.label, 128, 50);
+
+      // Nome
+      ctx.font = 'bold 22px sans-serif';
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillText(pos.name, 128, 80);
+
+      // Condição
+      ctx.font = 'bold 18px sans-serif';
+      ctx.fillStyle = condColor;
+      ctx.fillText(condition + '%', 128, 106);
+
+      const texture = new THREE.CanvasTexture(canvas);
+      const mat = new THREE.SpriteMaterial({
+        map: texture,
+        transparent: true,
+        depthTest: false,
+      });
+      const sprite = new THREE.Sprite(mat);
+
+      // Posicionar relativo ao carro
+      sprite.position.set(
+        carPos.x + pos.x,
+        carPos.y + pos.y + this.liftHeight,
+        carPos.z + pos.z
+      );
+      sprite.scale.set(0.9, 0.45, 1);
+
+      // Metadata para interação
+      sprite.userData.partName = partName;
+      sprite.userData.isPartLabel = true;
+      sprite.userData.baseY = pos.y;
+
+      this.scene.add(sprite);
+      this.partLabels.push(sprite);
+
+      // Adicionar ao raycaster
+      if (!this.clickableObjects.includes(sprite)) {
+        this.clickableObjects.push(sprite);
+      }
+    });
+
+    this.partLabelsVisible = true;
+  }
+
+  hidePartLabels() {
+    this.partLabels.forEach(label => {
+      this.scene.remove(label);
+      const idx = this.clickableObjects.indexOf(label);
+      if (idx > -1) this.clickableObjects.splice(idx, 1);
+      if (label.material.map) label.material.map.dispose();
+      label.material.dispose();
+    });
+    this.partLabels = [];
+    this.partLabelsVisible = false;
+  }
+
+  updatePartLabelPositions() {
+    if (!this.partLabels.length || !this.currentCar) return;
+    const carPos = this.currentCar.position;
+    this.partLabels.forEach(label => {
+      label.position.x = carPos.x + (label.userData.offsetX || 0);
+      label.position.y = carPos.y + label.userData.baseY + this.liftHeight;
+      label.position.z = carPos.z + (label.userData.offsetZ || 0);
+    });
+  }
+
+  refreshPartLabel(partName, condition) {
+    // Atualizar cor do label após reparo
+    const label = this.partLabels.find(l => l.userData.partName === partName);
+    if (!label) return;
+    // Re-renderizar apenas a cor da borda
+    const parts = window.gameState?.currentCar?.parts;
+    if (parts) this.showPartLabels(parts);
+  }
+
+  _roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
   }
 
   highlightObject(obj, active) {
@@ -1067,8 +1257,8 @@ export class OptimizedGarage {
 
   removeCar() {
     if (this.currentCar) {
-      this._clearDamageEmitters?.();
       // Abrir porta, depois sair
+      this.hidePartLabels();
       this.openGarageDoor();
       window.uiManager?.showNotification("🚗 Carro saindo da garagem...", "info");
       setTimeout(() => {
@@ -1389,6 +1579,11 @@ export class OptimizedGarage {
         pos.z = target.z;
         this.carEntering = false;
         this.closeGarageDoor();
+        // Mostrar labels de peças quando carro chega
+        const parts = window.gameState?.currentCar?.parts;
+        if (parts) {
+          setTimeout(() => this.showPartLabels(parts), 500);
+        }
         window.uiManager?.showNotification("✅ Carro pronto para serviço!", "success");
       }
     }

@@ -908,6 +908,11 @@ export class UIManager {
               window.uiManager?.updatePartsList();
               window.uiManager?.updateMoney();
               window.createRepairEffect?.(partName);
+              // Atualizar label 3D da peça reparada
+              const updatedParts = window.gameState?.currentCar?.parts;
+              if (updatedParts && window.scene3D?.showPartLabels) {
+                window.scene3D.showPartLabels(updatedParts);
+              }
               const status = window.gameState.checkCarReady?.();
               if (status?.ready) {
                 document.getElementById("deliver-car").disabled = false;
