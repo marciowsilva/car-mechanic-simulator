@@ -1,639 +1,190 @@
-// src/systems/AchievementSystem.js - Sistema de conquistas completo
-
-export const ACHIEVEMENTS = {
-  // Conquistas de serviço
-  firstJob: {
-    id: "firstJob",
-    name: "Primeiro Serviço",
-    description: "Complete seu primeiro serviço",
-    icon: "🔰",
-    category: "service",
-    requirement: { type: "jobs", value: 1 },
-    reward: { money: 500, experience: 100 },
-    hidden: false,
-  },
-  fiveJobs: {
-    id: "fiveJobs",
-    name: "Mecânico Iniciante",
-    description: "Complete 5 serviços",
-    icon: "🔧",
-    category: "service",
-    requirement: { type: "jobs", value: 5 },
-    reward: { money: 1000, experience: 250 },
-    hidden: false,
-  },
-  tenJobs: {
-    id: "tenJobs",
-    name: "Mecânico Experiente",
-    description: "Complete 10 serviços",
-    icon: "⚙️",
-    category: "service",
-    requirement: { type: "jobs", value: 10 },
-    reward: { money: 2000, experience: 500 },
-    hidden: false,
-  },
-  twentyFiveJobs: {
-    id: "twentyFiveJobs",
-    name: "Mecânico Profissional",
-    description: "Complete 25 serviços",
-    icon: "🔨",
-    category: "service",
-    requirement: { type: "jobs", value: 25 },
-    reward: { money: 5000, experience: 1000 },
-    hidden: false,
-  },
-  fiftyJobs: {
-    id: "fiftyJobs",
-    name: "Mestre Mecânico",
-    description: "Complete 50 serviços",
-    icon: "🏆",
-    category: "service",
-    requirement: { type: "jobs", value: 50 },
-    reward: { money: 10000, experience: 2500 },
-    hidden: false,
-  },
-  hundredJobs: {
-    id: "hundredJobs",
-    name: "Lendário",
-    description: "Complete 100 serviços",
-    icon: "👑",
-    category: "service",
-    requirement: { type: "jobs", value: 100 },
-    reward: { money: 25000, experience: 5000 },
-    hidden: false,
-  },
-
-  // Conquistas de dinheiro
-  firstThousand: {
-    id: "firstThousand",
-    name: "Primeiro Milhar",
-    description: "Ganhe R$ 1.000",
-    icon: "💰",
-    category: "money",
-    requirement: { type: "money", value: 1000 },
-    reward: { money: 200, experience: 50 },
-    hidden: false,
-  },
-  tenThousand: {
-    id: "tenThousand",
-    name: "Acumulador",
-    description: "Ganhe R$ 10.000",
-    icon: "💵",
-    category: "money",
-    requirement: { type: "money", value: 10000 },
-    reward: { money: 1000, experience: 200 },
-    hidden: false,
-  },
-  fiftyThousand: {
-    id: "fiftyThousand",
-    name: "Empresário",
-    description: "Ganhe R$ 50.000",
-    icon: "💎",
-    category: "money",
-    requirement: { type: "money", value: 50000 },
-    reward: { money: 5000, experience: 1000 },
-    hidden: false,
-  },
-  hundredThousand: {
-    id: "hundredThousand",
-    name: "Magnata",
-    description: "Ganhe R$ 100.000",
-    icon: "👔",
-    category: "money",
-    requirement: { type: "money", value: 100000 },
-    reward: { money: 10000, experience: 2500 },
-    hidden: false,
-  },
-
-  // Conquistas de qualidade
-  perfectJob: {
-    id: "perfectJob",
-    name: "Perfeição",
-    description: "Complete um serviço com todas as peças em 100%",
-    icon: "✨",
-    category: "quality",
-    requirement: { type: "perfect", value: 1 },
-    reward: { money: 1000, experience: 300 },
-    hidden: false,
-  },
-  fivePerfect: {
-    id: "fivePerfect",
-    name: "Perfeccionista",
-    description: "Complete 5 serviços perfeitos",
-    icon: "🌟",
-    category: "quality",
-    requirement: { type: "perfect", value: 5 },
-    reward: { money: 5000, experience: 1500 },
-    hidden: false,
-  },
-  tenPerfect: {
-    id: "tenPerfect",
-    name: "Artista",
-    description: "Complete 10 serviços perfeitos",
-    icon: "🎨",
-    category: "quality",
-    requirement: { type: "perfect", value: 10 },
-    reward: { money: 10000, experience: 3000 },
-    hidden: false,
-  },
-
-  // Conquistas de clientes
-  firstVIP: {
-    id: "firstVIP",
-    name: "Primeiro VIP",
-    description: "Atenda seu primeiro cliente VIP",
-    icon: "👑",
-    category: "customer",
-    requirement: { type: "vip", value: 1 },
-    reward: { money: 1000, experience: 200 },
-    hidden: false,
-  },
-  fiveVIP: {
-    id: "fiveVIP",
-    name: "Clube VIP",
-    description: "Atenda 5 clientes VIP",
-    icon: "💎",
-    category: "customer",
-    requirement: { type: "vip", value: 5 },
-    reward: { money: 5000, experience: 1000 },
-    hidden: false,
-  },
-  tenVIP: {
-    id: "tenVIP",
-    name: "Alta Sociedade",
-    description: "Atenda 10 clientes VIP",
-    icon: "🏰",
-    category: "customer",
-    requirement: { type: "vip", value: 10 },
-    reward: { money: 10000, experience: 2500 },
-    hidden: false,
-  },
-
-  // Conquistas de ferramentas
-  firstUpgrade: {
-    id: "firstUpgrade",
-    name: "Primeiro Upgrade",
-    description: "Faça seu primeiro upgrade de ferramenta",
-    icon: "⬆️",
-    category: "tools",
-    requirement: { type: "upgrades", value: 1 },
-    reward: { money: 500, experience: 100 },
-    hidden: false,
-  },
-  fiveUpgrades: {
-    id: "fiveUpgrades",
-    name: "Colecionador",
-    description: "Faça 5 upgrades de ferramentas",
-    icon: "🔧",
-    category: "tools",
-    requirement: { type: "upgrades", value: 5 },
-    reward: { money: 2000, experience: 500 },
-    hidden: false,
-  },
-  tenUpgrades: {
-    id: "tenUpgrades",
-    name: "Mestre das Ferramentas",
-    description: "Faça 10 upgrades de ferramentas",
-    icon: "⚒️",
-    category: "tools",
-    requirement: { type: "upgrades", value: 10 },
-    reward: { money: 5000, experience: 1500 },
-    hidden: false,
-  },
-  allToolsMax: {
-    id: "allToolsMax",
-    name: "Ferramenta Total",
-    description: "Todas as ferramentas no nível máximo",
-    icon: "🔨",
-    category: "tools",
-    requirement: { type: "allToolsMax", value: 1 },
-    reward: { money: 20000, experience: 5000 },
-    hidden: true,
-    secret: "⭐ SUPER SECRETO ⭐",
-  },
-
-  // Conquistas de garagem
-  garageLevel2: {
-    id: "garageLevel2",
-    name: "Garagem Ampliada",
-    description: "Expanda a garagem para o nível 2",
-    icon: "🏠",
-    category: "garage",
-    requirement: { type: "garageLevel", value: 2 },
-    reward: { money: 2000, experience: 500 },
-    hidden: false,
-  },
-  garageLevel3: {
-    id: "garageLevel3",
-    name: "Oficina Profissional",
-    description: "Expanda a garagem para o nível 3",
-    icon: "🏢",
-    category: "garage",
-    requirement: { type: "garageLevel", value: 3 },
-    reward: { money: 5000, experience: 1000 },
-    hidden: false,
-  },
-  garageLevel4: {
-    id: "garageLevel4",
-    name: "Centro Automotivo",
-    description: "Expanda a garagem para o nível 4",
-    icon: "🏬",
-    category: "garage",
-    requirement: { type: "garageLevel", value: 4 },
-    reward: { money: 10000, experience: 2000 },
-    hidden: false,
-  },
-  garageLevel5: {
-    id: "garageLevel5",
-    name: "Mega Oficina",
-    description: "Expanda a garagem para o nível 5",
-    icon: "🏭",
-    category: "garage",
-    requirement: { type: "garageLevel", value: 5 },
-    reward: { money: 20000, experience: 5000 },
-    hidden: false,
-  },
-};
+// src/systems/achievements/AchievementSystem.js — Implementação completa
 
 export class AchievementSystem {
   constructor() {
-    this.achievements = JSON.parse(JSON.stringify(ACHIEVEMENTS));
-    this.unlockedAchievements = [];
+    this.achievements = this._buildAchievements();
     this.stats = {
-      jobsCompleted: 0,
-      totalEarned: 0,
-      perfectJobs: 0,
-      vipCustomers: 0,
-      upgradesDone: 0,
-      partsBought: 0,
-      fastJobs: 0,
-      totalRepairs: 0,
-      garageLevel: 1,
+      jobsCompleted:  0,
+      perfectJobs:    0,
+      fastJobs:       0,
+      vipCustomers:   0,
+      upgradesDone:   0,
+      partsBought:    0,
+      totalEarned:    0,
     };
-    this.loadProgress();
+    this._load();
   }
 
-  loadProgress() {
-    const saved = localStorage.getItem("achievementProgress");
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        this.unlockedAchievements = data.unlockedAchievements || [];
-        this.stats = data.stats || this.stats;
-      } catch (e) {
-        console.error("❌ Erro ao carregar conquistas:", e);
-      }
-    }
-  }
-
-  saveProgress() {
-    const data = {
-      unlockedAchievements: this.unlockedAchievements,
-      stats: this.stats,
+  _buildAchievements() {
+    return {
+      // Serviços
+      firstJob:       { id:'firstJob',       name:'Primeiro Serviço',        description:'Complete seu primeiro serviço',              icon:'🔧', category:'service',  reward:{ money:500,   experience:50  }, unlocked:false, hidden:false },
+      jobs10:         { id:'jobs10',          name:'Mecânico Dedicado',       description:'Complete 10 serviços',                       icon:'🏁', category:'service',  reward:{ money:1000,  experience:100 }, unlocked:false, hidden:false },
+      jobs50:         { id:'jobs50',          name:'Veterano da Oficina',     description:'Complete 50 serviços',                       icon:'🏆', category:'service',  reward:{ money:5000,  experience:500 }, unlocked:false, hidden:false },
+      jobs100:        { id:'jobs100',         name:'Mestre Mecânico',         description:'Complete 100 serviços',                      icon:'👑', category:'service',  reward:{ money:15000, experience:1000}, unlocked:false, hidden:false },
+      // Qualidade
+      perfectJob:     { id:'perfectJob',      name:'Perfeccionista',          description:'Entregue um carro com todas as peças em 100%',icon:'✨', category:'quality',  reward:{ money:2000,  experience:200 }, unlocked:false, hidden:false },
+      perfect10:      { id:'perfect10',       name:'Artesão',                 description:'Complete 10 serviços perfeitos',              icon:'💎', category:'quality',  reward:{ money:10000, experience:1000}, unlocked:false, hidden:false },
+      // Tempo
+      fastJob:        { id:'fastJob',         name:'Relâmpago',               description:'Complete um serviço antes do prazo',          icon:'⚡', category:'time',     reward:{ money:500,   experience:50  }, unlocked:false, hidden:false },
+      fastJobs10:     { id:'fastJobs10',      name:'Corredor',                description:'Complete 10 serviços antes do prazo',         icon:'🏎️', category:'time',     reward:{ money:3000,  experience:300 }, unlocked:false, hidden:false },
+      // Dinheiro
+      earn10k:        { id:'earn10k',         name:'Empreendedor',            description:'Acumule R$ 10.000',                           icon:'💰', category:'money',    reward:{ money:1000,  experience:100 }, unlocked:false, hidden:false },
+      earn100k:       { id:'earn100k',        name:'Empresário',              description:'Acumule R$ 100.000',                          icon:'💵', category:'money',    reward:{ money:5000,  experience:500 }, unlocked:false, hidden:false },
+      earn1m:         { id:'earn1m',          name:'Milionário',              description:'Acumule R$ 1.000.000',                        icon:'🤑', category:'money',    reward:{ money:50000, experience:2000}, unlocked:false, hidden:false },
+      // Clientes
+      vipCustomer:    { id:'vipCustomer',     name:'Atendimento VIP',         description:'Atenda um cliente VIP',                       icon:'👔', category:'customer', reward:{ money:2000,  experience:200 }, unlocked:false, hidden:false },
+      happyCustomers: { id:'happyCustomers',  name:'Querido dos Clientes',    description:'Receba 5 estrelas 10 vezes',                  icon:'⭐', category:'customer', reward:{ money:3000,  experience:300 }, unlocked:false, hidden:false },
+      // Ferramentas
+      masterMechanic: { id:'masterMechanic',  name:'Ferramentas Perfeitas',   description:'Faça upgrade de todas as ferramentas ao nível máximo',icon:'🔩',category:'tools',reward:{ money:10000, experience:1000}, unlocked:false, hidden:false },
+      // Peças
+      parts50:        { id:'parts50',         name:'Comprador Compulsivo',    description:'Compre 50 peças novas',                       icon:'📦', category:'parts',    reward:{ money:2000,  experience:200 }, unlocked:false, hidden:false },
+      // Secretas
+      nightOwl:       { id:'nightOwl',        name:'Coruja da Mecânica',      description:'???',                                         icon:'🦉', category:'secret',   reward:{ money:5000,  experience:500 }, unlocked:false, hidden:true  },
+      jobStarted:     { id:'jobStarted',      name:'Mãos à Obra',             description:'Inicie seu primeiro serviço',                 icon:'🚗', category:'service',  reward:{ money:0,     experience:10  }, unlocked:false, hidden:false },
+      moneyEarned:    { id:'moneyEarned',     name:'Primeiro Pagamento',      description:'Receba seu primeiro pagamento',               icon:'💸', category:'money',    reward:{ money:0,     experience:25  }, unlocked:false, hidden:false },
     };
-    localStorage.setItem("achievementProgress", JSON.stringify(data));
   }
 
-  // ===== MÉTODO PRINCIPAL PARA VERIFICAR CONQUISTAS =====
-  checkAchievement(achievementId, value = 1) {
-
-    // Verificar por ID específico
-    if (achievementId && this.achievements[achievementId]) {
-      this.unlockAchievement(achievementId);
-      return [this.achievements[achievementId]];
-    }
-
-    // Verificar por tipo (para compatibilidade com chamadas antigas)
-    let unlocked = [];
-
-    switch (achievementId) {
-      case "jobCompleted":
-        this.stats.jobsCompleted += value;
-        unlocked = this.checkServiceAchievements();
-        break;
-      case "moneyEarned":
-        this.stats.totalEarned += value;
-        unlocked = this.checkMoneyAchievements();
-        break;
-      case "perfectJob":
-        this.stats.perfectJobs += value;
-        unlocked = this.checkQualityAchievements();
-        break;
-      case "vipCustomer":
-        this.stats.vipCustomers += value;
-        unlocked = this.checkCustomerAchievements();
-        break;
-      case "upgradeDone":
-        this.stats.upgradesDone += value;
-        unlocked = this.checkToolAchievements();
-        break;
-      case "partBought":
-        this.stats.partsBought += value;
-        unlocked = this.checkPartAchievements();
-        break;
-      case "fastJob":
-        this.stats.fastJobs += value;
-        unlocked = this.checkTimeAchievements();
-        break;
-      case "garageUpgraded":
-        this.stats.garageLevel = value || this.stats.garageLevel + 1;
-        unlocked = this.checkGarageAchievements();
-        break;
-    }
-
-    if (unlocked.length > 0) {
-      this.saveProgress();
-    }
-
-    return unlocked;
-  }
-
-  // ===== MÉTODOS DE VERIFICAÇÃO POR CATEGORIA =====
-
-  checkServiceAchievements() {
-    const unlocked = [];
-    const serviceAchievements = [
-      "firstJob",
-      "fiveJobs",
-      "tenJobs",
-      "twentyFiveJobs",
-      "fiftyJobs",
-      "hundredJobs",
-    ];
-
-    serviceAchievements.forEach((id) => {
-      const ach = this.achievements[id];
-      if (ach && !this.isUnlocked(id)) {
-        if (this.stats.jobsCompleted >= ach.requirement.value) {
-          this.unlockAchievement(id);
-          unlocked.push(ach);
-        }
-      }
-    });
-
-    return unlocked;
-  }
-
-  checkMoneyAchievements() {
-    const unlocked = [];
-    const moneyAchievements = [
-      "firstThousand",
-      "tenThousand",
-      "fiftyThousand",
-      "hundredThousand",
-    ];
-
-    moneyAchievements.forEach((id) => {
-      const ach = this.achievements[id];
-      if (ach && !this.isUnlocked(id)) {
-        if (this.stats.totalEarned >= ach.requirement.value) {
-          this.unlockAchievement(id);
-          unlocked.push(ach);
-        }
-      }
-    });
-
-    return unlocked;
-  }
-
-  checkQualityAchievements() {
-    const unlocked = [];
-    const qualityAchievements = ["perfectJob", "fivePerfect", "tenPerfect"];
-
-    qualityAchievements.forEach((id) => {
-      const ach = this.achievements[id];
-      if (ach && !this.isUnlocked(id)) {
-        if (this.stats.perfectJobs >= ach.requirement.value) {
-          this.unlockAchievement(id);
-          unlocked.push(ach);
-        }
-      }
-    });
-
-    return unlocked;
-  }
-
-  checkCustomerAchievements() {
-    const unlocked = [];
-    const customerAchievements = ["firstVIP", "fiveVIP", "tenVIP"];
-
-    customerAchievements.forEach((id) => {
-      const ach = this.achievements[id];
-      if (ach && !this.isUnlocked(id)) {
-        if (this.stats.vipCustomers >= ach.requirement.value) {
-          this.unlockAchievement(id);
-          unlocked.push(ach);
-        }
-      }
-    });
-
-    return unlocked;
-  }
-
-  checkToolAchievements() {
-    const unlocked = [];
-    const toolAchievements = ["firstUpgrade", "fiveUpgrades", "tenUpgrades"];
-
-    toolAchievements.forEach((id) => {
-      const ach = this.achievements[id];
-      if (ach && !this.isUnlocked(id)) {
-        if (this.stats.upgradesDone >= ach.requirement.value) {
-          this.unlockAchievement(id);
-          unlocked.push(ach);
-        }
-      }
-    });
-
-    if (!this.isUnlocked("allToolsMax") && window.upgradeManager) {
-      const allMax = Object.values(window.upgradeManager.toolLevels).every(
-        (level) => level >= 5,
-      );
-      if (allMax) {
-        this.unlockAchievement("allToolsMax");
-        unlocked.push(this.achievements.allToolsMax);
-      }
-    }
-
-    return unlocked;
-  }
-
-  checkPartAchievements() {
-    const unlocked = [];
-    const partAchievements = ["firstPart", "tenParts", "fiftyParts"];
-
-    partAchievements.forEach((id) => {
-      const ach = this.achievements[id];
-      if (ach && !this.isUnlocked(id)) {
-        if (this.stats.partsBought >= ach.requirement.value) {
-          this.unlockAchievement(id);
-          unlocked.push(ach);
-        }
-      }
-    });
-
-    return unlocked;
-  }
-
-  checkTimeAchievements() {
-    const unlocked = [];
-    const timeAchievements = ["speedDemon", "fiveFastJobs"];
-
-    timeAchievements.forEach((id) => {
-      const ach = this.achievements[id];
-      if (ach && !this.isUnlocked(id)) {
-        if (this.stats.fastJobs >= ach.requirement.value) {
-          this.unlockAchievement(id);
-          unlocked.push(ach);
-        }
-      }
-    });
-
-    return unlocked;
-  }
-
-  checkGarageAchievements() {
-    const unlocked = [];
-    const garageAchievements = [
-      "garageLevel2",
-      "garageLevel3",
-      "garageLevel4",
-      "garageLevel5",
-    ];
-
-    garageAchievements.forEach((id) => {
-      const ach = this.achievements[id];
-      if (ach && !this.isUnlocked(id)) {
-        if (this.stats.garageLevel >= ach.requirement.value) {
-          this.unlockAchievement(id);
-          unlocked.push(ach);
-        }
-      }
-    });
-
-    return unlocked;
-  }
-
-  // ===== MÉTODO PARA DESBLOQUEAR CONQUISTA =====
-  unlockAchievement(id) {
-    const achievement = this.achievements[id];
-    if (!achievement || this.unlockedAchievements.includes(id)) return false;
-
-    this.unlockedAchievements.push(id);
-
-    // Aplicar recompensas - SEM CHAMAR updateMoney diretamente
-    if (achievement.reward) {
-      if (achievement.reward.money && window.gameState) {
-        // Usar flag para evitar loop
-        window.gameState.isUpdatingFromAchievement = true;
-        try {
-          window.gameState.money += achievement.reward.money;
-          window.gameState.updateMoney(); // Vai chamar, mas flag vai impedir loop
-        } finally {
-          window.gameState.isUpdatingFromAchievement = false;
-        }
-      }
-      if (achievement.reward.experience && window.gameState) {
-        window.gameState.isUpdatingFromAchievement = true;
-        try {
-          window.gameState.addExperience(achievement.reward.experience);
-        } finally {
-          window.gameState.isUpdatingFromAchievement = false;
-        }
-      }
-    }
-
-
-    // Mostrar notificação - SEM CHECAR CONQUISTAS NOVAMENTE
-    if (window.uiManager) {
-      window.uiManager.showAchievementNotification(achievement);
-    }
-
-    this.saveProgress();
-    return true;
-  }
-
-  // ===== MÉTODOS DE UTILIDADE =====
-
-  isUnlocked(id) {
-    return this.unlockedAchievements.includes(id);
-  }
+  // ===== API PÚBLICA (usada pelo AchievementsPanel) =====
 
   getProgress() {
-    const total = Object.keys(this.achievements).length;
-    const unlocked = this.unlockedAchievements.length;
-    const percentage = total > 0 ? Math.floor((unlocked / total) * 100) : 0;
-
+    const all = Object.values(this.achievements);
+    const unlocked = all.filter(a => a.unlocked).length;
+    const total = all.length;
     return {
-      total,
       unlocked,
-      percentage,
-      recentUnlocked: this.getRecentUnlocked(5),
+      total,
+      percentage: total > 0 ? Math.round(unlocked / total * 100) : 0,
     };
-  }
-
-  getRecentUnlocked(count) {
-    return this.unlockedAchievements
-      .slice(-count)
-      .map((id) => this.achievements[id])
-      .filter((a) => a);
-  }
-
-  getAchievementsByCategory(category) {
-    return Object.values(this.achievements)
-      .filter((ach) => ach.category === category)
-      .map((ach) => ({
-        ...ach,
-        unlocked: this.isUnlocked(ach.id),
-      }));
-  }
-
-  getAllAchievements() {
-    return Object.values(this.achievements).map((ach) => ({
-      ...ach,
-      unlocked: this.isUnlocked(ach.id),
-    }));
   }
 
   getStats() {
-    return { ...this.stats };
-  }
-
-  reset() {
-    this.unlockedAchievements = [];
-    this.stats = {
-      jobsCompleted: 0,
-      totalEarned: 0,
-      perfectJobs: 0,
-      vipCustomers: 0,
-      upgradesDone: 0,
-      partsBought: 0,
-      fastJobs: 0,
-      totalRepairs: 0,
-      garageLevel: 1,
+    return {
+      jobsCompleted:  window.gameState?.jobsCompleted  || this.stats.jobsCompleted,
+      perfectJobs:    this.stats.perfectJobs,
+      fastJobs:       this.stats.fastJobs,
+      vipCustomers:   this.stats.vipCustomers,
+      upgradesDone:   this.stats.upgradesDone,
+      partsBought:    this.stats.partsBought,
     };
-    localStorage.removeItem("achievementProgress");
+  }
+
+  getAllAchievements() {
+    return Object.values(this.achievements);
+  }
+
+  getAchievementsByCategory(category) {
+    return Object.values(this.achievements).filter(a => a.category === category);
+  }
+
+  // ===== UNLOCK =====
+
+  checkAchievement(id, value) {
+    const ach = this.achievements[id];
+    if (!ach || ach.unlocked) return false;
+
+    let shouldUnlock = false;
+    const gs = window.gameState;
+
+    switch(id) {
+      case 'firstJob':
+      case 'jobStarted':    shouldUnlock = true; break;
+      case 'moneyEarned':   shouldUnlock = true; break;
+      case 'jobs10':        shouldUnlock = (gs?.jobsCompleted || 0) >= 10; break;
+      case 'jobs50':        shouldUnlock = (gs?.jobsCompleted || 0) >= 50; break;
+      case 'jobs100':       shouldUnlock = (gs?.jobsCompleted || 0) >= 100; break;
+      case 'perfectJob':    shouldUnlock = true; this.stats.perfectJobs++; break;
+      case 'perfect10':     shouldUnlock = this.stats.perfectJobs >= 10; break;
+      case 'fastJob':       shouldUnlock = true; this.stats.fastJobs++; break;
+      case 'fastJobs10':    shouldUnlock = this.stats.fastJobs >= 10; break;
+      case 'earn10k':       shouldUnlock = (gs?.money || 0) >= 10000; break;
+      case 'earn100k':      shouldUnlock = (gs?.money || 0) >= 100000; break;
+      case 'earn1m':        shouldUnlock = (gs?.money || 0) >= 1000000; break;
+      case 'vipCustomer':   shouldUnlock = true; this.stats.vipCustomers++; break;
+      case 'masterMechanic':shouldUnlock = true; this.stats.upgradesDone++; break;
+      case 'parts50':       shouldUnlock = this.stats.partsBought >= 50; break;
+      case 'nightOwl': {
+        const h = new Date().getHours();
+        shouldUnlock = h >= 22 || h < 5;
+        break;
+      }
+      default: shouldUnlock = true;
+    }
+
+    if (shouldUnlock) {
+      this._unlock(ach);
+      return true;
+    }
+    return false;
+  }
+
+  checkAchievements() {
+    // Verificar conquistas baseadas no estado atual
+    const gs = window.gameState;
+    if (!gs) return;
+
+    if (gs.jobsCompleted >= 1)   this.checkAchievement('firstJob');
+    if (gs.jobsCompleted >= 10)  this.checkAchievement('jobs10');
+    if (gs.jobsCompleted >= 50)  this.checkAchievement('jobs50');
+    if (gs.jobsCompleted >= 100) this.checkAchievement('jobs100');
+    if (gs.money >= 10000)       this.checkAchievement('earn10k');
+    if (gs.money >= 100000)      this.checkAchievement('earn100k');
+    if (gs.money >= 1000000)     this.checkAchievement('earn1m');
+  }
+
+  unlockAchievement(id) {
+    this.checkAchievement(id);
+  }
+
+  _unlock(ach) {
+    ach.unlocked = true;
+    ach.unlockedAt = new Date().toISOString();
+
+    // Recompensas
+    if (ach.reward?.money && window.gameState) {
+      window.gameState.money += ach.reward.money;
+      window.gameState.updateMoney?.(0);
+    }
+    if (ach.reward?.experience && window.gameState) {
+      window.gameState.addExperience?.(ach.reward.experience);
+    }
+
+    // Notificar painel
+    window.uiManager?.achievementsPanel?.showUnlockedNotification?.(ach);
+    window.uiManager?.showNotification?.(`🏆 ${ach.name} desbloqueada!`, 'achievement', 5000);
+
+    this._save();
+  }
+
+  // ===== PERSISTÊNCIA =====
+  _save() {
+    try {
+      const data = {
+        achievements: Object.fromEntries(
+          Object.entries(this.achievements).map(([k,v]) => [k, { unlocked: v.unlocked, unlockedAt: v.unlockedAt }])
+        ),
+        stats: this.stats,
+      };
+      localStorage.setItem('cms_achievements', JSON.stringify(data));
+    } catch(e) {}
+  }
+
+  _load() {
+    try {
+      const raw = localStorage.getItem('cms_achievements');
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      // Restaurar estado de unlock
+      Object.entries(data.achievements || {}).forEach(([id, val]) => {
+        if (this.achievements[id]) {
+          this.achievements[id].unlocked   = val.unlocked   || false;
+          this.achievements[id].unlockedAt = val.unlockedAt || null;
+        }
+      });
+      if (data.stats) Object.assign(this.stats, data.stats);
+    } catch(e) {}
   }
 }
 
-// Expor globalmente
-if (typeof window !== "undefined") {
-  window.AchievementSystem = AchievementSystem;
-  window.ACHIEVEMENTS = ACHIEVEMENTS;
-}
-
-// Garantir que o método checkAchievement existe (caso algo sobrescreva)
-if (AchievementSystem.prototype.checkAchievement === undefined) {
-  console.warn("⚠️ checkAchievement não encontrado, adicionando...");
-  AchievementSystem.prototype.checkAchievement = function (
-    achievementId,
-    value = 1,
-  ) {
-
-    // Verificar por ID específico
-    if (achievementId && this.achievements[achievementId]) {
-      this.unlockAchievement(achievementId);
-      return [this.achievements[achievementId]];
-    }
-    return [];
-  };
-}
+if (typeof window !== 'undefined') window.AchievementSystem = AchievementSystem;
