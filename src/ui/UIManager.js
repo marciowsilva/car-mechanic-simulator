@@ -1169,6 +1169,9 @@ export class UIManager {
     overlay.classList.add('show');
   }
 
+  pauseAmbience() { this.sounds?.stopAmbience?.(); }
+  resumeAmbience() { this.sounds?.startAmbience?.(); }
+
   closeJobResult() {
     const overlay = document.getElementById('job-result-overlay');
     if (overlay) overlay.classList.remove('show');
@@ -1347,6 +1350,131 @@ export class UIManager {
     }).join('');
   }
 
+
+  // ===== PAINEL DE ESTATÍSTICAS =====
+
+  showStats() {
+    const panel = document.getElementById('stats-panel');
+    if (!panel) return;
+    this._renderStats();
+    panel.classList.add('show');
+    document.addEventListener('keydown', this._statsEscHandler = e => {
+      if (e.key === 'Escape') this.hideStats();
+    });
+  }
+
+  hideStats() {
+    document.getElementById('stats-panel')?.classList.remove('show');
+    if (this._statsEscHandler) {
+      document.removeEventListener('keydown', this._statsEscHandler);
+      this._statsEscHandler = null;
+    }
+  }
+
+  _renderStats() {
+    const gs = window.gameState;
+    if (!gs) return;
+
+    const history = this.jobHistory || [];
+    const totalJobs    = history.length;
+    const totalEarned  = history.reduce((s, j) => s + (j.payment || 0), 0);
+    const avgSat       = totalJobs ? Math.round(history.reduce((s, j) => s + (j.satisfaction || 0), 0) / totalJobs) : 0;
+    const avgQuality   = totalJobs ? Math.round(history.reduce((s, j) => s + (j.quality || 0), 0) / totalJobs) : 0;
+    const perfect      = history.filter(j => j.stars === 5).length;
+    const withBonus    = history.filter(j => j.timeBonus > 0).length;
+    const bestPayment  = totalJobs ? Math.max(...history.map(j => j.payment || 0)) : 0;
+
+    // Título do jogador por nível
+    const titles = [(1, '🔧', 'Aprendiz'), (2, '🔩', 'Mecânico Iniciante'), (3, '⚙️', 'Mecânico Treinado'), (4, '🛠️', 'Técnico Especialista'), (5, '🏆', 'Mestre Mecânico'), (6, '👑', 'Engenheiro Automotivo'), (7, '💎', 'Lenda da Oficina'), (99, '🌟', 'Mito do Motor')];
+    const [, avatar, title] = titles.find(([l]) => gs.level <= l) || titles[titles.length-1];
+
+    // Perfil
+    const xpPct = Math.min(100, Math.round((gs.experience / gs.experienceToNextLevel) * 100));
+    this._setEl('stats-avatar',      avatar);
+    this._setEl('stats-player-name', `Nível ${gs.level}`);
+    this._setEl('stats-player-title', title);
+    this._setEl('stats-xp-label',    `${gs.experience} / ${gs.experienceToNextLevel} XP`);
+    this._setEl('stats-money',       `R$ ${(gs.money || 0).toLocaleString('pt-BR')}`);
+    const xpFill = document.getElementById('stats-xp-fill');
+    if (xpFill) xpFill.style.width = xpPct + '%';
+
+    // Grid principal
+    const grid = document.getElementById('stats-grid');
+    if (grid) grid.innerHTML = [
+      { v: totalJobs,                          l: 'Jobs',         cls: '' },
+      { v: `R$ ${totalEarned.toLocaleString('pt-BR')}`, l: 'Total ganho', cls: 'gold' },
+      { v: `R$ ${(gs.totalSpent||0).toLocaleString('pt-BR')}`, l: 'Total gasto', cls: 'red' },
+      { v: `${avgSat}%`,                       l: 'Satisfação',   cls: avgSat >= 70 ? 'green' : avgSat >= 45 ? 'amber' : 'red' },
+      { v: `${'★'.repeat(gs.reputation)}`,     l: 'Reputação',    cls: 'gold' },
+    ].map(s => `
+      <div class="stats-cell">
+        <div class="stats-cell-value ${s.cls}">${s.v}</div>
+        <div class="stats-cell-label">${s.l}</div>
+      </div>`).join('');
+
+    // Barras de desempenho
+    const bars = document.getElementById('stats-bars');
+    if (bars) bars.innerHTML = [
+      { name: 'Qualidade média',    val: avgQuality,    max: 100, color: '#22c55e' },
+      { name: 'Satisfação média',   val: avgSat,        max: 100, color: '#3b82f6' },
+      { name: 'Jobs perfeitos',     val: totalJobs ? Math.round(perfect/totalJobs*100) : 0, max: 100, color: '#facc15' },
+      { name: 'No prazo',           val: totalJobs ? Math.round(withBonus/totalJobs*100) : 0, max: 100, color: '#f59e0b' },
+      { name: 'Melhor pagamento',   val: Math.min(100, Math.round(bestPayment/200)), max: 100, color: '#a855f7',
+        label: bestPayment > 0 ? `R$${bestPayment.toLocaleString('pt-BR')}` : '—' },
+    ].map(b => `
+      <div class="stats-bar-row">
+        <div class="stats-bar-name">${b.name}</div>
+        <div class="stats-bar-bg">
+          <div class="stats-bar-fill" style="width:${b.val}%;background:${b.color}"></div>
+        </div>
+        <div class="stats-bar-val">${b.label || b.val + '%'}</div>
+      </div>`).join('');
+
+    // Carros mais atendidos
+    const carCount = {};
+    history.forEach(j => {
+      const key = j.car || 'Veículo';
+      carCount[key] = (carCount[key] || 0) + 1;
+    });
+    const topCars = Object.entries(carCount).sort((a,b)=>b[1]-a[1]).slice(0,6);
+    const carsEl = document.getElementById('stats-cars');
+    if (carsEl) {
+      if (!topCars.length) {
+        carsEl.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:#64748b;font-size:13px;padding:20px">Nenhum serviço realizado ainda</div>';
+      } else {
+        carsEl.innerHTML = topCars.map(([car, count]) => `
+          <div class="stats-car-card">
+            <div class="stats-car-icon">🚗</div>
+            <div class="stats-car-name" title="${car}">${car}</div>
+            <div class="stats-car-count">${count}x</div>
+          </div>`).join('');
+      }
+    }
+
+    // Timeline recente (últimos 5)
+    const tlEl = document.getElementById('stats-timeline');
+    if (tlEl) {
+      if (!history.length) {
+        tlEl.innerHTML = '<div style="text-align:center;color:#64748b;font-size:13px;padding:20px">Nenhum serviço realizado ainda</div>';
+      } else {
+        tlEl.innerHTML = history.slice(0, 5).map(j => `
+          <div class="stats-timeline-item">
+            <div class="stats-tl-stars">${'⭐'.repeat(j.stars||0)}${'☆'.repeat(5-(j.stars||0))}</div>
+            <div class="stats-tl-info">
+              <div class="stats-tl-car">${j.car || 'Veículo'}</div>
+              <div class="stats-tl-date">👤 ${j.customer || 'Cliente'} · ${j.date || ''}</div>
+            </div>
+            <div class="stats-tl-pay">R$ ${(j.payment||0).toLocaleString('pt-BR')}</div>
+          </div>`).join('');
+      }
+    }
+  }
+
+  _setEl(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+
   _getSaveKey() {
     return localStorage.getItem('cms_active_save_key') || 'cms_save_default';
   }
@@ -1360,6 +1488,7 @@ export class UIManager {
         experience:    window.gameState.experience,
         reputation:    window.gameState.reputation,
         jobsCompleted: window.gameState.jobsCompleted,
+        totalSpent:    window.gameState.totalSpent || 0,
         savedAt:       new Date().toISOString(),
       };
       localStorage.setItem(this._getSaveKey(), JSON.stringify(save));

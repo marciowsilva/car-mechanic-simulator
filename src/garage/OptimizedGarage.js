@@ -33,8 +33,6 @@ export class OptimizedGarage {
     this.partLabelsVisible = false;
     this.ceilingLights = [];     // Luzes do teto para animação dinâmica
     this.lightsOn = true;        // Estado das luzes
-    this.mechanic = null;        // Personagem mecânico 3D
-    this.mechanicState = 'idle'; // idle | walk | work | wave
     this._currentLightLevel = 0; // Nível atual de intensidade (0-1)
     this._lightAnimInterval = null;
     this.liftArms = []; // Braços do elevador ativo
@@ -60,7 +58,6 @@ export class OptimizedGarage {
     this.setupControls();
     this.setupLights();
     this.createGarage();
-    this.createMechanic();
     this.setupInteraction();
     this.animate();
 
@@ -907,231 +904,8 @@ export class OptimizedGarage {
   }
 
 
-  // ===== MECÂNICO 3D =====
 
-  createMechanic() {
-    const group = new THREE.Group();
 
-    // Materiais
-    const skinMat  = new THREE.MeshStandardMaterial({ color: 0xf4c07a, roughness: 0.9 });
-    const suitMat  = new THREE.MeshStandardMaterial({ color: 0x1e3a5f, roughness: 0.8 });
-    const bootMat  = new THREE.MeshStandardMaterial({ color: 0x2a1a0a, roughness: 0.9 });
-    const hairMat  = new THREE.MeshStandardMaterial({ color: 0x1a0e00, roughness: 1.0 });
-    const gloveMat = new THREE.MeshStandardMaterial({ color: 0xcc4400, roughness: 0.7 });
-    const toolMat  = new THREE.MeshStandardMaterial({ color: 0x888888, roughness: 0.4, metalness: 0.8 });
-
-    // ---- CORPO ----
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.52, 0.22), suitMat);
-    torso.position.y = 1.0;
-    torso.castShadow = true;
-    group.add(torso);
-
-    // Bolso do macacão
-    const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.10, 0.01), new THREE.MeshStandardMaterial({ color: 0x152b47, roughness: 0.9 }));
-    pocket.position.set(0.1, 1.02, 0.115);
-    group.add(pocket);
-
-    // ---- CABEÇA ----
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.28, 0.26), skinMat);
-    head.position.y = 1.42;
-    head.castShadow = true;
-    group.add(head);
-
-    // Cabelo
-    const hair = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.10, 0.28), hairMat);
-    hair.position.y = 1.57;
-    group.add(hair);
-
-    // Boné (aba)
-    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.04, 0.14), new THREE.MeshStandardMaterial({ color: 0xcc4400, roughness: 0.8 }));
-    brim.position.set(0, 1.62, 0.18);
-    group.add(brim);
-
-    // Olhos
-    [-0.07, 0.07].forEach(x => {
-      const eye = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.01), new THREE.MeshStandardMaterial({ color: 0x111111 }));
-      eye.position.set(x, 1.42, 0.135);
-      group.add(eye);
-    });
-
-    // ---- PESCOÇO ----
-    const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 6), skinMat);
-    neck.position.y = 1.28;
-    group.add(neck);
-
-    // ---- BRAÇOS ----
-    // Braço esquerdo (com ferramenta)
-    this._mechArmL = new THREE.Group();
-    const upperArmL = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 0.12), suitMat);
-    upperArmL.position.y = -0.14;
-    upperArmL.castShadow = true;
-    this._mechArmL.add(upperArmL);
-    const foreArmL = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.25, 0.11), suitMat);
-    foreArmL.position.y = -0.4;
-    this._mechArmL.add(foreArmL);
-    const gloveL = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.13), gloveMat);
-    gloveL.position.y = -0.56;
-    this._mechArmL.add(gloveL);
-    // Chave inglesa
-    const wrench = new THREE.Group();
-    const wrenchHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.25, 6), toolMat);
-    wrenchHandle.rotation.z = Math.PI / 2;
-    wrench.add(wrenchHandle);
-    const wrenchHead = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.06, 0.04), toolMat);
-    wrenchHead.position.x = 0.15;
-    wrench.add(wrenchHead);
-    wrench.position.set(0.05, -0.62, 0);
-    this._mechArmL.add(wrench);
-    this._mechArmL.position.set(-0.28, 1.22, 0);
-    group.add(this._mechArmL);
-
-    // Braço direito
-    this._mechArmR = new THREE.Group();
-    const upperArmR = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.28, 0.12), suitMat);
-    upperArmR.position.y = -0.14;
-    upperArmR.castShadow = true;
-    this._mechArmR.add(upperArmR);
-    const foreArmR = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.25, 0.11), suitMat);
-    foreArmR.position.y = -0.4;
-    this._mechArmR.add(foreArmR);
-    const gloveR = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.12, 0.13), gloveMat);
-    gloveR.position.y = -0.56;
-    this._mechArmR.add(gloveR);
-    this._mechArmR.position.set(0.28, 1.22, 0);
-    group.add(this._mechArmR);
-
-    // ---- PERNAS ----
-    this._mechLegL = new THREE.Group();
-    const thighL = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.32, 0.17), suitMat);
-    thighL.position.y = -0.16;
-    thighL.castShadow = true;
-    this._mechLegL.add(thighL);
-    const shinL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.28, 0.15), suitMat);
-    shinL.position.y = -0.42;
-    this._mechLegL.add(shinL);
-    const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.10, 0.22), bootMat);
-    bootL.position.set(0, -0.6, 0.03);
-    this._mechLegL.add(bootL);
-    this._mechLegL.position.set(-0.11, 0.74, 0);
-    group.add(this._mechLegL);
-
-    this._mechLegR = new THREE.Group();
-    const thighR = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.32, 0.17), suitMat);
-    thighR.position.y = -0.16;
-    thighR.castShadow = true;
-    this._mechLegR.add(thighR);
-    const shinR = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.28, 0.15), suitMat);
-    shinR.position.y = -0.42;
-    this._mechLegR.add(shinR);
-    const bootR = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.10, 0.22), bootMat);
-    bootR.position.set(0, -0.6, 0.03);
-    this._mechLegR.add(bootR);
-    this._mechLegR.position.set(0.11, 0.74, 0);
-    group.add(this._mechLegR);
-
-    // Posição inicial — ao lado do elevador, fora do caminho da câmera
-    group.position.set(2.8, 0, 1.5);
-    group.rotation.y = -Math.PI / 2;
-    group.castShadow = true;
-
-    this.mechanic = group;
-    this._mechStateTime = 0;
-    this._mechWalkPhase = 0;
-    this._mechTargetPos = null;
-    this.scene.add(group);
-  }
-
-  setMechanicState(state) {
-    this.mechanicState = state;
-    this._mechStateTime = 0;
-
-    // Definir destino para walk
-    if (state === 'walk') {
-      // Vai até o elevador
-      this._mechTargetPos = new THREE.Vector3(1.2, 0, 0.5);
-    } else if (state === 'idle') {
-      // Volta para posição de descanso
-      this._mechTargetPos = new THREE.Vector3(2.8, 0, 1.5);
-    }
-  }
-
-  updateMechanic(time) {
-    if (!this.mechanic) return;
-    const t = time;
-
-    // Mover em direção ao target
-    if (this._mechTargetPos && this.mechanicState !== 'work') {
-      const pos = this.mechanic.position;
-      const target = this._mechTargetPos;
-      const dx = target.x - pos.x;
-      const dz = target.z - pos.z;
-      const dist = Math.sqrt(dx*dx + dz*dz);
-      if (dist > 0.05) {
-        const speed = 1.8;
-        pos.x += (dx / dist) * speed * 0.016;
-        pos.z += (dz / dist) * speed * 0.016;
-        // Girar na direção do movimento
-        this.mechanic.rotation.y = Math.atan2(dx, dz);
-      } else if (this.mechanicState === 'walk') {
-        this.mechanicState = 'idle';
-        this._mechTargetPos = null;
-      }
-    }
-
-    switch (this.mechanicState) {
-      case 'idle': {
-        // Respiração suave
-        const breathe = Math.sin(t * 1.2) * 0.015;
-        this.mechanic.position.y = breathe;
-        // Braços ligeiramente abaixados
-        if (this._mechArmL) this._mechArmL.rotation.x = 0.1 + Math.sin(t * 0.8) * 0.02;
-        if (this._mechArmR) this._mechArmR.rotation.x = 0.1 + Math.sin(t * 0.8 + 0.5) * 0.02;
-        if (this._mechLegL) this._mechLegL.rotation.x = 0;
-        if (this._mechLegR) this._mechLegR.rotation.x = 0;
-        break;
-      }
-      case 'walk': {
-        // Balançar braços e pernas no ritmo da caminhada
-        const walkFreq = t * 6;
-        const swing = Math.sin(walkFreq) * 0.35;
-        if (this._mechArmL) this._mechArmL.rotation.x =  swing;
-        if (this._mechArmR) this._mechArmR.rotation.x = -swing;
-        if (this._mechLegL) this._mechLegL.rotation.x = -swing * 0.7;
-        if (this._mechLegR) this._mechLegR.rotation.x =  swing * 0.7;
-        // Bob vertical
-        this.mechanic.position.y = Math.abs(Math.sin(walkFreq)) * 0.04;
-        break;
-      }
-      case 'work': {
-        // Braço esquerdo bate ritmicamente (consertando)
-        const workFreq = t * 4;
-        if (this._mechArmL) {
-          this._mechArmL.rotation.x = -0.8 + Math.sin(workFreq) * 0.5;
-          this._mechArmL.rotation.z =  0.15 + Math.sin(workFreq * 0.5) * 0.08;
-        }
-        // Braço direito segura algo
-        if (this._mechArmR) {
-          this._mechArmR.rotation.x = -0.5 + Math.sin(workFreq + 1) * 0.1;
-        }
-        // Leve balanceio do corpo
-        this.mechanic.rotation.z = Math.sin(t * 2) * 0.015;
-        break;
-      }
-      case 'wave': {
-        // Acenar com o braço direito
-        const waveFreq = t * 8;
-        if (this._mechArmR) {
-          this._mechArmR.rotation.x = -1.2;
-          this._mechArmR.rotation.z = -0.4 + Math.sin(waveFreq) * 0.4;
-        }
-        if (this._mechArmL) this._mechArmL.rotation.x = 0.1;
-        if (this._mechLegL) this._mechLegL.rotation.x = 0;
-        if (this._mechLegR) this._mechLegR.rotation.x = 0;
-        this.mechanic.position.y = 0;
-        break;
-      }
-    }
-  }
 
   // ===== CONTROLE DE ILUMINAÇÃO =====
 
@@ -1690,8 +1464,6 @@ export class OptimizedGarage {
     if (this.currentCar) {
       // Abrir porta, depois sair
       this.hidePartLabels();
-      this.setMechanicState('wave');
-      setTimeout(() => this.setMechanicState('idle'), 2000);
       this.lightsDown();
       this.openGarageDoor();
       window.uiManager?.showNotification("🚗 Carro saindo da garagem...", "info");
@@ -2018,9 +1790,6 @@ export class OptimizedGarage {
         pos.z = target.z;
         this.carEntering = false;
         this.closeGarageDoor();
-        // Mecânico vai até o carro
-        this.setMechanicState('walk');
-        setTimeout(() => this.setMechanicState('work'), 1200);
         // Mostrar labels de peças quando carro chega
         const parts = window.gameState?.currentCar?.parts;
         if (parts) {
@@ -2054,6 +1823,8 @@ export class OptimizedGarage {
       }
     }
 
+    this.updatePartLabelPositions();
+    this.updateLightFlicker(this.clock.elapsedTime);
     this.renderer.render(this.scene, this.camera);
   }
 }

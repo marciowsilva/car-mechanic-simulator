@@ -745,3 +745,118 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
   font-family: 'DM Mono', monospace; margin-bottom: 4px;
 }
 .history-item-stars { font-size: 12px; letter-spacing: 1px; }
+
+/* ===== PAINEL DE ESTATÍSTICAS ===== */
+#stats-panel {
+  position: fixed; inset: 0; z-index: 2000;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(10,12,20,0.78); backdrop-filter: blur(6px);
+  font-family: 'DM Sans', sans-serif;
+}
+#stats-panel.show { display: flex; }
+
+.stats-modal {
+  background: #181c27; border: 1px solid #2a3047;
+  border-radius: 20px; width: 780px; max-width: 95vw;
+  max-height: 88vh; display: flex; flex-direction: column;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6); overflow: hidden;
+}
+
+.stats-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid #2a3047; flex-shrink: 0;
+}
+.stats-title { font-size: 17px; font-weight: 700; color: #e2e8f0; }
+.stats-close {
+  width: 32px; height: 32px; border-radius: 8px;
+  background: transparent; border: 1px solid #2a3047;
+  color: #64748b; cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.stats-close:hover { background: #252b3b; color: #e2e8f0; }
+
+/* Perfil do jogador */
+.stats-profile {
+  display: flex; align-items: center; gap: 20px;
+  padding: 20px 24px; border-bottom: 1px solid #2a3047; flex-shrink: 0;
+  background: #1f2433;
+}
+.stats-avatar {
+  width: 64px; height: 64px; border-radius: 16px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; flex-shrink: 0;
+}
+.stats-player-info { flex: 1; }
+.stats-player-name { font-size: 18px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+.stats-player-title { font-size: 12px; color: #60a5fa; margin-bottom: 8px; }
+.stats-xp-bar-wrap { display: flex; align-items: center; gap: 10px; }
+.stats-xp-bg { flex: 1; height: 6px; background: #1f2433; border-radius: 100px; overflow: hidden; border: 1px solid #2a3047; }
+.stats-xp-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, #3b82f6, #60a5fa); transition: width 0.6s ease; }
+.stats-xp-label { font-size: 11px; color: #64748b; white-space: nowrap; font-family: 'DM Mono', monospace; }
+.stats-money-badge {
+  font-size: 16px; font-weight: 700; color: #facc15;
+  font-family: 'DM Mono', monospace; background: rgba(250,204,21,0.08);
+  border: 1px solid rgba(250,204,21,0.2); border-radius: 10px; padding: 6px 14px;
+}
+
+/* Grid de stats */
+.stats-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-bottom: 1px solid #2a3047; flex-shrink: 0;
+}
+.stats-cell {
+  text-align: center; padding: 16px 10px;
+  border-right: 1px solid #2a3047;
+}
+.stats-cell:last-child { border-right: none; }
+.stats-cell-value {
+  font-size: 22px; font-weight: 700; color: #3b82f6;
+  font-family: 'DM Mono', monospace; margin-bottom: 4px;
+}
+.stats-cell-value.gold  { color: #facc15; }
+.stats-cell-value.green { color: #22c55e; }
+.stats-cell-value.amber { color: #f59e0b; }
+.stats-cell-value.red   { color: #ef4444; }
+.stats-cell-label { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; }
+
+/* Seções */
+.stats-body { overflow-y: auto; flex: 1; padding: 20px 24px; display: flex; flex-direction: column; gap: 20px; }
+.stats-body::-webkit-scrollbar { width: 4px; }
+.stats-body::-webkit-scrollbar-thumb { background: #2a3047; border-radius: 100px; }
+
+.stats-section-title {
+  font-size: 11px; font-weight: 700; color: #64748b;
+  text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px;
+}
+
+/* Barras de métricas */
+.stats-bars { display: flex; flex-direction: column; gap: 10px; }
+.stats-bar-row { display: flex; align-items: center; gap: 12px; }
+.stats-bar-name { font-size: 12px; color: #94a3b8; width: 130px; flex-shrink: 0; }
+.stats-bar-bg { flex: 1; height: 7px; background: #1f2433; border-radius: 100px; overflow: hidden; }
+.stats-bar-fill { height: 100%; border-radius: 100px; transition: width 0.8s ease; }
+.stats-bar-val { font-size: 11px; color: #64748b; width: 40px; text-align: right; font-family: 'DM Mono', monospace; }
+
+/* Carros favoritos */
+.stats-cars { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.stats-car-card {
+  background: #1f2433; border: 1px solid #2a3047;
+  border-radius: 10px; padding: 12px; text-align: center;
+}
+.stats-car-icon { font-size: 22px; margin-bottom: 6px; }
+.stats-car-name { font-size: 11px; color: #94a3b8; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stats-car-count { font-size: 13px; font-weight: 700; color: #3b82f6; font-family: 'DM Mono', monospace; }
+
+/* Linha do tempo recente */
+.stats-timeline { display: flex; flex-direction: column; gap: 8px; }
+.stats-timeline-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; background: #1f2433;
+  border: 1px solid #2a3047; border-radius: 10px;
+}
+.stats-tl-stars { font-size: 11px; flex-shrink: 0; width: 70px; }
+.stats-tl-info { flex: 1; min-width: 0; }
+.stats-tl-car { font-size: 12px; font-weight: 600; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stats-tl-date { font-size: 10px; color: #64748b; }
+.stats-tl-pay { font-size: 13px; font-weight: 700; color: #facc15; font-family: 'DM Mono', monospace; flex-shrink: 0; }

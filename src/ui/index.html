@@ -497,6 +497,7 @@
       <button class="action-btn" id="events-btn">📅 Eventos</button>
       <button class="action-btn" id="customers-btn">👥 Clientes</button>
         <button class="action-btn" id="history-btn" onclick="window.uiManager?.showHistory()">📋 Histórico</button>
+        <button class="action-btn" id="stats-btn" onclick="window.uiManager?.showStats()">📊 Stats</button>
         <button class="action-btn" id="achievements-btn">🏆 Conquistas</button>
       <div class="btn-sep"></div>
       <button class="action-btn" id="garage-btn">🏢 Garagem</button>
@@ -508,6 +509,43 @@
     </div>
 
     <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
+  </div>
+
+  <!-- ===== PAINEL DE ESTATÍSTICAS ===== -->
+  <div id="stats-panel">
+    <div class="stats-modal">
+      <div class="stats-header">
+        <div class="stats-title">Estatísticas</div>
+        <button class="stats-close" onclick="window.uiManager?.hideStats()">✕</button>
+      </div>
+      <div class="stats-profile">
+        <div class="stats-avatar" id="stats-avatar">🔧</div>
+        <div class="stats-player-info">
+          <div class="stats-player-name" id="stats-player-name">Mecânico</div>
+          <div class="stats-player-title" id="stats-player-title">Aprendiz</div>
+          <div class="stats-xp-bar-wrap">
+            <div class="stats-xp-bg"><div class="stats-xp-fill" id="stats-xp-fill" style="width:0%"></div></div>
+            <div class="stats-xp-label" id="stats-xp-label">0 / 1000 XP</div>
+          </div>
+        </div>
+        <div class="stats-money-badge" id="stats-money">R$ 0</div>
+      </div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="stats-body">
+        <div>
+          <div class="stats-section-title">Desempenho</div>
+          <div class="stats-bars" id="stats-bars"></div>
+        </div>
+        <div>
+          <div class="stats-section-title">Carros mais atendidos</div>
+          <div class="stats-cars" id="stats-cars"></div>
+        </div>
+        <div>
+          <div class="stats-section-title">Últimos serviços</div>
+          <div class="stats-timeline" id="stats-timeline"></div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== HISTÓRICO DE JOBS ===== -->
@@ -843,6 +881,9 @@
         // Fade in do jogo
         transition.classList.remove('fade-in');
 
+        // Iniciar/retomar ambiente (após gesto do usuário)
+        window.uiManager?.resumeAmbience?.();
+
         // Inicializar estado do minigame
         const mgEnabled = localStorage.getItem('minigame_enabled') === 'true';
         const mgBtn = document.getElementById('btn-minigame');
@@ -881,6 +922,8 @@
       // Fechar painéis abertos
       window.uiManager?.closeJobResult?.();
       window.uiManager?.hideHistory?.();
+      window.uiManager?.hideStats?.();
+      window.uiManager?.pauseAmbience?.();
 
       // Fade
       const transition = document.getElementById('menu-transition');

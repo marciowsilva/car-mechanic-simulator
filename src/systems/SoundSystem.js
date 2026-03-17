@@ -336,6 +336,216 @@ export class SoundSystem {
     };
   }
 
+
+  // ===== SONS DE AMBIENTE =====
+
+  startAmbience() {
+    if (this._ambienceRunning) return;
+
+    // Garantir que o AudioContext está ativo após gesto do usuário
+    const ctx = this._ctx();
+    if (!ctx) return;
+
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => this._startAmbienceInternal());
+    } else {
+      this._startAmbienceInternal();
+    }
+  }
+
+  _startAmbienceInternal() {
+    this._ambienceRunning = true;
+    this._ambienceNodes = [];
+    this._startFan();
+    this._startHum();
+    this._startRadio();
+    this._scheduleRattle();
+    this._scheduleClank();
+  }
+
+  stopAmbience() {
+    this._ambienceRunning = false;
+    this._ambienceNodes?.forEach(n => {
+      try { n.stop?.(); n.disconnect?.(); } catch(e) {}
+    });
+    this._ambienceNodes = [];
+    if (this._rattleTimer) clearTimeout(this._rattleTimer);
+    if (this._clankTimer)  clearTimeout(this._clankTimer);
+  }
+
+  setAmbienceVolume(vol) {
+    this._ambienceVol = Math.max(0, Math.min(1, vol));
+    if (this._fanGain)   this._fanGain.gain.value   = this._ambienceVol * 0.06;
+    if (this._humGain)   this._humGain.gain.value   = this._ambienceVol * 0.04;
+    if (this._radioGain) this._radioGain.gain.value = this._ambienceVol * 0.05;
+  }
+
+  // Ventilador — ruído branco filtrado em loop
+  _startFan() {
+    const ctx = this._ctx(); if (!ctx) return;
+    const bufSize = ctx.sampleRate * 4;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+
+    const bpf = ctx.createBiquadFilter();
+    bpf.type = 'bandpass';
+    bpf.frequency.value = 320;
+    bpf.Q.value = 0.8;
+
+    const bpf2 = ctx.createBiquadFilter();
+    bpf2.type = 'bandpass';
+    bpf2.frequency.value = 180;
+    bpf2.Q.value = 1.2;
+
+    this._fanGain = ctx.createGain();
+    this._fanGain.gain.value = (this._ambienceVol || 0.5) * 0.06;
+
+    src.connect(bpf); bpf.connect(bpf2); bpf2.connect(this._fanGain);
+    this._fanGain.connect(ctx.destination);
+    src.start();
+    this._ambienceNodes.push(src, bpf, bpf2, this._fanGain);
+  }
+
+  // Hum elétrico — frequência de 60Hz (transformadores/lâmpadas)
+  _startHum() {
+    const ctx = this._ctx(); if (!ctx) return;
+    const now = ctx.currentTime;
+
+    [60, 120, 180].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+
+      const gain = ctx.createGain();
+      gain.gain.value = (this._ambienceVol || 0.5) * [0.04, 0.02, 0.01][i];
+
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start();
+      this._ambienceNodes.push(osc, gain);
+      if (i === 0) this._humGain = gain;
+    });
+  }
+
+  // Rádio AM distante — voz + música simulada
+  _startRadio() {
+    const ctx = this._ctx(); if (!ctx) return;
+    const bufSize = ctx.sampleRate * 6;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+
+    // Simular "música" com harmônicos variando
+    const baseFreqs = [220, 330, 440, 550, 660];
+    for (let i = 0; i < bufSize; i++) {
+      const t = i / ctx.sampleRate;
+      let v = 0;
+      baseFreqs.forEach(f => {
+        v += Math.sin(2 * Math.PI * f * t) * 0.15;
+        v += Math.sin(2 * Math.PI * f * 1.5 * t) * 0.05;
+      });
+      // Modulação AM (simula sinal de rádio)
+      const carrier = Math.sin(2 * Math.PI * 0.3 * t);
+      v *= (0.6 + carrier * 0.4);
+      // Ruído de fundo do rádio
+      v += (Math.random() - 0.5) * 0.08;
+      data[i] = v * 0.3;
+    }
+
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+
+    // Filtro para soar como rádio AM (faixa estreita)
+    const bpf = ctx.createBiquadFilter();
+    bpf.type = 'bandpass';
+    bpf.frequency.value = 1200;
+    bpf.Q.value = 0.5;
+
+    const dist = ctx.createWaveShaper();
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      const x = (i * 2) / 256 - 1;
+      curve[i] = (Math.PI + 200) * x / (Math.PI + 200 * Math.abs(x));
+    }
+    dist.curve = curve;
+
+    this._radioGain = ctx.createGain();
+    this._radioGain.gain.value = (this._ambienceVol || 0.5) * 0.05;
+
+    src.connect(bpf); bpf.connect(dist); dist.connect(this._radioGain);
+    this._radioGain.connect(ctx.destination);
+    src.start();
+    this._ambienceNodes.push(src, bpf, dist, this._radioGain);
+  }
+
+  // Chocalho metálico esporádico (ferramenta caindo)
+  _scheduleRattle() {
+    if (!this._ambienceRunning) return;
+    const delay = 8000 + Math.random() * 20000; // 8-28 segundos
+    this._rattleTimer = setTimeout(() => {
+      this._playRattle();
+      this._scheduleRattle();
+    }, delay);
+  }
+
+  _playRattle() {
+    const ctx = this._ctx(); if (!ctx) return;
+    const now = ctx.currentTime;
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.4, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const t = i / ctx.sampleRate;
+      // Série de pequenos impactos decaindo
+      const impacts = [0, 0.05, 0.09, 0.12, 0.14, 0.155];
+      let v = 0;
+      impacts.forEach(imp => {
+        if (t >= imp) v += (Math.random() - 0.5) * Math.exp(-(t - imp) / 0.02);
+      });
+      data[i] = v;
+    }
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = 'highpass';
+    hpf.frequency.value = 1000;
+    const gain = ctx.createGain();
+    gain.gain.value = (this._ambienceVol || 0.5) * 0.4;
+    src.connect(hpf); hpf.connect(gain); gain.connect(ctx.destination);
+    src.start(now);
+  }
+
+  // Baque metálico esporádico (pancada de martelo ao longe)
+  _scheduleClank() {
+    if (!this._ambienceRunning) return;
+    const delay = 12000 + Math.random() * 25000; // 12-37 segundos
+    this._clankTimer = setTimeout(() => {
+      this._playClank();
+      this._scheduleClank();
+    }, delay);
+  }
+
+  _playClank() {
+    const ctx = this._ctx(); if (!ctx) return;
+    const now = ctx.currentTime;
+    // Tom metálico grave
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.3);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime((this._ambienceVol || 0.5) * 0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+    const lpf = ctx.createBiquadFilter();
+    lpf.type = 'lowpass';
+    lpf.frequency.value = 600;
+    osc.connect(lpf); lpf.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.5);
+  }
+
   // ===== API PÚBLICA =====
 
   play(soundName) {

@@ -36,6 +36,7 @@ class GameState {
     this.selectedTool = "wrench";
     this.selectedPart = null;
     this.startTime = Date.now();
+    this.totalSpent = 0;
     this.isUpdatingFromAchievement = false;
   }
 
@@ -115,6 +116,7 @@ class GameState {
     const oldCondition = part.condition;
     part.condition = Math.min(100, part.condition + tool.repair);
     this.money -= tool.cost;
+    this.totalSpent = (this.totalSpent || 0) + tool.cost;
     this.addExperience(5);
     this.updateMoney(0);
     return { success:true, message:`🔧 Reparou ${Math.round(part.condition - oldCondition)}% com ${tool.name}`, repairedAmount:Math.round(part.condition - oldCondition), partName, newCondition:part.condition };
@@ -126,6 +128,7 @@ class GameState {
     if (this.money < 500) return { success:false, message:"💰 Dinheiro insuficiente" };
     part.condition = 100;
     this.money -= 500;
+    this.totalSpent = (this.totalSpent || 0) + 500;
     this.addExperience(20);
     this.updateMoney(0);
     return { success:true, message:"🛒 Peça nova instalada!", partName, newCondition:100 };
