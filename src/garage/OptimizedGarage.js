@@ -33,6 +33,10 @@ export class OptimizedGarage {
     this.partLabelsVisible = false;
     this.ceilingLights = [];     // Luzes do teto para animação dinâmica
     this.lightsOn = true;        // Estado das luzes
+    // Vetores reutilizáveis (evitar GC no loop)
+    this._tmpVec3   = new THREE.Vector3();
+    this._fwdVec    = new THREE.Vector3();
+    this._gndFwdVec = new THREE.Vector3();
     this._currentLightLevel = 0; // Nível atual de intensidade (0-1)
     this._lightAnimInterval = null;
     this.liftArms = []; // Braços do elevador ativo
@@ -985,7 +989,7 @@ export class OptimizedGarage {
 
   // Animação de pulso suave (hum da fluorescente)
   updateLightFlicker(time) {
-    if (!this.lightsOn || !this.ceilingLights.length) return;
+    if (!this.lightsOn || !this.ceilingLights.length || this._currentLightLevel < 0.1) return;
     this.ceilingLights.forEach(({ light, fillLight, bulbMat }, i) => {
       // Pulso muito sutil — simula hum de fluorescente
       const flicker = 1 + Math.sin(time * 120 + i * 1.5) * 0.012

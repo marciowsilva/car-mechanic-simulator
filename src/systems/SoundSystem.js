@@ -383,7 +383,7 @@ export class SoundSystem {
   // Ventilador — ruído branco filtrado em loop
   _startFan() {
     const ctx = this._ctx(); if (!ctx) return;
-    const bufSize = ctx.sampleRate * 4;
+    const bufSize = ctx.sampleRate * 2; // 2s loop (era 4s)
     const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
@@ -434,7 +434,7 @@ export class SoundSystem {
   // Rádio AM distante — voz + música simulada
   _startRadio() {
     const ctx = this._ctx(); if (!ctx) return;
-    const bufSize = ctx.sampleRate * 6;
+    const bufSize = ctx.sampleRate * 3; // 3s loop (era 6s)
     const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
     const data = buf.getChannelData(0);
 

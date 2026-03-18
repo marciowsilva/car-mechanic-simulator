@@ -28,6 +28,8 @@ export class UIManager {
     this.initTooltips();
     this._timerInterval = null;
     this.jobHistory = this._loadHistory() || [];
+    // Cache de elementos DOM acessados frequentemente
+    this._domCache = {};
 
     this._timerDisplayInterval = setInterval(() => this.updateTimer(), 1000);
   }
@@ -774,6 +776,9 @@ export class UIManager {
   }
 
   updateJobInfo() {
+    const now = Date.now();
+    if (this._lastJobInfoUpdate && now - this._lastJobInfoUpdate < 200) return;
+    this._lastJobInfoUpdate = now;
     const el = this.getElement("job-info");
     if (!window.gameState?.currentJob) {
       el.innerHTML = '<div class="empty-state">🚗 Nenhum serviço ativo</div>';
@@ -1079,6 +1084,8 @@ export class UIManager {
       clearInterval(this._timerInterval);
       this._timerInterval = null;
     this.jobHistory = this._loadHistory() || [];
+    // Cache de elementos DOM acessados frequentemente
+    this._domCache = {};
     }
     const timerEl = document.getElementById('job-timer');
     if (timerEl) timerEl.classList.remove('show');
