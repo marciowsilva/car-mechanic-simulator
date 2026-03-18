@@ -610,6 +610,11 @@ export class UIManager {
         }
 
         this.sounds?.play("money");
+        // Progresso de missão
+        if (window.dailyChallenges && result) {
+          window.dailyChallenges.onJobComplete?.({ quality: avgQuality || 0, payment: payment, startTime: window.gameState?.startTime || Date.now() });
+          window.uiManager?._updateMissionsBadge?.();
+        }
 
         // Calcular qualidade média das peças
         const partsArr = Object.values(window.gameState.currentCar?.parts || {});
@@ -1169,6 +1174,7 @@ export class UIManager {
     overlay.classList.add('show');
   }
 
+  hideMissionsOnMenu() { this.hideMissions?.(); }
   pauseAmbience() { this.sounds?.stopAmbience?.(); }
   resumeAmbience() { this.sounds?.startAmbience?.(); }
 
@@ -1350,6 +1356,123 @@ export class UIManager {
     }).join('');
   }
 
+
+
+  // ===== MISSÕES DIÁRIAS =====
+
+  showMissions() {
+    const panel = document.getElementById('missions-panel');
+    if (!panel) return;
+    this._renderMissions();
+    panel.classList.add('show');
+    // Atualizar timer a cada minuto
+    this._missionsTimerInterval = setInterval(() => this._updateMissionsTimer(), 60000);
+    document.addEventListener('keydown', this._missionsEscHandler = e => {
+      if (e.key === 'Escape') this.hideMissions();
+    });
+  }
+
+  hideMissions() {
+    document.getElementById('missions-panel')?.classList.remove('show');
+    clearInterval(this._missionsTimerInterval);
+    if (this._missionsEscHandler) {
+      document.removeEventListener('keydown', this._missionsEscHandler);
+      this._missionsEscHandler = null;
+    }
+  }
+
+  _renderMissions() {
+    const dc = window.dailyChallenges;
+    if (!dc) return;
+
+    const challenges = dc.challenges || [];
+    const progress   = dc.getProgress?.() || { completed: 0, total: 5, percentage: 0 };
+    const pct        = Math.round((progress.claimed || 0) / (progress.total || 5) * 100);
+
+    // Barra e streak
+    const bar = document.getElementById('missions-bar');
+    if (bar) bar.style.width = pct + '%';
+    const barLabel = document.getElementById('missions-bar-label');
+    if (barLabel) barLabel.textContent = `${progress.claimed || 0} / ${progress.total || 5}`;
+    const streak = document.getElementById('missions-streak');
+    if (streak) streak.textContent = `🔥 ${dc.consecutiveDays || 0} dias`;
+
+    this._updateMissionsTimer();
+
+    // Lista de missões
+    const list = document.getElementById('missions-list');
+    if (!list) return;
+
+    list.innerHTML = challenges.map(ch => {
+      const pct  = Math.min(100, Math.round((ch.progress / ch.target) * 100));
+      const done = ch.claimed;
+      const ready = ch.completed && !ch.claimed;
+
+      let btnHtml = '';
+      if (done) {
+        btnHtml = `<button class="mission-claim-btn done">✓ Resgatado</button>`;
+      } else if (ready) {
+        btnHtml = `<button class="mission-claim-btn ready" onclick="window.uiManager?.claimMission('${ch.id}')">Resgatar R$ ${ch.reward}</button>`;
+      } else {
+        btnHtml = `<button class="mission-claim-btn reward">R$ ${ch.reward}</button>`;
+      }
+
+      return `
+        <div class="mission-card ${ready ? 'completed' : ''} ${done ? 'claimed' : ''}">
+          <div class="mission-icon">${ch.icon}</div>
+          <div class="mission-info">
+            <div class="mission-name">${ch.name}</div>
+            <div class="mission-desc">${ch.description}</div>
+            <div class="mission-prog-wrap">
+              <div class="mission-prog-bg">
+                <div class="mission-prog-fill" style="width:${pct}%"></div>
+              </div>
+              <div class="mission-prog-label">${ch.progress} / ${ch.target}</div>
+            </div>
+          </div>
+          ${btnHtml}
+        </div>`;
+    }).join('');
+  }
+
+  _updateMissionsTimer() {
+    const dc = window.dailyChallenges;
+    if (!dc) return;
+    const timer = document.getElementById('missions-timer');
+    if (timer) timer.textContent = `⏱ ${dc.formatTimeLeft?.() || '--h --m'}`;
+  }
+
+  claimMission(challengeId) {
+    const dc = window.dailyChallenges;
+    if (!dc) return;
+    const reward = dc.claimReward(challengeId);
+    if (reward > 0) {
+      window.gameState.money += reward;
+      window.gameState.updateMoney?.(0);
+      this.updateMoney();
+      this.showNotification(`🎯 Missão concluída! +R$ ${reward.toLocaleString('pt-BR')}`, 'success');
+      this._saveProgress();
+    }
+    this._renderMissions();
+    this._updateMissionsBadge();
+  }
+
+  _updateMissionsBadge() {
+    const dc = window.dailyChallenges;
+    if (!dc) return;
+    const ready = (dc.challenges || []).filter(c => c.completed && !c.claimed).length;
+    const badge = document.getElementById('missions-badge');
+    if (badge) {
+      badge.textContent = ready;
+      badge.style.display = ready > 0 ? 'flex' : 'none';
+    }
+  }
+
+  // Notificar missão concluída
+  _notifyMissionComplete(ch) {
+    this.showNotification(`🎯 Missão completa: ${ch.name}! Resgate R$ ${ch.reward}`, 'success', 5000);
+    this._updateMissionsBadge();
+  }
 
   // ===== PAINEL DE ESTATÍSTICAS =====
 
@@ -1547,6 +1670,11 @@ export class UIManager {
           break;
         case "money":
           this.sounds?.play("money");
+        // Progresso de missão
+        if (window.dailyChallenges && result) {
+          window.dailyChallenges.onJobComplete?.({ quality: avgQuality || 0, payment: payment, startTime: window.gameState?.startTime || Date.now() });
+          window.uiManager?._updateMissionsBadge?.();
+        }
           break;
         default:
           this.sounds?.play("click");

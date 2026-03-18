@@ -498,6 +498,7 @@
       <button class="action-btn" id="customers-btn">👥 Clientes</button>
         <button class="action-btn" id="history-btn" onclick="window.uiManager?.showHistory()">📋 Histórico</button>
         <button class="action-btn" id="stats-btn" onclick="window.uiManager?.showStats()">📊 Stats</button>
+        <button class="action-btn" id="missions-btn" onclick="window.uiManager?.showMissions()" style="position:relative">🎯 Missões<span class="missions-badge" id="missions-badge" style="display:none">0</span></button>
         <button class="action-btn" id="achievements-btn">🏆 Conquistas</button>
       <div class="btn-sep"></div>
       <button class="action-btn" id="garage-btn">🏢 Garagem</button>
@@ -509,6 +510,25 @@
     </div>
 
     <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
+  </div>
+
+  <!-- ===== MISSÕES DIÁRIAS ===== -->
+  <div id="missions-panel">
+    <div class="missions-modal">
+      <div class="missions-header">
+        <div class="missions-header-left">
+          <div class="missions-title">Missões Diárias</div>
+          <div class="missions-timer" id="missions-timer">⏱ --h --m</div>
+        </div>
+        <button class="missions-close" onclick="window.uiManager?.hideMissions()">✕</button>
+      </div>
+      <div class="missions-progress-bar">
+        <div class="ach-bar-bg" style="flex:1"><div class="ach-bar-fill" id="missions-bar" style="width:0%"></div></div>
+        <div class="ach-bar-label" id="missions-bar-label">0 / 5</div>
+        <div class="missions-streak" id="missions-streak">🔥 0 dias</div>
+      </div>
+      <div class="missions-list" id="missions-list"></div>
+    </div>
   </div>
 
   <!-- ===== PAINEL DE ESTATÍSTICAS ===== -->
@@ -923,6 +943,7 @@
       window.uiManager?.closeJobResult?.();
       window.uiManager?.hideHistory?.();
       window.uiManager?.hideStats?.();
+      window.uiManager?.hideMissions?.();
       window.uiManager?.pauseAmbience?.();
 
       // Fade
