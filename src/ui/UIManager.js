@@ -1061,8 +1061,14 @@ export class UIManager {
       // Classes de estado
       if (display) {
         display.classList.remove('warning', 'critical');
-        if (pct <= 25) display.classList.add('critical');
-        else if (pct <= 50) display.classList.add('warning');
+        timerEl.classList.remove('warning', 'critical');
+        if (pct <= 25) {
+          display.classList.add('critical');
+          timerEl.classList.add('critical');
+        } else if (pct <= 50) {
+          display.classList.add('warning');
+          timerEl.classList.add('warning');
+        }
       }
 
       // Label
@@ -1091,7 +1097,7 @@ export class UIManager {
     this._domCache = {};
     }
     const timerEl = document.getElementById('job-timer');
-    if (timerEl) timerEl.classList.remove('show');
+    if (timerEl) timerEl.classList.remove('show', 'warning', 'critical');
   }
 
   _onTimerExpired() {

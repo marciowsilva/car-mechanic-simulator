@@ -526,20 +526,32 @@
   <div id="ui-overlay" style="display:none">
     <div id="top-panel">
       <div class="stat">
-        <span class="stat-label">Dinheiro</span>
-        <span class="stat-value" id="money">R$ 500.000</span>
+        <div class="stat-icon">💰</div>
+        <div class="stat-body">
+          <span class="stat-label">Dinheiro</span>
+          <span class="stat-value" id="money">R$ 500.000</span>
+        </div>
       </div>
       <div class="stat">
-        <span class="stat-label">Nível</span>
-        <span class="stat-value" id="level">1</span>
+        <div class="stat-icon">⭐</div>
+        <div class="stat-body">
+          <span class="stat-label">Nível</span>
+          <span class="stat-value" id="level">1</span>
+        </div>
       </div>
       <div class="stat">
-        <span class="stat-label">Reputação</span>
-        <span class="stat-value" id="reputation">★★★☆☆</span>
+        <div class="stat-icon">🏅</div>
+        <div class="stat-body">
+          <span class="stat-label">Reputação</span>
+          <span class="stat-value" id="reputation">★☆☆☆☆</span>
+        </div>
       </div>
       <div class="stat">
-        <span class="stat-label">Clientes</span>
-        <span class="stat-value" id="jobs-completed">0</span>
+        <div class="stat-icon">🚗</div>
+        <div class="stat-body">
+          <span class="stat-label">Clientes</span>
+          <span class="stat-value" id="jobs-completed">0</span>
+        </div>
       </div>
       <div class="audio-controls">
         <button class="audio-btn active" id="toggle-music" title="Música">🎵</button>
@@ -607,27 +619,90 @@
     </div>
 
     <div id="bottom-panel">
-      <button class="action-btn" id="new-job">🚗 Novo Cliente</button>
-      <div class="btn-sep"></div>
-      <button class="action-btn" id="upgrade-shop-btn">🛠 Upgrades</button>
-      <button class="action-btn" id="equipment-btn">🔩 Equipamentos</button>
-      <button class="action-btn" id="inventory-btn">📦 Estoque</button>
-      <button class="action-btn" id="shop-btn">🛒 Loja</button>
-      <div class="btn-sep"></div>
-      <button class="action-btn" id="events-btn">📅 Eventos</button>
-      <button class="action-btn" id="customers-btn">👥 Clientes</button>
-        <button class="action-btn" id="history-btn" onclick="window.uiManager?.showHistory()">📋 Histórico</button>
-        <button class="action-btn" id="stats-btn" onclick="window.uiManager?.showStats()">📊 Stats</button>
-        <button class="action-btn" id="events-btn" onclick="window.uiManager?.showEvents()" style="position:relative">⚡ Eventos<span class="event-active-dot" id="event-active-dot" style="display:none"></span></button>
-        <button class="action-btn" id="missions-btn" onclick="window.uiManager?.showMissions()" style="position:relative">🎯 Missões<span class="missions-badge" id="missions-badge" style="display:none">0</span></button>
-        <button class="action-btn" id="achievements-btn">🏆 Conquistas</button>
-      <div class="btn-sep"></div>
-      <button class="action-btn" id="garage-btn">🏢 Garagem</button>
-      <button class="action-btn" id="garage-upgrade-btn">➕ Expandir</button>
-      <div class="btn-sep"></div>
-      <button class="action-btn" id="deliver-car" disabled>✅ Entregar</button>
-      <div class="btn-sep"></div>
-      <button class="action-btn" id="btn-back-menu" onclick="returnToMenu()" title="Voltar ao menu" style="padding:9px 14px">⏏ Menu</button>
+
+      <!-- Ações principais -->
+      <div class="btn-group-main">
+        <button class="bar-btn bar-btn-primary" id="new-job">
+          <span class="bar-btn-icon">🚗</span>
+          <span class="bar-btn-label">Novo Cliente</span>
+        </button>
+        <button class="bar-btn bar-btn-success" id="deliver-car" disabled>
+          <span class="bar-btn-icon">✅</span>
+          <span class="bar-btn-label">Entregar Carro</span>
+        </button>
+      </div>
+
+      <div class="bar-divider"></div>
+
+      <!-- Oficina -->
+      <div class="btn-group">
+        <button class="bar-btn" id="upgrade-shop-btn">
+          <span class="bar-btn-icon">🛠</span>
+          <span class="bar-btn-label">Upgrades</span>
+        </button>
+        <button class="bar-btn" id="shop-btn">
+          <span class="bar-btn-icon">🛒</span>
+          <span class="bar-btn-label">Loja</span>
+        </button>
+        <button class="bar-btn" id="inventory-btn">
+          <span class="bar-btn-icon">📦</span>
+          <span class="bar-btn-label">Estoque</span>
+        </button>
+        <button class="bar-btn" id="garage-upgrade-btn">
+          <span class="bar-btn-icon">🏢</span>
+          <span class="bar-btn-label">Garagem</span>
+        </button>
+      </div>
+
+      <div class="bar-divider"></div>
+
+      <!-- Progresso -->
+      <div class="btn-group">
+        <button class="bar-btn" id="missions-btn" onclick="window.uiManager?.showMissions()" style="position:relative">
+          <span class="bar-btn-icon">🎯</span>
+          <span class="bar-btn-label">Missões</span>
+          <span class="missions-badge" id="missions-badge" style="display:none">0</span>
+        </button>
+        <button class="bar-btn" id="achievements-btn">
+          <span class="bar-btn-icon">🏆</span>
+          <span class="bar-btn-label">Conquistas</span>
+        </button>
+        <button class="bar-btn" id="events-btn" onclick="window.uiManager?.showEvents()" style="position:relative">
+          <span class="bar-btn-icon">⚡</span>
+          <span class="bar-btn-label">Eventos</span>
+          <span class="event-active-dot" id="event-active-dot" style="display:none"></span>
+        </button>
+      </div>
+
+      <div class="bar-divider"></div>
+
+      <!-- Info -->
+      <div class="btn-group">
+        <button class="bar-btn" id="stats-btn" onclick="window.uiManager?.showStats()">
+          <span class="bar-btn-icon">📊</span>
+          <span class="bar-btn-label">Stats</span>
+        </button>
+        <button class="bar-btn" id="history-btn" onclick="window.uiManager?.showHistory()">
+          <span class="bar-btn-icon">📋</span>
+          <span class="bar-btn-label">Histórico</span>
+        </button>
+        <button class="bar-btn" id="customers-btn">
+          <span class="bar-btn-icon">👥</span>
+          <span class="bar-btn-label">Clientes</span>
+        </button>
+      </div>
+
+      <!-- Spacer -->
+      <div class="bar-spacer"></div>
+
+      <!-- Menu -->
+      <div class="btn-group">
+        <button class="bar-btn bar-btn-muted" id="btn-back-menu" onclick="returnToMenu()">
+          <span class="bar-btn-icon">⏏</span>
+          <span class="bar-btn-label">Menu</span>
+        </button>
+      </div>
+
     </div>
 
     <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
