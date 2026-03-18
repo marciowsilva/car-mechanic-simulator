@@ -498,6 +498,7 @@
       <button class="action-btn" id="customers-btn">👥 Clientes</button>
         <button class="action-btn" id="history-btn" onclick="window.uiManager?.showHistory()">📋 Histórico</button>
         <button class="action-btn" id="stats-btn" onclick="window.uiManager?.showStats()">📊 Stats</button>
+        <button class="action-btn" id="events-btn" onclick="window.uiManager?.showEvents()" style="position:relative">⚡ Eventos<span class="event-active-dot" id="event-active-dot" style="display:none"></span></button>
         <button class="action-btn" id="missions-btn" onclick="window.uiManager?.showMissions()" style="position:relative">🎯 Missões<span class="missions-badge" id="missions-badge" style="display:none">0</span></button>
         <button class="action-btn" id="achievements-btn">🏆 Conquistas</button>
       <div class="btn-sep"></div>
@@ -510,6 +511,29 @@
     </div>
 
     <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
+  </div>
+
+  <!-- ===== BANNER DE EVENTO ===== -->
+  <div class="event-notif-banner" id="event-banner" style="display:none">
+    <div class="event-notif-icon" id="event-banner-icon"></div>
+    <div class="event-notif-body">
+      <div class="event-notif-label">Evento especial ativo</div>
+      <div class="event-notif-name" id="event-banner-name"></div>
+      <div class="event-notif-desc" id="event-banner-desc"></div>
+      <div class="event-notif-mults" id="event-banner-mults"></div>
+    </div>
+  </div>
+
+  <!-- ===== PAINEL DE EVENTOS ===== -->
+  <div id="events-panel">
+    <div class="events-modal">
+      <div class="events-header">
+        <div class="events-title">Eventos Especiais</div>
+        <button class="events-close" onclick="window.uiManager?.hideEvents()">✕</button>
+      </div>
+      <div class="events-mults-bar" id="events-mults-bar"></div>
+      <div class="events-list" id="events-list"></div>
+    </div>
   </div>
 
   <!-- ===== MISSÕES DIÁRIAS ===== -->
@@ -944,6 +968,7 @@
       window.uiManager?.hideHistory?.();
       window.uiManager?.hideStats?.();
       window.uiManager?.hideMissions?.();
+      window.uiManager?.hideEvents?.();
       window.uiManager?.pauseAmbience?.();
 
       // Fade

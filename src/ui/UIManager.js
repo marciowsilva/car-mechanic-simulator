@@ -1358,6 +1358,143 @@ export class UIManager {
 
 
 
+
+  // ===== EVENTOS ESPECIAIS =====
+
+  showEvents() {
+    const panel = document.getElementById('events-panel');
+    if (!panel) return;
+    this._renderEvents();
+    panel.classList.add('show');
+    document.addEventListener('keydown', this._eventsEscHandler = e => {
+      if (e.key === 'Escape') this.hideEvents();
+    });
+  }
+
+  hideEvents() {
+    document.getElementById('events-panel')?.classList.remove('show');
+    if (this._eventsEscHandler) {
+      document.removeEventListener('keydown', this._eventsEscHandler);
+      this._eventsEscHandler = null;
+    }
+  }
+
+  _renderEvents() {
+    const es = this.eventSystem || window.eventSystem;
+    if (!es) {
+      document.getElementById('events-list').innerHTML =
+        '<div style="text-align:center;color:#64748b;padding:40px;font-size:14px">Sistema de eventos não disponível</div>';
+      return;
+    }
+
+    const active = es.getActiveEvents?.() || [];
+    const mults  = es.currentMultipliers || { money: 1.0, xp: 1.0 };
+
+    // Multiplicadores ativos
+    const multsBar = document.getElementById('events-mults-bar');
+    if (multsBar) {
+      const chips = [];
+      if (mults.money > 1) chips.push(`<div class="events-mult-chip money">💰 x${mults.money.toFixed(1)} dinheiro</div>`);
+      if (mults.xp    > 1) chips.push(`<div class="events-mult-chip xp">⭐ x${mults.xp.toFixed(1)} XP</div>`);
+      if (!chips.length)    chips.push('<div class="events-mult-chip none">Nenhum bônus ativo no momento</div>');
+      multsBar.innerHTML = chips.join('');
+    }
+
+    // Lista de todos os eventos
+    const allEvents = Object.values(window.SPECIAL_EVENTS || {});
+    const list = document.getElementById('events-list');
+    if (!list) return;
+
+    if (!allEvents.length) {
+      list.innerHTML = '<div style="text-align:center;color:#64748b;padding:40px">Nenhum evento disponível</div>';
+      return;
+    }
+
+    // Separar ativos e futuros
+    const activeIds = active.map(e => e.id);
+    const sorted = [...allEvents].sort((a, b) => {
+      const aActive = activeIds.includes(a.id);
+      const bActive = activeIds.includes(b.id);
+      if (aActive && !bActive) return -1;
+      if (!aActive && bActive) return  1;
+      return 0;
+    });
+
+    list.innerHTML = sorted.map(ev => {
+      const isActive = activeIds.includes(ev.id);
+      const mTags = [];
+      if (ev.multipliers?.money) mTags.push(`<span class="event-card-tag mult-tag">💰 +${Math.round((ev.multipliers.money-1)*100)}%</span>`);
+      if (ev.multipliers?.xp)    mTags.push(`<span class="event-card-tag mult-tag">⭐ +${Math.round((ev.multipliers.xp-1)*100)}% XP</span>`);
+      const statusTag = isActive
+        ? '<span class="event-card-tag active-tag">✓ Ativo agora</span>'
+        : ev.startDate
+        ? `<span class="event-card-tag next-tag">📅 ${ev.startDate}</span>`
+        : '<span class="event-card-tag next-tag">Aleatório</span>';
+
+      const rewardParts = [];
+      if (ev.rewards?.money) rewardParts.push(`R$ ${ev.rewards.money.toLocaleString('pt-BR')}`);
+      if (ev.rewards?.xp)    rewardParts.push(`${ev.rewards.xp.toLocaleString()} XP`);
+
+      return `
+        <div class="event-card ${isActive ? 'active' : ''}">
+          <div class="event-card-icon">${ev.icon}</div>
+          <div class="event-card-info">
+            <div class="event-card-name">${ev.name}</div>
+            <div class="event-card-desc">${ev.description}${rewardParts.length ? ` · Recompensa: ${rewardParts.join(' + ')}` : ''}</div>
+            <div class="event-card-tags">${statusTag}${mTags.join('')}</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  showEventBanner(event) {
+    const banner = document.getElementById('event-banner');
+    if (!banner || !event) return;
+
+    document.getElementById('event-banner-icon').textContent = event.icon;
+    document.getElementById('event-banner-name').textContent = event.name;
+    document.getElementById('event-banner-desc').textContent = event.description;
+
+    const multsEl = document.getElementById('event-banner-mults');
+    if (multsEl) {
+      const tags = [];
+      if (event.multipliers?.money) tags.push(`<span class="event-mult-tag">💰 +${Math.round((event.multipliers.money-1)*100)}% dinheiro</span>`);
+      if (event.multipliers?.xp)    tags.push(`<span class="event-mult-tag">⭐ +${Math.round((event.multipliers.xp-1)*100)}% XP</span>`);
+      multsEl.innerHTML = tags.join('');
+    }
+
+    // Mostrar com animação
+    banner.style.display = 'flex';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => banner.classList.add('show'));
+    });
+
+    setTimeout(() => {
+      banner.classList.remove('show');
+      setTimeout(() => { banner.style.display = 'none'; }, 400);
+    }, 8000);
+
+    // Mostrar ponto no botão
+    const dot = document.getElementById('event-active-dot');
+    if (dot) dot.style.display = 'block';
+  }
+
+  _initEventSystem() {
+    const es = this.eventSystem || window.eventSystem;
+    if (!es) return;
+
+    // Verificar eventos ativos ao iniciar
+    const active = es.getActiveEvents?.() || [];
+    if (active.length > 0) {
+      setTimeout(() => this.showEventBanner(active[0]), 2000);
+      const dot = document.getElementById('event-active-dot');
+      if (dot) dot.style.display = 'block';
+    }
+
+    // Sobrescrever notifyEvent para usar nosso banner
+    es.notifyEvent = (event) => this.showEventBanner(event);
+  }
+
   // ===== MISSÕES DIÁRIAS =====
 
   showMissions() {

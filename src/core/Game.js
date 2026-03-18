@@ -20,6 +20,7 @@ import { OptimizedGarage as Scene3D } from "/src/garage/OptimizedGarage.js";
 import { UIManager } from "/src/ui/UIManager.js";
 import { UsedPartsMarket } from "/src/systems/market/used-parts-market.js";
 import { CareerMode } from "/src/systems/career-mode.js";
+import { EventSystem, SPECIAL_EVENTS } from "/src/events/EventSystem.js";
 
 // ===== ESTADO GLOBAL DO JOGO =====
 class GameState {
@@ -150,6 +151,7 @@ const customerSystem    = new CustomerSystem();
 const dailyChallenges   = new DailyChallenges();
 const usedPartsMarket   = new UsedPartsMarket();
 const careerMode        = new CareerMode();
+const eventSystem       = new EventSystem();
 let scene3D, uiManager;
 
 Object.defineProperty(window, "scene3D",   { set: v => { scene3D  = v; window._scene3D  = v; }, get: () => window._scene3D  || scene3D });
@@ -294,6 +296,8 @@ window.customerSystem     = customerSystem;
 window.dailyChallenges    = dailyChallenges;
 window.usedPartsMarket    = usedPartsMarket;
 window.careerMode         = careerMode;
+window.eventSystem        = eventSystem;
+window.SPECIAL_EVENTS     = SPECIAL_EVENTS;
 window.GameState          = GameState;
 window.Database           = Database;
 window.UpgradeSystem      = UpgradeSystem;
