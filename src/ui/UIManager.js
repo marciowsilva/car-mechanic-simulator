@@ -612,17 +612,18 @@ export class UIManager {
         }
 
         this.sounds?.play("money");
-        // Progresso de missão
-        if (window.dailyChallenges && result) {
-          window.dailyChallenges.onJobComplete?.({ quality: avgQuality || 0, payment: payment, startTime: window.gameState?.startTime || Date.now() });
-          window.uiManager?._updateMissionsBadge?.();
-        }
 
-        // Calcular qualidade média das peças
+        // Calcular qualidade média das peças (antes de usar em missões e resultado)
         const partsArr = Object.values(window.gameState.currentCar?.parts || {});
         const avgQuality = partsArr.length
           ? partsArr.reduce((a, p) => a + (p.condition || 0), 0) / partsArr.length
           : 80;
+
+        // Progresso de missão
+        if (window.dailyChallenges && result) {
+          window.dailyChallenges.onJobComplete?.({ quality: avgQuality, payment: payment, startTime: window.gameState?.startTime || Date.now() });
+          window.uiManager?._updateMissionsBadge?.();
+        }
 
         // Parar timer antes de mostrar resultado
         this.stopJobTimer();
