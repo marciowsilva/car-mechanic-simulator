@@ -442,32 +442,48 @@ export class UIManager {
         if (this.achievementsPanel?.isVisible) { this.achievementsPanel.hide(); closed = true; }
         if (this.garageUpgradePanel?.isVisible){ this.garageUpgradePanel.hide();closed = true; }
         // Só notifica se realmente fechou algo
-        if (closed) this.showNotification("🔧 Painel fechado", "info");
       }
     });
   }
 
   initAudioControls() {
     const musicBtn = this.getElement("toggle-music");
-    const sfxBtn = this.getElement("toggle-sfx");
+    const sfxBtn   = this.getElement("toggle-sfx");
 
     if (musicBtn && this.sounds) {
       musicBtn.addEventListener("click", () => {
         const enabled = this.sounds.toggle();
-        musicBtn.textContent = enabled ? "🔊" : "🔇";
-        this.showNotification(
-          enabled ? "🔊 Som ativado" : "🔇 Som desativado",
-          "info",
-        );
+        musicBtn.textContent = enabled ? "🎵" : "🔇";
+        musicBtn.title = enabled ? "Música (ligar/desligar)" : "Música desligada";
+        musicBtn.classList.toggle("active", enabled);
+        localStorage.setItem("music_enabled", enabled);
+        if (enabled) this.sounds.startAmbience?.();
+        else          this.sounds.stopAmbience?.();
         this.sounds?.play("click");
       });
     }
 
     if (sfxBtn && this.sounds) {
       sfxBtn.addEventListener("click", () => {
-        this.sounds?.play("click");
-        this.showNotification("🔧 Efeitos sonoros", "info");
+        const enabled = this.sounds.toggleSfx?.() ?? true;
+        sfxBtn.textContent = enabled ? "🔊" : "🔕";
+        sfxBtn.title = enabled ? "Efeitos (ligar/desligar)" : "Efeitos desligados";
+        sfxBtn.classList.toggle("active", enabled);
+        localStorage.setItem("sfx_enabled", enabled);
+        if (enabled) this.sounds?.play("click");
       });
+    }
+
+    // Inicializar estado dos ícones conforme localStorage
+    const musicOn = localStorage.getItem("music_enabled") !== "false";
+    const sfxOn   = localStorage.getItem("sfx_enabled")   !== "false";
+    if (musicBtn) {
+      musicBtn.textContent = musicOn ? "🎵" : "🔇";
+      musicBtn.classList.toggle("active", musicOn);
+    }
+    if (sfxBtn) {
+      sfxBtn.textContent = sfxOn ? "🔊" : "🔕";
+      sfxBtn.classList.toggle("active", sfxOn);
     }
   }
 
@@ -959,7 +975,6 @@ export class UIManager {
                 );
               }
               const label = quality >= 90 ? '🎯 Perfeito!' : quality >= 70 ? '✅ Bom reparo!' : '🔧 Reparo básico';
-              window.uiManager?.showNotification(`${label} (${quality}%)`, quality >= 70 ? 'success' : 'info');
               window.uiManager?.updatePartsList();
               window.uiManager?.updateMoney();
               window.createRepairEffect?.(partName);
@@ -1900,7 +1915,6 @@ window.selectPart = (partName) => {
   if (window.gameState) {
     window.gameState.selectedPart = partName;
     window.uiManager?.updatePartsList();
-    window.uiManager?.showNotification(`🔧 Peça selecionada: ${partName}`, "info");
   }
 };
 

@@ -22,7 +22,6 @@ export class OptimizedGarage {
     this.clickableObjects = [];
     this.raycaster = new THREE.Raycaster();
     this.gltfLoader = new GLTFLoader();
-    this.carWheels = [];
     this.mouse = new THREE.Vector2();
     this.hoveredObject = null;
     this.carLifted = false;
@@ -327,7 +326,6 @@ export class OptimizedGarage {
     // Clique em label de peça
     if (this.hoveredObject.userData.isPartLabel) {
       const partName = this.hoveredObject.userData.partName;
-      window.uiManager?.showNotification(`🔧 ${partName} selecionada`, 'info');
       // Selecionar a peça no painel e destacar
       if (window.selectPart) window.selectPart(partName);
       // Destacar o card no painel
@@ -671,10 +669,14 @@ export class OptimizedGarage {
     const label = t < 0.5 ? prev.label : next.label;
     if (label !== this._lastTimeLabel) {
       this._lastTimeLabel = label;
-      const now = new Date();
-      const hr  = now.getHours();
-      const min = now.getMinutes().toString().padStart(2, '0');
-      window.uiManager?.showNotification(`🕐 ${hr}:${min} — ${label}`, 'info');
+      // Notificar apenas em transições marcantes (amanhecer, meio-dia, pôr do sol, noite)
+      const notable = ['Amanhecer', 'Meio-dia', 'Pôr do sol', 'Noite'];
+      if (notable.includes(label)) {
+        const now = new Date();
+        const hr  = now.getHours();
+        const min = now.getMinutes().toString().padStart(2, '0');
+        window.uiManager?.showNotification(`🕐 ${hr}:${min} — ${label}`, 'info');
+      }
     }
   }
 
@@ -1322,9 +1324,7 @@ export class OptimizedGarage {
         carGroup.position.z -= center.z;
         carGroup.position.y += modelInfo.yOffset;
 
-        // --- Sombras em todos os meshes + detectar rodas ---
-        this.carWheels = [];
-        const wheelKeywords = ['wheel', 'roda', 'tire', 'tyre', 'pneu', 'rueda', 'roue', 'felge', 'rim'];
+        // --- Sombras em todos os meshes ---
 
         // Coletar todos os objetos com nome para debug
         carGroup.traverse((child) => {
@@ -1344,64 +1344,6 @@ export class OptimizedGarage {
             }
           }
         });
-        // --- Mapeamento EXATO por modelo ---
-        // exact: nomes exatos dos objetos raiz de cada roda
-        // exclude: palavras que invalidam (volante, caliper, etc)
-        const wheelMap = {
-          // Bel Air: sem rodas ainda — aguardando nomes reais
-          '1956_-_chevrolet_bel_air_nomad.glb': { exact: [], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 0 }, // geometria fundida
-          // Challenger: keyword case-insensitive para rtAni_Wheel_*
-          '1970_dodge_challenger_rt.glb':        { exact: [], keywords: ['rtani_wheel_b','rtani_wheel_f'], exclude: ['caliper'], rotAxis: 'x', maxWheels: 4 },
-          // Honda: instância única com as 4 rodas, eixo Y
-          '1999_honda_civic_si.glb':             { exact: ['Wheel1A_3D'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 1 },
-          // Gol: 2 grupos pai que animam as rodas fr/rr, eixo Y
-          '1999_volkswagen_gol_2000_gti_g2.glb': { exact: ['Gol_wheel_R_4','Gol_wheel_F_5'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 2 },
-          // Fiesta: sem rodas separadas — sem animação
-          '2013_ford_fiesta_st.glb':             { exact: [], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 0 },
-          // Fusca: 4 rodas nomeadas, eixo X
-          'beetlefusca_version_2.glb':           { exact: ['Wheel_F_L','Wheel_F_R','Wheel_B_L','Wheel_B_R'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
-          // Chevette: 4 pneus nomeados, eixo X
-          'chevrolet_chevette_sl_76_.glb':       { exact: ['Pneu_D_Back_Pneu_0','Pneu_D_Front_Pneu_0','Pneu_E_Front_Pneu_0','Pneu_E_Back_Pneu_0'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
-          // F-100: instância única, eixo Y
-          'ford_f100_1967.glb':                  { exact: ['Ford_F100__Wheel_0'], keywords: [], exclude: [], rotAxis: 'y', maxWheels: 1 },
-          // Sedan: 4 bones de roda, eixo X
-          'generic_sedan_car.glb':               { exact: ['DEF-WheelFtL_124','DEF-WheelFtR_128','DEF-WheelBkL_132','DEF-WheelBkR_136'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
-          // Van: 4 rodas, eixo Z
-          'shvan_92_-_low_poly_model.glb':       { exact: ['Shvan92_WheelStock_FL','Shvan92_WheelStock_FR','Shvan92_WheelStock_RL','Shvan92_WheelStock_RL_1'], keywords: [], exclude: [], rotAxis: 'z', maxWheels: 4 },
-          // VW Bus: felge = aros (4), sem plane00
-          'vw_bus.glb':                          { exact: ['Felge000_2','Felge001_5','Felge002_7','Felge003_9'], keywords: [], exclude: [], rotAxis: 'x', maxWheels: 4 },
-        };
-
-        const cfg = wheelMap[modelInfo.file] || { exact: [], keywords: ['wheel'], exclude: ['steering','caliper'] };
-
-        carGroup.traverse((child) => {
-          if (child === carGroup) return;
-          const name = child.name || '';
-          const nameLower = name.toLowerCase();
-
-          // Checar exclusões primeiro
-          if (cfg.exclude.some(e => nameLower.includes(e))) return;
-
-          const isExact = cfg.exact.includes(name);
-          const isKeyword = cfg.keywords.length > 0 && cfg.keywords.some(k => nameLower.includes(k.toLowerCase()));
-
-          if (isExact || isKeyword) {
-            // Não pegar se um ancestral já foi pego
-            let ancestor = child.parent;
-            while (ancestor && ancestor !== carGroup) {
-              if (this.carWheels.includes(ancestor)) return;
-              ancestor = ancestor.parent;
-            }
-            if (!this.carWheels.includes(child)) this.carWheels.push(child);
-          }
-        });
-
-        // Aplicar rotAxis e limitar quantidade de rodas
-        const rotAxis = cfg.rotAxis || 'x';
-        if (cfg.maxWheels && this.carWheels.length > cfg.maxWheels) {
-          this.carWheels = this.carWheels.slice(0, cfg.maxWheels);
-        }
-        this.carWheels.forEach(wheel => { wheel.userData.rotAxis = rotAxis; });
 
 
         // --- Orientar: frente do carro para -Z (padrão da garagem) ---
@@ -1428,7 +1370,6 @@ export class OptimizedGarage {
         this.openGarageDoor();
         setTimeout(() => {
           this.carEntering = true;
-          window.uiManager?.showNotification(`🚗 ${modelInfo.name} entrando na garagem...`, 'info');
         }, 800);
       },
       (progress) => {
@@ -1470,7 +1411,6 @@ export class OptimizedGarage {
       this.hidePartLabels();
       this.lightsDown();
       this.openGarageDoor();
-      window.uiManager?.showNotification("🚗 Carro saindo da garagem...", "info");
       setTimeout(() => {
         this.carExiting = true;
         this.carExitTarget = 16;
@@ -1779,12 +1719,7 @@ export class OptimizedGarage {
     // Animação de entrada do carro
     if (this.carEntering && this.currentCar) {
       // Girar rodas enquanto entra
-      if (this.carWheels && this.carWheels.length > 0) {
-        this.carWheels.forEach(w => {
-          const ax = w.userData.rotAxis || 'x';
-          w.rotation[ax] -= 0.08;
-        });
-      }
+
       const target = this.carTargetPos;
       const pos = this.currentCar.position;
       const speed = 8 * delta;
@@ -1805,12 +1740,7 @@ export class OptimizedGarage {
 
     // Animação de saída do carro
     if (this.carExiting && this.currentCar) {
-      if (this.carWheels && this.carWheels.length > 0) {
-        this.carWheels.forEach(w => {
-          const ax = w.userData.rotAxis || 'x';
-          w.rotation[ax] += 0.08;
-        });
-      }
+
       const pos = this.currentCar.position;
       const speed = 8 * delta;
       pos.z += speed;
