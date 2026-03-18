@@ -46,7 +46,7 @@ class GameState {
     this.money += validAmount;
     if (isNaN(this.money)) this.money = 5000;
     const moneyEl = document.getElementById("money");
-    if (moneyEl) moneyEl.textContent = `R$ ${this.money.toLocaleString()}`;
+    if (moneyEl) moneyEl.textContent = `R$ ${this.money.toLocaleString("pt-BR")}`;
     if (!this.isUpdatingFromAchievement && window.achievementSystem) {
       this.isUpdatingFromAchievement = true;
       try { window.achievementSystem.checkAchievements?.(); } catch(e) {}

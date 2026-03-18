@@ -435,12 +435,14 @@ export class UIManager {
     // Tecla ESC para fechar painéis
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
-        if (this.upgradePanel?.isVisible) this.upgradePanel.hide();
-        if (this.customersPanel?.isVisible) this.customersPanel.hide();
-        if (this.shopPanel?.isVisible) this.shopPanel.hide();
-        if (this.achievementsPanel?.isVisible) this.achievementsPanel.hide();
-        if (this.garageUpgradePanel?.isVisible) this.garageUpgradePanel.hide();
-        this.showNotification("🔧 Painéis fechados", "info");
+        let closed = false;
+        if (this.upgradePanel?.isVisible)      { this.upgradePanel.hide();      closed = true; }
+        if (this.customersPanel?.isVisible)    { this.customersPanel.hide();    closed = true; }
+        if (this.shopPanel?.isVisible)         { this.shopPanel.hide();         closed = true; }
+        if (this.achievementsPanel?.isVisible) { this.achievementsPanel.hide(); closed = true; }
+        if (this.garageUpgradePanel?.isVisible){ this.garageUpgradePanel.hide();closed = true; }
+        // Só notifica se realmente fechou algo
+        if (closed) this.showNotification("🔧 Painel fechado", "info");
       }
     });
   }
@@ -741,7 +743,7 @@ export class UIManager {
       }
 
       // Formatar valor
-      moneyEl.textContent = `R$ ${value.toLocaleString()}`;
+      moneyEl.textContent = `R$ ${value.toLocaleString("pt-BR")}`;
 
       // Animação opcional
       if (this.animations) {
@@ -1441,7 +1443,7 @@ export class UIManager {
 
       const rewardParts = [];
       if (ev.rewards?.money) rewardParts.push(`R$ ${ev.rewards.money.toLocaleString('pt-BR')}`);
-      if (ev.rewards?.xp)    rewardParts.push(`${ev.rewards.xp.toLocaleString()} XP`);
+      if (ev.rewards?.xp)    rewardParts.push(`${ev.rewards.xp.toLocaleString("pt-BR")} XP`);
 
       return `
         <div class="event-card ${isActive ? 'active' : ''}">
@@ -1791,7 +1793,7 @@ export class UIManager {
     if (!this._showingLevelUp && message && message.includes('Nível') && message.includes('alcançado')) {
       const match = message.match(/Nível (\d+)/);
       if (match) {
-        const level = parseInt(match[1]);
+        const level = parseInt(match[1], 10);
         this._showingLevelUp = true;
         setTimeout(() => {
           this.showLevelUp(level);
