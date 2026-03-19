@@ -709,8 +709,8 @@
     <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
 
   <!-- ===== CONFIGURAÇÕES IN-GAME ===== -->
-  <div id="ingame-settings-panel" style="display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(10,12,20,0.78);backdrop-filter:blur(6px);font-family:'DM Sans',sans-serif;">
-    <div class="settings-modal" style="animation:fadeUp 0.3s ease">
+  <div id="ingame-settings-panel" style="display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(10,12,20,0.78);backdrop-filter:blur(6px);font-family:'DM Sans',sans-serif;pointer-events:auto;">
+    <div class="settings-modal" style="animation:fadeUp 0.3s ease;pointer-events:auto">
       <div class="settings-title">
         Configurações
         <button class="settings-close" onclick="window.uiManager?.hideIngameSettings()">✕</button>

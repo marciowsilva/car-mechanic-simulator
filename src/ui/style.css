@@ -469,6 +469,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 #job-result-overlay.show { display: flex; }
 
 .job-result-modal {
+  pointer-events: auto;
   background: var(--surface); border: 1px solid var(--border);
   border-radius: 20px; padding: 36px 40px;
   width: 460px; max-width: 92vw;
@@ -742,6 +743,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 
 /* ===== HISTÓRICO DE JOBS ===== */
 #history-panel {
+  pointer-events: auto;
   position: fixed; inset: 0; z-index: 2000;
   display: none; align-items: center; justify-content: center;
   background: rgba(10,12,20,0.78); backdrop-filter: blur(6px);
@@ -750,6 +752,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 #history-panel.show { display: flex; }
 
 .history-modal {
+  pointer-events: auto;
   background: #181c27; border: 1px solid #2a3047;
   border-radius: 20px; width: 760px; max-width: 95vw;
   max-height: 88vh; display: flex; flex-direction: column;
@@ -839,6 +842,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 
 /* ===== PAINEL DE ESTATÍSTICAS ===== */
 #stats-panel {
+  pointer-events: auto;
   position: fixed; inset: 0; z-index: 2000;
   display: none; align-items: center; justify-content: center;
   background: rgba(10,12,20,0.78); backdrop-filter: blur(6px);
@@ -847,6 +851,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 #stats-panel.show { display: flex; }
 
 .stats-modal {
+  pointer-events: auto;
   background: #181c27; border: 1px solid #2a3047;
   border-radius: 20px; width: 780px; max-width: 95vw;
   max-height: 88vh; display: flex; flex-direction: column;
@@ -954,6 +959,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 
 /* ===== PAINEL DE MISSÕES DIÁRIAS ===== */
 #missions-panel {
+  pointer-events: auto;
   position: fixed; inset: 0; z-index: 2000;
   display: none; align-items: center; justify-content: center;
   background: rgba(10,12,20,0.78); backdrop-filter: blur(6px);
@@ -962,6 +968,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 #missions-panel.show { display: flex; }
 
 .missions-modal {
+  pointer-events: auto;
   background: #181c27; border: 1px solid #2a3047;
   border-radius: 20px; width: 560px; max-width: 95vw;
   max-height: 88vh; display: flex; flex-direction: column;
@@ -1119,6 +1126,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 
 /* Painel de eventos */
 #events-panel {
+  pointer-events: auto;
   position: fixed; inset: 0; z-index: 2000;
   display: none; align-items: center; justify-content: center;
   background: rgba(10,12,20,0.78); backdrop-filter: blur(6px);
@@ -1127,6 +1135,7 @@ body { font-family: 'DM Sans', sans-serif; overflow: hidden; background: var(--b
 #events-panel.show { display: flex; }
 
 .events-modal {
+  pointer-events: auto;
   background: #181c27; border: 1px solid #2a3047;
   border-radius: 20px; width: 580px; max-width: 95vw;
   max-height: 88vh; display: flex; flex-direction: column;
