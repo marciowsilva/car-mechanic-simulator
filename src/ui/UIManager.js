@@ -450,27 +450,34 @@ export class UIManager {
     const musicBtn = this.getElement("toggle-music");
     const sfxBtn   = this.getElement("toggle-sfx");
 
-    if (musicBtn && this.sounds) {
+    if (musicBtn) {
       musicBtn.addEventListener("click", () => {
-        const enabled = this.sounds.toggle();
+        const enabled = this.sounds?.toggle() ?? true;
         musicBtn.textContent = enabled ? "🎵" : "🔇";
-        musicBtn.title = enabled ? "Música (ligar/desligar)" : "Música desligada";
+        musicBtn.title = enabled ? "Música: ligada" : "Música: desligada";
         musicBtn.classList.toggle("active", enabled);
         localStorage.setItem("music_enabled", enabled);
-        if (enabled) this.sounds.startAmbience?.();
-        else          this.sounds.stopAmbience?.();
-        this.sounds?.play("click");
+        if (enabled) this.sounds?.startAmbience?.();
+        else         this.sounds?.stopAmbience?.();
+        // Sincronizar toggle in-game
+        const igBtn = document.getElementById('ig-toggle-music');
+        if (igBtn) igBtn.classList.toggle('on', enabled);
+        this._showToast(enabled ? "🎵 Música ligada" : "🔇 Música desligada", "info", 2000);
       });
     }
 
-    if (sfxBtn && this.sounds) {
+    if (sfxBtn) {
       sfxBtn.addEventListener("click", () => {
-        const enabled = this.sounds.toggleSfx?.() ?? true;
-        sfxBtn.textContent = enabled ? "🔊" : "🔕";
-        sfxBtn.title = enabled ? "Efeitos (ligar/desligar)" : "Efeitos desligados";
+        const enabled = this.sounds?.toggleSfx?.() ?? true;
+        sfxBtn.textContent = enabled ? "🔊" : "🔈";
+        sfxBtn.title = enabled ? "Efeitos: ligados" : "Efeitos: desligados";
         sfxBtn.classList.toggle("active", enabled);
         localStorage.setItem("sfx_enabled", enabled);
+        // Sincronizar toggle in-game
+        const igBtn = document.getElementById('ig-toggle-sfx');
+        if (igBtn) igBtn.classList.toggle('on', enabled);
         if (enabled) this.sounds?.play("click");
+        this._showToast(enabled ? "🔊 Efeitos ligados" : "🔈 Efeitos desligados", "info", 2000);
       });
     }
 

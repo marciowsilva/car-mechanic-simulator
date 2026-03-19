@@ -557,7 +557,7 @@
         <button class="audio-btn active" id="toggle-music" title="Música (ligar/desligar)">🎵</button>
         <button class="audio-btn active" id="toggle-sfx" title="Efeitos Sonoros (ligar/desligar)">🔊</button>
         <button class="audio-btn" id="toggle-fullscreen" title="Tela Cheia" onclick="toggleFullscreen()">⛶</button>
-        <button class="audio-btn" id="btn-game-settings" title="Configurações" style="pointer-events:auto">⚙</button>
+        <button class="audio-btn" id="btn-settings-ingame" title="Configurações" onclick="window.uiManager?.showIngameSettings()" style="pointer-events:auto">⚙️</button>
       </div>
     </div>
 
@@ -707,33 +707,6 @@
     </div>
 
     <div id="interaction-info">👆 Clique nas peças do carro para selecionar</div>
-
-  <!-- ===== SETTINGS DO JOGO (in-game) ===== -->
-  <div id="game-settings-panel" style="display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(10,12,20,0.78);backdrop-filter:blur(6px);font-family:'DM Sans',sans-serif;">
-    <div style="background:#181c27;border:1px solid #2a3047;border-radius:20px;padding:32px 36px;width:400px;max-width:92vw;box-shadow:0 24px 80px rgba(0,0,0,0.6);">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-        <div style="font-size:17px;font-weight:700;color:#e2e8f0;">Configurações</div>
-        <button onclick="closeGameSettings()" style="width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid #2a3047;color:#64748b;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-label">Música ambiente</div><div class="settings-desc">Sons de fundo da garagem</div></div>
-        <div class="toggle-switch on" id="ig-toggle-music" onclick="toggleGameSetting('music')"></div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-label">Efeitos Sonoros</div><div class="settings-desc">Sons de ferramentas e ações</div></div>
-        <div class="toggle-switch on" id="ig-toggle-sfx" onclick="toggleGameSetting('sfx')"></div>
-      </div>
-      <div class="settings-row">
-        <div><div class="settings-label">Minigame de Reparo</div><div class="settings-desc">Sequência de teclas ao reparar</div></div>
-        <div class="toggle-switch" id="ig-toggle-minigame" onclick="toggleGameSetting('minigame')"></div>
-      </div>
-      <div class="settings-row" style="border-bottom:none;">
-        <div><div class="settings-label">Câmera Orbital</div><div class="settings-desc">Tecla C orbita ao redor do carro</div></div>
-        <div class="toggle-switch on" id="ig-toggle-orbit" onclick="toggleGameSetting('orbit')"></div>
-      </div>
-    </div>
-  </div>
-  </div>
 
   <!-- ===== CONFIGURAÇÕES IN-GAME ===== -->
   <div id="ingame-settings-panel" style="display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(10,12,20,0.78);backdrop-filter:blur(6px);font-family:'DM Sans',sans-serif;">
