@@ -557,7 +557,7 @@
         <button class="audio-btn active" id="toggle-music" title="Música (ligar/desligar)">🎵</button>
         <button class="audio-btn active" id="toggle-sfx" title="Efeitos Sonoros (ligar/desligar)">🔊</button>
         <button class="audio-btn" id="toggle-fullscreen" title="Tela Cheia" onclick="toggleFullscreen()">⛶</button>
-        <button class="audio-btn" id="btn-game-settings" title="Configurações" onclick="openGameSettings()">⚙</button>
+        <button class="audio-btn" id="btn-game-settings" title="Configurações" style="pointer-events:auto">⚙</button>
       </div>
     </div>
 
@@ -733,6 +733,44 @@
       </div>
     </div>
   </div>
+  </div>
+
+  <!-- ===== CONFIGURAÇÕES IN-GAME ===== -->
+  <div id="ingame-settings-panel" style="display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(10,12,20,0.78);backdrop-filter:blur(6px);font-family:'DM Sans',sans-serif;">
+    <div class="settings-modal" style="animation:fadeUp 0.3s ease">
+      <div class="settings-title">
+        Configurações
+        <button class="settings-close" onclick="window.uiManager?.hideIngameSettings()">✕</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Música / Ambiente</div>
+          <div class="settings-desc">Sons de fundo da garagem</div>
+        </div>
+        <div class="toggle-switch on" id="ig-toggle-music" onclick="window.uiManager?.toggleAudio('music')"></div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Efeitos Sonoros</div>
+          <div class="settings-desc">Sons de ferramentas e ações</div>
+        </div>
+        <div class="toggle-switch on" id="ig-toggle-sfx" onclick="window.uiManager?.toggleAudio('sfx')"></div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Minigame de Reparo</div>
+          <div class="settings-desc">Sequência de teclas ao reparar</div>
+        </div>
+        <div class="toggle-switch" id="ig-toggle-minigame" onclick="window.uiManager?.toggleIngameSetting('minigame')"></div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-label">Câmera Orbital</div>
+          <div class="settings-desc">Tecla C orbita ao redor do carro</div>
+        </div>
+        <div class="toggle-switch on" id="ig-toggle-orbit" onclick="window.uiManager?.toggleIngameSetting('orbit')"></div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== BANNER DE EVENTO ===== -->
@@ -1101,6 +1139,11 @@
       if (igEl) igEl.classList.toggle('on', isOn);
     }
 
+    document.addEventListener('DOMContentLoaded', () => {
+      const gsBtn = document.getElementById('btn-game-settings');
+      if (gsBtn) gsBtn.addEventListener('click', openGameSettings);
+    });
+
     function openGameSettings() {
       const panel = document.getElementById('game-settings-panel');
       if (!panel) return;
@@ -1250,6 +1293,7 @@
       window.uiManager?.hideHistory?.();
       window.uiManager?.hideStats?.();
       window.uiManager?.hideMissions?.();
+      window.uiManager?.hideIngameSettings?.();
       window.uiManager?.hideEvents?.();
       window.uiManager?.pauseAmbience?.();
 

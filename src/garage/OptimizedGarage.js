@@ -1718,8 +1718,6 @@ export class OptimizedGarage {
 
     // Animação de entrada do carro
     if (this.carEntering && this.currentCar) {
-      // Girar rodas enquanto entra
-
       const target = this.carTargetPos;
       const pos = this.currentCar.position;
       const speed = 8 * delta;
@@ -1734,7 +1732,6 @@ export class OptimizedGarage {
         if (parts) {
           setTimeout(() => this.showPartLabels(parts), 600);
         }
-        window.uiManager?.showNotification("✅ Carro pronto para serviço!", "success");
       }
     }
 

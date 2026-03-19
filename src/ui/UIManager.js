@@ -986,8 +986,7 @@ export class UIManager {
               const status = window.gameState.checkCarReady?.();
               if (status?.ready) {
                 document.getElementById("deliver-car").disabled = false;
-                window.uiManager?.showNotification("🎉 Carro pronto para entrega!", "success");
-              }
+                        }
             } else {
               window.uiManager?.showNotification(result?.message || "❌ Erro ao reparar", "error");
             }
@@ -1206,6 +1205,7 @@ export class UIManager {
   }
 
   hideMissionsOnMenu() { this.hideMissions?.(); }
+  hideIngameSettingsOnMenu() { this.hideIngameSettings?.(); }
   pauseAmbience() { this.sounds?.stopAmbience?.(); }
   resumeAmbience() { this.sounds?.startAmbience?.(); }
 
@@ -1526,6 +1526,89 @@ export class UIManager {
     es.notifyEvent = (event) => this.showEventBanner(event);
   }
 
+
+  // ===== ÁUDIO E CONFIGURAÇÕES IN-GAME =====
+
+  toggleAudio(type) {
+    const isMusic = type === 'music';
+    const storageKey = isMusic ? 'music_enabled' : 'sfx_enabled';
+    const current = localStorage.getItem(storageKey) !== 'false';
+    const newVal = !current;
+    localStorage.setItem(storageKey, newVal);
+
+    if (isMusic) {
+      if (newVal) this.sounds?.startAmbience?.();
+      else        this.sounds?.stopAmbience?.();
+    } else {
+      this.sounds?.toggleSfx?.();
+    }
+
+    // Atualizar botão HUD
+    const hudBtn = document.getElementById(isMusic ? 'toggle-music' : 'toggle-sfx');
+    if (hudBtn) {
+      hudBtn.classList.toggle('active', newVal);
+      hudBtn.title    = newVal ? `${isMusic ? 'Música' : 'Efeitos'}: ligado` : `${isMusic ? 'Música' : 'Efeitos'}: desligado`;
+      hudBtn.textContent = isMusic
+        ? (newVal ? '🎵' : '🔇')
+        : (newVal ? '🔊' : '🔈');
+    }
+
+    // Atualizar toggle in-game
+    const igBtn = document.getElementById(isMusic ? 'ig-toggle-music' : 'ig-toggle-sfx');
+    if (igBtn) igBtn.classList.toggle('on', newVal);
+
+    this._showToast(
+      newVal ? `${isMusic ? '🎵 Música' : '🔊 Efeitos'} ligado` : `${isMusic ? '🔇 Música' : '🔈 Efeitos'} desligado`,
+      'info', 2000
+    );
+  }
+
+  showIngameSettings() {
+    const panel = document.getElementById('ingame-settings-panel');
+    if (!panel) return;
+    panel.style.display = 'flex';
+    // Sincronizar toggles com estado atual
+    const syncToggle = (id, key, defVal = true) => {
+      const el = document.getElementById(id);
+      if (el) el.classList.toggle('on', localStorage.getItem(key) !== 'false');
+    };
+    syncToggle('ig-toggle-music',    'music_enabled');
+    syncToggle('ig-toggle-sfx',      'sfx_enabled');
+    syncToggle('ig-toggle-minigame', 'minigame_enabled', false);
+    syncToggle('ig-toggle-orbit',    'garage_mouseRotation');
+
+    document.addEventListener('keydown', this._igSettingsEsc = e => {
+      if (e.key === 'Escape') this.hideIngameSettings();
+    });
+  }
+
+  hideIngameSettings() {
+    const panel = document.getElementById('ingame-settings-panel');
+    if (panel) panel.style.display = 'none';
+    if (this._igSettingsEsc) {
+      document.removeEventListener('keydown', this._igSettingsEsc);
+      this._igSettingsEsc = null;
+    }
+  }
+
+  toggleIngameSetting(key) {
+    const storageMap = {
+      minigame: 'minigame_enabled',
+      orbit:    'garage_mouseRotation',
+    };
+    const storageKey = storageMap[key];
+    if (!storageKey) return;
+    const current = localStorage.getItem(storageKey) === 'true';
+    const newVal = !current;
+    localStorage.setItem(storageKey, newVal);
+    const igBtn = document.getElementById(`ig-toggle-${key}`);
+    if (igBtn) igBtn.classList.toggle('on', newVal);
+    this._showToast(
+      `${key === 'minigame' ? '🎮 Minigame' : '📷 Câmera orbital'} ${newVal ? 'ligado' : 'desligado'}`,
+      'info', 2000
+    );
+  }
+
   // ===== MISSÕES DIÁRIAS =====
 
   showMissions() {
@@ -1823,51 +1906,63 @@ export class UIManager {
       }
     }
 
-    if (this.notifications) {
-      this.notifications.show(message, type, duration);
+    // Sons por tipo
+    const soundMap = { success:'success', error:'error', achievement:'unlock', money:'money' };
+    if (soundMap[type]) this.sounds?.play(soundMap[type]);
 
-      switch (type) {
-        case "success":
-          this.sounds?.play("success");
-          break;
-        case "error":
-          this.sounds?.play("error");
-          break;
-        case "achievement":
-          this.sounds?.play("unlock");
-          break;
-        case "money":
-          this.sounds?.play("money");
-        // Progresso de missão
-        if (window.dailyChallenges && result) {
-          window.dailyChallenges.onJobComplete?.({ quality: avgQuality || 0, payment: payment, startTime: window.gameState?.startTime || Date.now() });
-          window.uiManager?._updateMissionsBadge?.();
-        }
-          break;
-        default:
-          this.sounds?.play("click");
-      }
-    } else {
-      const notification = this.getElement("notification");
+    // Criar toast unificado
+    this._showToast(message, type, duration);
+  }
 
-      if (this.notificationTimeout) {
-        clearTimeout(this.notificationTimeout);
-      }
-
-      notification.textContent = message;
-      notification.style.backgroundColor =
-        type === "error"
-          ? "#ff3333"
-          : type === "success"
-            ? "#00aa00"
-            : "#ff6b00";
-
-      notification.classList.add("show");
-
-      this.notificationTimeout = setTimeout(() => {
-        notification.classList.remove("show");
-      }, duration);
+  _showToast(message, type = 'info', duration = 3000) {
+    // Remover toast anterior se existir
+    const existing = document.getElementById('cms-toast');
+    if (existing) {
+      clearTimeout(existing._timeout);
+      existing.remove();
     }
+
+    const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️', achievement: '🏆', money: '💰' };
+    const colors = {
+      success:     { border: 'rgba(34,197,94,0.3)',   bg: 'rgba(34,197,94,0.06)',   text: '#22c55e' },
+      error:       { border: 'rgba(239,68,68,0.3)',   bg: 'rgba(239,68,68,0.06)',   text: '#ef4444' },
+      warning:     { border: 'rgba(245,158,11,0.3)',  bg: 'rgba(245,158,11,0.06)',  text: '#f59e0b' },
+      info:        { border: 'rgba(59,130,246,0.25)', bg: 'rgba(59,130,246,0.05)',  text: '#60a5fa' },
+      achievement: { border: 'rgba(250,204,21,0.35)', bg: 'rgba(250,204,21,0.06)',  text: '#facc15' },
+      money:       { border: 'rgba(250,204,21,0.3)',  bg: 'rgba(250,204,21,0.05)',  text: '#facc15' },
+    };
+    const col = colors[type] || colors.info;
+    const icon = icons[type] || 'ℹ️';
+
+    const toast = document.createElement('div');
+    toast.id = 'cms-toast';
+    toast.style.cssText = `
+      position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%) translateY(12px);
+      z-index: 8000; display: flex; align-items: center; gap: 10px;
+      background: rgba(10,12,20,0.95); border: 1px solid ${col.border};
+      border-left: 3px solid ${col.text};
+      border-radius: 12px; padding: 10px 16px;
+      font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600;
+      color: #e2e8f0; white-space: nowrap; pointer-events: none;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+      backdrop-filter: blur(12px);
+      opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease;
+    `;
+    toast.innerHTML = `<span style="font-size:15px">${icon}</span><span>${message}</span>`;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+      });
+    });
+
+    toast._timeout = setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateX(-50%) translateY(8px)';
+      setTimeout(() => toast.remove(), 220);
+    }, duration);
   }
 
   showAchievementNotification(achievement) {
@@ -1951,8 +2046,7 @@ window.repairPart = (partName) => {
         const status = window.gameState.checkCarReady();
         if (status.ready) {
           document.getElementById("deliver-car").disabled = false;
-          window.uiManager?.showNotification("🎉 Carro pronto para entrega!", "success");
-        }
+            }
       } else {
         window.uiManager?.showNotification(result.message, "error");
       }
@@ -1968,8 +2062,7 @@ window.repairPart = (partName) => {
       const status = window.gameState.checkCarReady();
       if (status.ready) {
         document.getElementById("deliver-car").disabled = false;
-        window.uiManager?.showNotification("🎉 Carro pronto para entrega!", "success");
-      }
+        }
     } else {
       window.uiManager?.showNotification(result.message, "error");
     }
